@@ -1,0 +1,90 @@
+{
+  "name": "playhub-artworks",
+  "version": "1.0.0",
+  "description": "A controller-first Steam artwork manager for Playhub.",
+  "type": "module",
+  "scripts": {
+    "build": "shx rm -rf dist && rollup -c --environment ROLLUP_ENV:production",
+    "watch": "rollup -c -w --environment ROLLUP_ENV:development",
+    "watch:vm-dev": "npm run watch -- --watch.onEnd=\"pnpm run copy-to-vm\"",
+    "watch:win-dev": "npm run watch -- --watch.onEnd=\"pnpm run copy-to-win\"",
+    "copy-to-win": "robocopy /E /NS /NC /NDL /NFL /NJS /NJH /NP dist \"%USERPROFILE%\\homebrew\\plugins\\Playhub-Artworks\\dist\" || exit 0",
+    "lint": "eslint --ext .ts,.tsx,.js src",
+    "test": "npm run lint && npm run build",
+    "check:backend": "python -m py_compile main.py provider_search.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LoZazaMastro/Playhub-Artworks.git"
+  },
+  "keywords": [
+    "decky",
+    "plugin",
+    "steam-deck",
+    "deck",
+    "steamgriddb"
+  ],
+  "author": "LoZazaMastro",
+  "contributors": [
+    {
+      "name": "Travis Lane (Tormak)",
+      "email": "Tormak9970@gmail.com"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/LoZazaMastro/Playhub-Artworks/issues"
+  },
+  "homepage": "https://github.com/LoZazaMastro/Playhub-Artworks",
+  "devDependencies": {
+    "@decky/rollup": "^1.0.2",
+    "@eslint/compat": "^1.4.1",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
+    "@rollup/plugin-commonjs": "^26.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.3.1",
+    "@rollup/plugin-replace": "^5.0.7",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/react": "18.2.0",
+    "@types/webpack": "^5.28.5",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "eslint": "^9.39.4",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
+    "rollup": "^4.60.0",
+    "rollup-plugin-delete": "^2.2.0",
+    "rollup-plugin-external-globals": "^0.11.0",
+    "rollup-plugin-import-assets": "^1.1.1",
+    "rollup-plugin-polyfill-node": "^0.13.0",
+    "rollup-plugin-scss": "^3.0.0",
+    "sass": "^1.98.0",
+    "shx": "^0.4.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@decky/api": "^1.1.3",
+    "@decky/ui": "^4.11.3",
+    "async-wait-until": "^2.0.31",
+    "just-debounce": "^1.1.0",
+    "qrcode.react": "^3.2.0",
+    "react-fast-compare": "^3.2.2",
+    "react-icons": "5.4.0",
+    "react-markdown": "^8.0.7",
+    "react-string-replace": "^1.1.1",
+    "remark-gfm": "^3.0.1"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ]
+    }
+  }
+}

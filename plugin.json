@@ -1,0 +1,17 @@
+{
+  "api_version": 1,
+  "name": "Playhub Artworks",
+  "author": "LoZazaMastro",
+  "flags": [
+    "debug"
+  ],
+  "publish": {
+    "tags": [
+      "artwork",
+      "sgdb",
+      "playhub"
+    ],
+    "description": "Trova, modifica e completa gli artwork della tua libreria Steam.",
+    "image": "thumb.png"
+  }
+}

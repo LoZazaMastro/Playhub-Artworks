@@ -1,0 +1,166 @@
+/* Filters share the editor's shell language so the whole plugin reads as one screen. */
+
+.pa-filters {
+  position: fixed;
+  inset: 0;
+  z-index: $zIndexAboveRing + 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(#{$topBarHeight} + 14px) 22px calc(#{$footerHeight} + 14px);
+  box-sizing: border-box;
+  color: #fff;
+}
+
+.pa-filters-shell {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid $panelBorder;
+  border-radius: 12px;
+  background: rgba(20, 23, 27, .94);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pa-filters-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { width: 0; height: 0; display: none; }
+}
+
+.pa-filter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &-head {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+
+    strong { font-size: 14px; }
+    span { font-size: 11px; color: rgba(255, 255, 255, .5); line-height: 1.35; }
+  }
+}
+
+/* Always-visible checks, never a dropdown. */
+.pa-filter-checks,
+.pa-filter-choices {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pa-check {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 13px 0 9px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px !important;
+  font-size: 13px;
+  white-space: nowrap;
+
+  .pa-check-box {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 255, .34);
+    border-radius: 5px;
+
+    svg { width: 13px; height: 13px; }
+  }
+
+  &.on .pa-check-box { background: $accent; border-color: $accent; color: #171717; }
+  &:focus, &.gpfocus { box-shadow: inset 0 0 0 2px #fff !important; }
+}
+
+.pa-choice-pill {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 15px !important;
+  display: flex !important;
+  align-items: center;
+  border-radius: 20px !important;
+  font-size: 13px;
+  white-space: nowrap;
+
+  &.on { background: $accent !important; color: #171717 !important; }
+  &:focus, &.gpfocus { box-shadow: inset 0 0 0 2px #fff !important; }
+}
+
+.pa-filter-size {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+
+  > * { flex: 1 1 auto; min-width: 0; }
+  .pa-filter-size-x { flex: 0 0 auto; color: rgba(255, 255, 255, .5); font-size: 16px; }
+}
+
+.pa-filter-game {
+  display: flex !important;
+  gap: 8px;
+
+  &-value {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    height: 42px !important;
+    border-radius: 8px !important;
+  }
+
+  &-clear {
+    flex: 0 0 auto !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+  }
+}
+
+.pa-filters-footer {
+  flex: 0 0 auto;
+  display: flex !important;
+  gap: 8px;
+
+  button {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px !important;
+
+    &:focus, &.gpfocus { box-shadow: inset 0 0 0 2px #fff !important; }
+  }
+
+  .pa-filters-apply { background: $accent !important; color: #171717 !important; }
+}
