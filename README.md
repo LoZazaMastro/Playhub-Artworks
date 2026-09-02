@@ -4,7 +4,7 @@
 
 # Playhub Artworks
 
-### Your library, with the artwork it deserves.
+### Your library, with the artworks it deserves.
 
 Manage covers, banners, backgrounds, logos, and icons directly from Steam Big Picture, with a controller-friendly interface.
 
