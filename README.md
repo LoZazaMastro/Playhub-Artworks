@@ -1,7 +1,3 @@
-<div align="center">
-
-<img src="thumb.png" width="240" alt="Playhub Artworks" />
-
 # Playhub Artworks
 
 ### Your library, with the artworks it deserves.
