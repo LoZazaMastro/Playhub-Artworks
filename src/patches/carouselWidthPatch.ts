@@ -6,7 +6,7 @@ import log from '../utils/log';
 /*
   Square slots for EVERY cover carousel, not just the recents row.
 
-  The Home is not one carousel. "Gioca ad un titolo della tua libreria" in the Consigliati
+  The Home is not one carousel. "Play a title from your library" in the Consigliati
   tab is the same component as the recents row - Steam builds it with
   `jsx(di, {name: "#LibraryHome_PlayNext", games, showFeaturedItem: false})` in
   `chunk~2dcc5aaf7.js` - and so are the other shelves. Squaring only the row the plugin had
@@ -108,7 +108,7 @@ const findCarouselPrototype = (): any => {
       }
     }
   } catch (error) {
-    log('carousel width: ricerca classe fallita', error);
+    log('carousel width: class lookup failed', error);
   }
   return null;
 };
@@ -183,7 +183,7 @@ const install = (prototype: any): boolean => {
   const descriptor = Object.getOwnPropertyDescriptor(prototype, 'GetCellColumnWidth');
   const scrollDescriptor = Object.getOwnPropertyDescriptor(prototype, 'SendScrollNotification');
   if (!descriptor || !descriptor.configurable) {
-    log('carousel width: metodo non modificabile su questa build di Steam');
+    log('carousel width: method cannot be patched on this Steam build');
     return false;
   }
 
@@ -241,7 +241,7 @@ const install = (prototype: any): boolean => {
       },
     });
   } else {
-    log('carousel width: notifica scroll non modificabile su questa build di Steam');
+    log('carousel width: scroll notification cannot be patched on this Steam build');
   }
 
   try {
@@ -256,7 +256,7 @@ const install = (prototype: any): boolean => {
   }
 
   patchedPrototype = prototype;
-  log('carousel width: patch installata');
+  log('carousel width: patch installed');
   patchMountedInstances();
   return true;
 };
@@ -348,10 +348,10 @@ const patchMountedInstances = () => {
       }
     });
     if (touched || skipped) {
-      log('carousel width: caroselli già montati', { aggiornati: touched, daRimontare: skipped });
+      log('carousel width: existing carousels', { updated: touched, pendingRemount: skipped });
     }
   } catch (error) {
-    log('carousel width: aggiornamento montati fallito', error);
+    log('carousel width: existing-carousel update failed', error);
   }
 };
 

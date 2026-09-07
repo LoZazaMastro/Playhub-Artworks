@@ -1,6 +1,6 @@
 {
   "name": "playhub-artworks",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "A controller-first Steam artwork manager for Playhub.",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "watch:win-dev": "npm run watch -- --watch.onEnd=\"pnpm run copy-to-win\"",
     "copy-to-win": "robocopy /E /NS /NC /NDL /NFL /NJS /NJH /NP dist \"%USERPROFILE%\\homebrew\\plugins\\Playhub-Artworks\\dist\" || exit 0",
     "lint": "eslint --ext .ts,.tsx,.js src",
-    "test": "npm run lint && npm run build",
+    "test": "npm run test:regression && npm run check:backend && npm run build",
+    "test:regression": "python -m unittest discover -s tests -p \"test_*.py\"",
     "check:backend": "python -m py_compile main.py provider_search.py"
   },
   "repository": {

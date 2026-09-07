@@ -24,8 +24,8 @@ const uiDocument = (): Document | null => {
   javascript keeps running with all its patches alive, but the document it wrote its
   `<style>` into is gone. The result is the worst possible half-state - the carousel is
   still being told to use square column widths while the CSS that squares the capsule no
-  longer exists, so every cover is drawn portrait at square width: "verticali e più alte
-  del normale". Remembering the css here is what makes putting it back possible.
+  longer exists, so every cover is drawn portrait at square width: "portrait and taller
+  than normal". Remembering the css here is what makes putting it back possible.
 */
 const injected = new Map<string, string>();
 

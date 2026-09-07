@@ -1,9 +1,20 @@
 import { call, fetchNoCors } from '@decky/api';
 
+import t from '../utils/i18n';
 import { ArtworkProviderId, ASSET_TYPE, DIMENSIONS, MIMES, STYLES } from '../constants';
 import { SGDB_API_BASE } from '../hooks/useSGDB';
 
 import getAppOverview from './getAppOverview';
+import {
+  assertBase64PayloadSize,
+  assertDataUrlSize,
+  blobToSafeDataUrl,
+  fetchWithCancellation,
+  loadSafeImage,
+  releaseCanvas,
+  releaseImage,
+  withCompositionLock,
+} from './imageSafety';
 import log from './log';
 import { normalizeArtworkPayload } from './normalizeArtworkPayload';
 
@@ -20,6 +31,7 @@ export interface ZazaBatchProgress {
   skipped: number;
   failed: number;
   current?: string;
+  lastError?: string;
   message: string;
   running: boolean;
 }
@@ -106,13 +118,10 @@ const ZAZAMASTRO_STEAM64 = '76561198128354791';
 const ZAZAMASTRO_NAMES = ['lozazamastro', 'zazamastro'];
 const API_TIMEOUT_MS = 12000;
 const JSON_TIMEOUT_MS = 6000;
-const DOWNLOAD_TIMEOUT_MS = 22000;
 const STEAM_ARTWORK_TIMEOUT_MS = 10000;
 const APP_TIMEOUT_MS = 30000;
-const ZAZA_APP_TIMEOUT_MS = 65000;
-const ZAZA_PREPARE_CONCURRENCY = 8;
-const STANDARD_PREPARE_CONCURRENCY = 10;
-const BULK_LOOKAHEAD = 20;
+const ZAZA_PREPARE_CONCURRENCY = 1;
+const STANDARD_PREPARE_CONCURRENCY = 2;
 
 const MIN_LOGO_POSITION: LogoPosition = {
   pinnedPosition: 'BottomLeft',
@@ -135,17 +144,17 @@ const endpointForAsset: Record<SGDBAssetType, string> = {
 };
 
 const labelForKind: Record<BatchKind, string> = {
-  squareReplace: 'Cover quadrate',
-  squareMissing: 'Cover quadrate mancanti',
-  portraitReplace: 'Cover verticali',
-  portraitMissing: 'Cover verticali mancanti',
-  perfectHeroReplace: 'Perfect Hero',
-  perfectHeroMissing: 'Perfect Hero mancanti',
-  banner920: 'Banner',
-  missingLogos: 'Loghi',
-  logoFix: 'Fix',
-  resetArtwork: 'Ripristino artwork Steam',
-  fixAll: 'Tutto',
+  squareReplace: t('PA_BATCH_SQUARE_REPLACE', 'Square covers'),
+  squareMissing: t('PA_BATCH_SQUARE_MISSING', 'Missing square covers'),
+  portraitReplace: t('PA_BATCH_PORTRAIT_REPLACE', 'Portrait covers'),
+  portraitMissing: t('PA_BATCH_PORTRAIT_MISSING', 'Missing portrait covers'),
+  perfectHeroReplace: t('PA_BATCH_PERFECT_HERO', 'Perfect Hero'),
+  perfectHeroMissing: t('PA_BATCH_PERFECT_HERO_MISSING', 'Missing Perfect Heroes'),
+  banner920: t('PA_BATCH_BANNERS', 'Banners'),
+  missingLogos: t('PA_BATCH_LOGOS', 'Missing logos'),
+  logoFix: t('PA_BATCH_LOGO_FIX', 'Logo fix'),
+  resetArtwork: t('PA_BATCH_RESTORE', 'Restore Steam artwork'),
+  fixAll: t('PA_BATCH_ALL', 'Everything'),
 };
 
 export type CoverShape = 'square' | 'portrait' | 'hero';
@@ -223,6 +232,18 @@ const phasesForKind = (kind: BatchKind): ProcessableBatchKind[] => (
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const throwIfCancelled = (signal?: AbortSignal) => {
+  if (!signal?.aborted) return;
+  const error = new Error('PA_OPERATION_CANCELLED');
+  error.name = 'AbortError';
+  throw error;
+};
+
+const errorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message || error.name;
+  return String(error || t('PA_FAILED', 'Operation failed.'));
+};
+
 const withTimeout = <T,>(request: Promise<T>, timeoutMs: number, message: string): Promise<T> => {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -255,7 +276,7 @@ const apiRequest = async (url: string): Promise<any[]> => {
     ''
   )).trim();
   if (!apiKey) {
-    throw new Error('Configura la tua chiave API SteamGridDB prima di avviare un completamento automatico.');
+    throw new Error(t('PA_ERROR_API_KEY_AUTOMATION', 'Configure your SteamGridDB API key before starting an automatic artwork operation.'));
   }
   const response = await withTimeout(fetchNoCors(`${SGDB_API_BASE}${url}`, {
     method: 'GET',
@@ -267,10 +288,9 @@ const apiRequest = async (url: string): Promise<any[]> => {
 
   if (response.status === 404) return [];
 
-  const body = await withTimeout(response.json(), JSON_TIMEOUT_MS, 'SteamGridDB risposta timeout');
+  const body = await withTimeout(response.json(), JSON_TIMEOUT_MS, t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.'));
   if (!body?.success) {
-    const message = Array.isArray(body?.errors) ? body.errors.join(', ') : 'SteamGridDB API error';
-    throw new Error(message);
+    throw new Error('PA_ERROR_SGDB_REQUEST');
   }
 
   return body.data ?? [];
@@ -625,7 +645,7 @@ const getZazaHeroMarker = async (appId: number): Promise<ZazaHeroMarker> => {
     return await withTimeout(
       call<[key: string, fallback: ZazaHeroMarker], ZazaHeroMarker>('get_setting', zazaMarkerKey(appId), {}),
       3000,
-      'Lettura marker ZazaMastro timeout'
+      t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
     ) ?? {};
   } catch (error) {
     log('ZazaMastro marker read failed', appId, error);
@@ -638,7 +658,7 @@ const saveZazaHeroMarker = async (appId: number, marker: ZazaHeroMarker) => {
     await withTimeout(
       call<[key: string, value: ZazaHeroMarker], void>('set_setting', zazaMarkerKey(appId), marker),
       3000,
-      'Salvataggio marker ZazaMastro timeout'
+      t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
     );
   } catch (error) {
     log('ZazaMastro marker save failed', appId, error);
@@ -646,11 +666,9 @@ const saveZazaHeroMarker = async (appId: number, marker: ZazaHeroMarker) => {
 };
 
 const downloadAssetPayload = async (url: string): Promise<DownloadedAssetPayload> => {
-  return await withTimeout(
-    call<[url: string], DownloadedAssetPayload>('download_asset_payload', url),
-    DOWNLOAD_TIMEOUT_MS,
-    'Download artwork timeout'
-  );
+  // The backend owns the socket timeout and byte limit. A Promise-race timeout here
+  // used to leave the real download alive while the batch started another one.
+  return await call<[url: string], DownloadedAssetPayload>('download_asset_payload', url);
 };
 
 const applyDownloadedAsset = async (appId: number, assetType: SGDBAssetType, payload: { data: string; format: string; animated?: boolean }) => {
@@ -693,28 +711,20 @@ const PERFECT_HEIGHT = 1240;
 /** The composer's own defaults, so an automatic hero matches a hand-made one. */
 const STANDARD_LOGO = { x: 25, y: 50, scale: 28 };
 
-const loadBitmap = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image();
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('Immagine non caricabile.'));
-  image.src = source;
-});
-
 /** Canvas work needs a `data:` URL; anything else taints it and `toDataURL` throws. */
 const asDataUrl = async (source: string): Promise<string> => {
   if (!source) return '';
-  if (source.startsWith('data:')) return source;
+  if (source.startsWith('data:')) {
+    assertDataUrlSize(source);
+    return source;
+  }
   try {
-    const response = await fetchNoCors(source, { method: 'GET' });
+    const response = await fetchWithCancellation(fetchNoCors as any, source, { method: 'GET' });
     if (!response?.ok) return '';
     const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ''));
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(blob);
-    });
-  } catch (_) {
+    return await blobToSafeDataUrl(blob);
+  } catch (error: any) {
+    if (String(error?.message || '').startsWith('PA_ERROR_')) throw error;
     return '';
   }
 };
@@ -737,72 +747,82 @@ const installedLogoDataUrl = async (appId: number): Promise<string> => {
 const PRISTINE_MAX_WIDTH = 4096;
 
 const boundedSourceData = async (dataUrl: string): Promise<{ data: string; ext: string } | null> => {
+  let image: HTMLImageElement | null = null;
+  let canvas: HTMLCanvasElement | null = null;
   try {
-    const image = await loadBitmap(dataUrl);
+    image = await loadSafeImage(dataUrl);
     if (image.naturalWidth <= PRISTINE_MAX_WIDTH) {
       const payload = dataUrl.split(',', 2)[1] ?? '';
+      assertBase64PayloadSize(payload);
       const ext = /image\/(png|webp|jpe?g)/i.exec(dataUrl)?.[1]?.replace('jpeg', 'jpg') ?? 'jpg';
       return payload ? { data: payload, ext } : null;
     }
     const scale = PRISTINE_MAX_WIDTH / image.naturalWidth;
-    const canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas');
     canvas.width = PRISTINE_MAX_WIDTH;
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext('2d');
     if (!context) return null;
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return { data: canvas.toDataURL('image/jpeg', 0.95).split(',', 2)[1] ?? '', ext: 'jpg' };
+    const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
+    assertBase64PayloadSize(data);
+    return { data, ext: 'jpg' };
   } catch (_) {
     return null;
+  } finally {
+    releaseImage(image);
+    releaseCanvas(canvas);
   }
 };
 
 const composePerfectHero = async (heroSource: string, logoSource: string): Promise<{ data: string; format: 'jpg' }> => {
-  const hero = await loadBitmap(heroSource);
-  const canvas = document.createElement('canvas');
-  canvas.width = PERFECT_WIDTH;
-  canvas.height = PERFECT_HEIGHT;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Compositing non disponibile.');
-
-  context.fillStyle = '#000';
-  context.fillRect(0, 0, PERFECT_WIDTH, PERFECT_HEIGHT);
-
-  // Cover-fit: fill the frame and centre whatever overflows.
-  const ratio = Math.max(PERFECT_WIDTH / hero.naturalWidth, PERFECT_HEIGHT / hero.naturalHeight);
-  const drawWidth = hero.naturalWidth * ratio;
-  const drawHeight = hero.naturalHeight * ratio;
-  context.drawImage(
-    hero,
-    (PERFECT_WIDTH - drawWidth) / 2,
-    (PERFECT_HEIGHT - drawHeight) / 2,
-    drawWidth,
-    drawHeight
-  );
-
-  if (logoSource) {
+  return await withCompositionLock(async () => {
+    let hero: HTMLImageElement | null = null;
+    let logo: HTMLImageElement | null = null;
+    let canvas: HTMLCanvasElement | null = null;
     try {
-      const logo = await loadBitmap(logoSource);
-      const width = (PERFECT_WIDTH * STANDARD_LOGO.scale) / 100;
-      const height = (width * logo.naturalHeight) / logo.naturalWidth;
-      const left = (PERFECT_WIDTH * STANDARD_LOGO.x) / 100 - width / 2;
-      const top = (PERFECT_HEIGHT * STANDARD_LOGO.y) / 100 - height / 2;
-      // A soft drop shadow keeps a light logo readable over a light background.
-      context.save();
-      context.shadowColor = 'rgba(0, 0, 0, 0.55)';
-      context.shadowBlur = Math.round(PERFECT_WIDTH * 0.006);
-      context.shadowOffsetY = Math.round(PERFECT_WIDTH * 0.003);
-      context.drawImage(logo, left, top, width, height);
-      context.restore();
-    } catch (error) {
-      // A hero without its logo is still better than no hero.
-      log('ZazaMastro automatic hero without logo', error);
-    }
-  }
+      hero = await loadSafeImage(heroSource);
+      canvas = document.createElement('canvas');
+      canvas.width = PERFECT_WIDTH;
+      canvas.height = PERFECT_HEIGHT;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error(t('PA_ERROR_COMPOSITING_UNAVAILABLE', 'Image compositing is unavailable.'));
 
-  const data = canvas.toDataURL('image/jpeg', 0.95).split(',', 2)[1] ?? '';
-  if (!data) throw new Error('Composizione vuota.');
-  return { data, format: 'jpg' };
+      context.fillStyle = '#000';
+      context.fillRect(0, 0, PERFECT_WIDTH, PERFECT_HEIGHT);
+      const ratio = Math.max(PERFECT_WIDTH / hero.naturalWidth, PERFECT_HEIGHT / hero.naturalHeight);
+      const drawWidth = hero.naturalWidth * ratio;
+      const drawHeight = hero.naturalHeight * ratio;
+      context.drawImage(hero, (PERFECT_WIDTH - drawWidth) / 2, (PERFECT_HEIGHT - drawHeight) / 2, drawWidth, drawHeight);
+
+      if (logoSource) {
+        try {
+          logo = await loadSafeImage(logoSource);
+          const width = (PERFECT_WIDTH * STANDARD_LOGO.scale) / 100;
+          const height = (width * logo.naturalHeight) / logo.naturalWidth;
+          const left = (PERFECT_WIDTH * STANDARD_LOGO.x) / 100 - width / 2;
+          const top = (PERFECT_HEIGHT * STANDARD_LOGO.y) / 100 - height / 2;
+          context.save();
+          context.shadowColor = 'rgba(0, 0, 0, 0.55)';
+          context.shadowBlur = Math.round(PERFECT_WIDTH * 0.006);
+          context.shadowOffsetY = Math.round(PERFECT_WIDTH * 0.003);
+          context.drawImage(logo, left, top, width, height);
+          context.restore();
+        } catch (error) {
+          log('ZazaMastro automatic hero without logo', error);
+        }
+      }
+
+      const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
+      if (!data) throw new Error(t('PA_ERROR_EMPTY_IMAGE', 'The resulting image is empty.'));
+      assertBase64PayloadSize(data);
+      return { data, format: 'jpg' };
+    } finally {
+      releaseImage(hero);
+      releaseImage(logo);
+      releaseCanvas(canvas);
+    }
+  });
 };
 
 /** The biggest background any enabled source has, in priority order. */
@@ -855,10 +875,10 @@ const prepareAutoPerfectHero = async (
   */
   const hasZazaHero = currentHero.source === 'custom' && currentHero.sha256 && marker.sha256 === currentHero.sha256;
   if (!replace && hasZazaHero) {
-    return { app: rawApp, name, result: 'skipped', isZazaMastro: true, skipReason: 'hero LoZazaMastro già applicato' };
+    return { app: rawApp, name, result: 'skipped', isZazaMastro: true, skipReason: 'LoZazaMastro hero already applied' };
   }
   if (!replace && alreadyPerfect) {
-    return { app: rawApp, name, result: 'skipped', isZazaMastro: false, skipReason: 'Perfect Hero già presente' };
+    return { app: rawApp, name, result: 'skipped', isZazaMastro: false, skipReason: 'Perfect Hero already present' };
   }
 
   const app = await normalizeApp(rawApp);
@@ -882,12 +902,12 @@ const prepareAutoPerfectHero = async (
 
   const hero = await largestHeroFromSources(app, sources);
   if (!hero?.url) {
-    return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'nessuno sfondo disponibile' };
+    return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'no background available' };
   }
 
   const heroData = await asDataUrl(String(hero.url));
   if (!heroData) {
-    return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'sfondo non scaricabile' };
+    return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'background could not be downloaded' };
   }
 
   // The installed logo first; SteamGridDB only if the game has none.
@@ -929,7 +949,7 @@ const applyPreparedHero3840 = async (prepared: PreparedHeroArtwork): Promise<Pro
   if (prepared.result === 'skipped') return 'skipped';
 
   if (prepared.result === 'ready') {
-    if (!prepared.data) throw new Error('Prepared hero artwork is incomplete');
+    if (!prepared.data) throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
     await applyDownloadedAsset(prepared.app.appid, 'hero', { data: prepared.data, format: prepared.format || 'png', animated: prepared.animated });
   }
 
@@ -943,13 +963,13 @@ const applyPreparedHero3840 = async (prepared: PreparedHeroArtwork): Promise<Pro
     await withTimeout(
       call('set_setting', `logo_visible_${prepared.app.appid}`, false),
       3000,
-      'Salvataggio visibilità logo timeout'
+      t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
     );
     // Flagged as a Perfect Hero so the game page offers to undo it.
     await withTimeout(
       call('set_setting', `perfect_hero_${prepared.app.appid}`, true),
       3000,
-      'Salvataggio Perfect Hero timeout'
+      t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
     ).catch(() => undefined);
     if (prepared.isZazaMastro) {
       const appliedHero = await getLocalAssetInfo(prepared.app.appid, 'hero');
@@ -1049,13 +1069,13 @@ const prepareBulkArtwork = async (
     "Apply and replace" ignores all of this and redoes every game of that shape.
   */
   if (cover && !replacesExisting(kind) && local.exists && coverMatchesShape(local, shapeForKind(kind))) {
-    return { app: rawApp, name: label, result: 'skipped', skipReason: 'cover già di questa forma' };
+    return { app: rawApp, name: label, result: 'skipped', skipReason: 'cover already has this shape' };
   }
   if (kind === 'banner920' && local.exists && local.width && local.height && local.width >= 920 && local.height >= 430) {
-    return { app: rawApp, name: label, result: 'skipped', skipReason: 'banner già presente' };
+    return { app: rawApp, name: label, result: 'skipped', skipReason: 'banner already present' };
   }
   if (kind === 'missingLogos' && local.exists && (!local.width || local.width > 1) && (!local.height || local.height > 1)) {
-    return { app: rawApp, name: label, result: 'skipped', skipReason: 'logo già presente' };
+    return { app: rawApp, name: label, result: 'skipped', skipReason: 'logo already present' };
   }
 
   const app = await normalizeApp(rawApp);
@@ -1064,7 +1084,7 @@ const prepareBulkArtwork = async (
   let asset: any = null;
   if (cover) {
     if (sources.length === 0) {
-      return { app, name, result: 'skipped', skipReason: 'nessuna sorgente attiva' };
+      return { app, name, result: 'skipped', skipReason: 'no source enabled' };
     }
     const found = await findCoverForApp(app, shapeForKind(kind), sources);
     asset = found?.asset ?? null;
@@ -1073,7 +1093,7 @@ const prepareBulkArtwork = async (
   }
 
   if (!asset?.url) {
-    return { app, name, result: 'skipped', skipReason: 'nessun artwork trovato' };
+    return { app, name, result: 'skipped', skipReason: 'no artwork found' };
   }
 
   const payload = await downloadAssetPayload(asset.url);
@@ -1091,7 +1111,7 @@ const prepareBulkArtwork = async (
 const applyPreparedBulkArtwork = async (prepared: PreparedBulkArtwork): Promise<ProcessResult> => {
   if (prepared.result === 'skipped') return 'skipped';
   if (!prepared.assetType || !prepared.data) {
-    throw new Error('Prepared bulk artwork is incomplete');
+    throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
   }
 
   await applyDownloadedAsset(prepared.app.appid, prepared.assetType, { data: prepared.data, format: prepared.format || 'png', animated: prepared.animated });
@@ -1117,13 +1137,17 @@ const applyLogoFix = async (appId: number, isVerifiedZazaMastro: boolean): Promi
 export const runZazaMastroBatch = async (
   kind: BatchKind,
   onProgress: (progress: ZazaBatchProgress) => void,
-  requestedSteamWrites = 4
+  requestedSteamWrites = 2,
+  signal?: AbortSignal
 ) => {
-  const steamWriteConcurrency = Math.max(4, Math.min(10, Math.round(requestedSteamWrites || 4)));
+  throwIfCancelled(signal);
+  const steamWriteConcurrency = Math.max(1, Math.min(STANDARD_PREPARE_CONCURRENCY, Math.round(requestedSteamWrites || 1)));
   const apps = await getLibraryApps();
+  throwIfCancelled(signal);
   const phases = phasesForKind(kind);
   const totalSteps = apps.length * phases.length;
   const counters = { changed: 0, skipped: 0, failed: 0 };
+  let lastError: string | undefined;
   log('bulk enumeration', { kind, apps: apps.length, phases, totalSteps, steamWriteConcurrency });
   let verifiedZazaAppids: Set<number> | null = null;
 
@@ -1143,9 +1167,10 @@ export const runZazaMastroBatch = async (
       skipped: counters.skipped,
       failed: counters.failed,
       current,
+      lastError,
       message: running
-        ? `${phaseLabel}${current ?? 'Lettura della libreria'}`
-        : `${labelForKind[kind]}: fatto`,
+        ? `${phaseLabel}${current ?? t('PA_READING_LIBRARY', 'Reading the library')}`
+        : t('PA_BATCH_PHASE_DONE', '{operation}: done').replace('{operation}', labelForKind[kind]),
       running,
     });
   };
@@ -1157,29 +1182,27 @@ export const runZazaMastroBatch = async (
   const heroSources = phases.some(isHeroKind) ? await enabledCoverSources('hero') : [];
   if (heroSources.length) log('bulk hero sources', heroSources);
 
-  emit(0, apps.length ? undefined : 'Nessun gioco trovato', phases[0]);
+  emit(0, apps.length ? undefined : t('PA_NO_GAMES_FOUND', 'No games found'), phases[0]);
 
   let processed = 0;
   for (const phase of phases) {
+    throwIfCancelled(signal);
     if (isHeroKind(phase)) {
       // ZazaMastro discovery has priority; a regular 3840x1240 hero is prepared
       // only as fallback. Network work stays ahead of the Steam writer pool.
       const preparing = new Map<number, Promise<{ prepared?: PreparedHeroArtwork; error?: unknown }>>();
-      const preparationWindow = Math.max(ZAZA_PREPARE_CONCURRENCY, steamWriteConcurrency * 2);
+      const preparationWindow = ZAZA_PREPARE_CONCURRENCY;
       let nextToPrepare = 0;
       let nextToProcess = 0;
 
       const fillPreparationWindow = () => {
+        throwIfCancelled(signal);
         while (nextToPrepare < apps.length && preparing.size < preparationWindow) {
           const prepareIndex = nextToPrepare;
           const app = apps[prepareIndex];
           preparing.set(
             prepareIndex,
-            withTimeout(
-              prepareAutoPerfectHero(app, heroSources, replacesExisting(phase)),
-              ZAZA_APP_TIMEOUT_MS,
-              'Preparazione hero timeout'
-            )
+            prepareAutoPerfectHero(app, heroSources, replacesExisting(phase))
               .then((prepared) => ({ prepared }))
               .catch((error) => ({ error }))
           );
@@ -1191,6 +1214,7 @@ export const runZazaMastroBatch = async (
 
       const worker = async () => {
         while (true) {
+          throwIfCancelled(signal);
           const index = nextToProcess;
           nextToProcess += 1;
           if (index >= apps.length) return;
@@ -1198,15 +1222,18 @@ export const runZazaMastroBatch = async (
           const app = apps[index];
           const current = app.display_name || String(app.appid);
           emit(processed, current, phase);
+          let preparedForRelease: PreparedHeroArtwork | undefined;
 
           try {
             const task = preparing.get(index);
-            if (!task) throw new Error('Hero preparation task missing');
+            if (!task) throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
             const outcome = await task;
+            throwIfCancelled(signal);
             preparing.delete(index);
             fillPreparationWindow();
             if (outcome.error) throw outcome.error;
-            if (!outcome.prepared) throw new Error('Hero preparation returned no result');
+            if (!outcome.prepared) throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
+            preparedForRelease = outcome.prepared;
 
             if (outcome.prepared.result === 'skipped') {
               log('bulk skipped', { phase, appid: app.appid, reason: outcome.prepared.skipReason });
@@ -1215,25 +1242,29 @@ export const runZazaMastroBatch = async (
             const result = await withTimeout(
               applyPreparedHero3840(outcome.prepared),
               APP_TIMEOUT_MS,
-              'Applicazione hero timeout'
+              t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
             );
             counters[result] += 1;
           } catch (error) {
+            if ((error as Error)?.name === 'AbortError') throw error;
             preparing.delete(index);
             fillPreparationWindow();
             counters.failed += 1;
+            lastError = `${current}: ${errorMessage(error)}`;
             log('Artwork hero batch error', app.appid, current, error);
+          } finally {
+            if (preparedForRelease) preparedForRelease.data = undefined;
           }
 
           processed += 1;
           emit(processed, current, phase);
-          await delay(0);
+          await delay(16);
         }
       };
 
       await Promise.all(
         Array.from(
-          { length: Math.min(steamWriteConcurrency, Math.max(1, apps.length)) },
+          { length: Math.min(ZAZA_PREPARE_CONCURRENCY, Math.max(1, apps.length)) },
           () => worker()
         )
       );
@@ -1247,6 +1278,7 @@ export const runZazaMastroBatch = async (
       */
       const types: SGDBAssetType[] = ['grid_p', 'grid_l', 'hero', 'logo', 'icon'];
       for (const app of apps) {
+        throwIfCancelled(signal);
         const name = app.display_name || String(app.appid);
         emit(processed, name, phase);
         let cleared = false;
@@ -1263,6 +1295,7 @@ export const runZazaMastroBatch = async (
           } catch (error) {
             log('reset artwork failed', app.appid, assetType, error);
             counters.failed += 1;
+            lastError = `${name} (${assetType}): ${errorMessage(error)}`;
           }
         }
         if (cleared) {
@@ -1287,17 +1320,18 @@ export const runZazaMastroBatch = async (
 
     if (isCoverKind(phase) || phase === 'banner920' || phase === 'missingLogos') {
       const preparing = new Map<number, Promise<{ prepared?: PreparedBulkArtwork; error?: unknown }>>();
-      const preparationWindow = Math.max(BULK_LOOKAHEAD, STANDARD_PREPARE_CONCURRENCY, steamWriteConcurrency * 2);
+      const preparationWindow = STANDARD_PREPARE_CONCURRENCY;
       let nextToPrepare = 0;
       let nextToProcess = 0;
 
       const fillPreparationWindow = () => {
+        throwIfCancelled(signal);
         while (nextToPrepare < apps.length && preparing.size < preparationWindow) {
           const prepareIndex = nextToPrepare;
           const app = apps[prepareIndex];
           preparing.set(
             prepareIndex,
-            withTimeout(prepareBulkArtwork(phase, app, coverSources), ZAZA_APP_TIMEOUT_MS, 'Preparazione artwork timeout')
+            prepareBulkArtwork(phase, app, coverSources)
               .then((prepared) => ({ prepared }))
               .catch((error) => ({ error }))
           );
@@ -1309,6 +1343,7 @@ export const runZazaMastroBatch = async (
 
       const worker = async () => {
         while (true) {
+          throwIfCancelled(signal);
           const index = nextToProcess;
           nextToProcess += 1;
           if (index >= apps.length) return;
@@ -1316,15 +1351,18 @@ export const runZazaMastroBatch = async (
           const app = apps[index];
           const current = app.display_name || String(app.appid);
           emit(processed, current, phase);
+          let preparedForRelease: PreparedBulkArtwork | undefined;
 
           try {
             const task = preparing.get(index);
-            if (!task) throw new Error('Bulk preparation task missing');
+            if (!task) throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
             const outcome = await task;
+            throwIfCancelled(signal);
             preparing.delete(index);
             fillPreparationWindow();
             if (outcome.error) throw outcome.error;
-            if (!outcome.prepared) throw new Error('Bulk preparation returned no result');
+            if (!outcome.prepared) throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
+            preparedForRelease = outcome.prepared;
 
             if (outcome.prepared.result === 'skipped') {
               log('bulk skipped', { phase, appid: app.appid, reason: outcome.prepared.skipReason });
@@ -1333,25 +1371,29 @@ export const runZazaMastroBatch = async (
             const result = await withTimeout(
               applyPreparedBulkArtwork(outcome.prepared),
               APP_TIMEOUT_MS,
-              'Applicazione artwork timeout'
+              t('PA_ERROR_OPERATION_TIMEOUT', 'The operation took too long.')
             );
             counters[result] += 1;
           } catch (error) {
+            if ((error as Error)?.name === 'AbortError') throw error;
             preparing.delete(index);
             fillPreparationWindow();
             counters.failed += 1;
+            lastError = `${current}: ${errorMessage(error)}`;
             log('Artwork bulk error', phase, app.appid, current, error);
+          } finally {
+            if (preparedForRelease) preparedForRelease.data = undefined;
           }
 
           processed += 1;
           emit(processed, current, phase);
-          await delay(0);
+          await delay(16);
         }
       };
 
       await Promise.all(
         Array.from(
-          { length: Math.min(steamWriteConcurrency, Math.max(1, apps.length)) },
+          { length: Math.min(STANDARD_PREPARE_CONCURRENCY, Math.max(1, apps.length)) },
           () => worker()
         )
       );
@@ -1364,6 +1406,7 @@ export const runZazaMastroBatch = async (
     let nextToProcess = 0;
     const worker = async () => {
       while (true) {
+        throwIfCancelled(signal);
         const index = nextToProcess;
         nextToProcess += 1;
         if (index >= apps.length) return;
@@ -1380,7 +1423,9 @@ export const runZazaMastroBatch = async (
           );
           counters[result] += 1;
         } catch (error) {
+          if ((error as Error)?.name === 'AbortError') throw error;
           counters.failed += 1;
+          lastError = `${current}: ${errorMessage(error)}`;
           log('Artwork logo fix error', app.appid, current, error);
         }
 
@@ -1404,7 +1449,8 @@ export const runZazaMastroBatch = async (
     changed: counters.changed,
     skipped: counters.skipped,
     failed: counters.failed,
-    message: `${labelForKind[kind]} completato`,
+    lastError,
+    message: t('PA_BATCH_COMPLETED', '{operation} completed').replace('{operation}', labelForKind[kind]),
     running: false,
   };
   onProgress(finalProgress);

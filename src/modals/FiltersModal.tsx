@@ -1,3 +1,4 @@
+import t from '../utils/i18n';
 import {
   DialogButton,
   Focusable,
@@ -5,7 +6,7 @@ import {
   showModal,
 } from '@decky/ui';
 import { call } from '@decky/api';
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HiCheck, HiXMark } from 'react-icons/hi2';
 import { MdRefresh } from 'react-icons/md';
 
@@ -137,7 +138,8 @@ const FiltersModal: FC<{
   const [dimensions, setDimensions] = useState<Array<string | number>>(defaultFilters?.dimensions ?? DIMENSIONS[assetType].default);
   const availableProviders = useMemo(() => providersForAsset(assetType), [assetType]);
   const savedProvider = String(defaultFilters?.provider ?? defaultFilters?.providers?.[0] ?? ARTWORK_PROVIDERS.default);
-  const [provider, setProvider] = useState<string>(availableProviders.some((item) => item.value === savedProvider) ? savedProvider : availableProviders[0].value);
+  const fallbackProvider = availableProviders[0]?.value ?? ARTWORK_PROVIDERS.default;
+  const [provider, setProvider] = useState<string>(availableProviders.some((item) => item.value === savedProvider) ? savedProvider : fallbackProvider);
   const [minimumQuality, setMinimumQuality] = useState<string>(defaultFilters?.minimumQuality ?? QUALITY_LEVELS.default);
   const [contentType, setContentType] = useState<string>(defaultFilters?.contentType ?? 'all');
   const [aspectMode, setAspectMode] = useState<string>(defaultFilters?.aspectMode ?? 'both');
@@ -147,20 +149,21 @@ const FiltersModal: FC<{
   const [humor, setHumor] = useState<boolean>(defaultFilters?.humor ?? true);
   const [epilepsy, setEpilepsy] = useState<boolean>(defaultFilters?.epilepsy ?? true);
   const [untagged, setUntagged] = useState<boolean>(defaultFilters?.untagged ?? true);
-  const [selectedGame, setSelectedGame] = useState(defaultSelectedGame);
   /*
-    The store pick is NOT part of the saved filters.
-
-    It used to be, and the filters are saved once per asset type for the whole plugin - so
-    the PlayStation title chosen while scraping Cars was still selected when opening Beast
-    of Reincarnation, and the search happily returned Cars artwork for another game. It now
-    belongs to the app being scraped and is handed in and out on its own.
+    Every scraper owns its own selected title. A SteamGridDB fallback must never become
+    the title searched by IGDB, IGN, Xbox, PlayStation or Nintendo when tabs are changed.
   */
-  const [storeGame, setStoreGameState] = useState<any>(defaultStoreGame);
-  const setStoreGame = useCallback((game: any) => {
-    setStoreGameState(game);
-    onStoreGameChange?.(game);
-  }, [onStoreGameChange]);
+  const [gamesByProvider, setGamesByProvider] = useState<Record<string, any>>(() => {
+    const initial: Record<string, any> = {};
+    for (const candidate of [defaultSelectedGame, defaultStoreGame]) {
+      if (!candidate) continue;
+      const source = String(candidate.provider ?? savedProvider);
+      initial[source] = candidate.provider === source ? candidate : { ...candidate, provider: source };
+    }
+    return initial;
+  });
+  const manuallyClearedProviders = useRef<Set<string>>(new Set());
+  const providerSearchSequence = useRef(0);
 
   const providerConfig = useMemo(() => providerForId(provider), [provider]);
   const storeSearch = Boolean(providerConfig.storeSearch);
@@ -179,7 +182,7 @@ const FiltersModal: FC<{
       return [{
         id: `exact:${provider}:${clean}`,
         name: clean,
-        displayName: `Ricerca esatta “${clean}”`,
+        displayName: t('PA_EXACT_SEARCH', 'Exact search “{name}”').replace('{name}', clean),
         provider,
         exact: true,
       }, ...matches.filter((game: any) => game.name?.toLocaleLowerCase() !== clean.toLocaleLowerCase())];
@@ -187,28 +190,38 @@ const FiltersModal: FC<{
       return providerConfig.exactSearch ? [{
         id: `exact:${provider}:${clean}`,
         name: clean,
-        displayName: `Ricerca esatta “${clean}”`,
+        displayName: t('PA_EXACT_SEARCH', 'Exact search “{name}”').replace('{name}', clean),
         provider,
         exact: true,
       }] : [];
     }
   }, [provider, providerConfig.exactSearch, searchGames, sourceSearch]);
 
-  /* A store pick belongs to the store it came from: switching source starts over. */
-  const providerStoreGame = storeGame?.provider === provider ? storeGame : undefined;
+  const activeGame = gamesByProvider[provider];
+  const originalGameTitle = String(defaultSearchTerm ?? '').trim();
 
-  // Pick the best store match on its own, exactly like the SteamGridDB path does.
-  useEffect(() => {
-    if (!storeSearch || providerStoreGame || !defaultSearchTerm.trim()) return;
-    let active = true;
-    void searchProviderGames(defaultSearchTerm).then((results) => {
-      if (active && results.length > 0) setStoreGame(results[0]);
+  const selectProviderGame = useCallback((game: any) => {
+    manuallyClearedProviders.current.delete(provider);
+    const normalized = game ? { ...game, provider } : undefined;
+    setGamesByProvider((current) => {
+      const next = { ...current };
+      if (normalized) next[provider] = normalized;
+      else delete next[provider];
+      return next;
     });
-    return () => { active = false; };
-  }, [defaultSearchTerm, providerStoreGame, searchProviderGames, setStoreGame, storeSearch]);
+    if (storeSearch) onStoreGameChange?.(normalized);
+  }, [onStoreGameChange, provider, storeSearch]);
 
-  const selectedForProvider = selectedGame?.provider === provider ? selectedGame : undefined;
-  const activeGame = storeSearch ? providerStoreGame : selectedForProvider;
+  const clearProviderGame = useCallback(() => {
+    manuallyClearedProviders.current.add(provider);
+    providerSearchSequence.current += 1;
+    setGamesByProvider((current) => {
+      const next = { ...current };
+      delete next[provider];
+      return next;
+    });
+    if (storeSearch) onStoreGameChange?.(undefined);
+  }, [onStoreGameChange, provider, storeSearch]);
 
   const filters = useMemo(() => ({
     styles,
@@ -244,13 +257,23 @@ const FiltersModal: FC<{
   }, [providerConfig, assetType, qualityOptions, contentOptions, aspectOptions, minimumQuality, contentType, aspectMode]);
 
   useEffect(() => {
-    if (storeSearch || selectedForProvider || !defaultSearchTerm.trim()) return;
+    if (
+      activeGame
+      || manuallyClearedProviders.current.has(provider)
+      || !originalGameTitle
+    ) return;
+    const sequence = ++providerSearchSequence.current;
     let active = true;
-    void searchProviderGames(defaultSearchTerm).then((results) => {
-      if (active && results.length > 0) setSelectedGame(results[0]);
-    });
+    void searchProviderGames(originalGameTitle)
+      .then((results) => {
+        if (!active || sequence !== providerSearchSequence.current || results.length === 0) return;
+        const normalized = { ...results[0], provider };
+        setGamesByProvider((current) => ({ ...current, [provider]: normalized }));
+        if (storeSearch) onStoreGameChange?.(normalized);
+      })
+      .catch(() => undefined);
     return () => { active = false; };
-  }, [defaultSearchTerm, searchProviderGames, selectedForProvider, storeSearch]);
+  }, [activeGame, onStoreGameChange, originalGameTitle, provider, searchProviderGames, storeSearch]);
 
   const handleClose = useCallback(() => {
     onSave(assetType, filters, activeGame);
@@ -258,10 +281,11 @@ const FiltersModal: FC<{
   }, [activeGame, assetType, closeModal, filters, onSave]);
 
   const resetFilters = () => {
+    manuallyClearedProviders.current.clear();
     setStyles(STYLES[assetType].default);
     setMimes(MIMES[assetType].default);
     setDimensions(DIMENSIONS[assetType].default);
-    setProvider(availableProviders.some((item) => item.value === ARTWORK_PROVIDERS.default) ? ARTWORK_PROVIDERS.default : availableProviders[0].value);
+    setProvider(availableProviders.some((item) => item.value === ARTWORK_PROVIDERS.default) ? ARTWORK_PROVIDERS.default : fallbackProvider);
     setMinimumQuality(QUALITY_LEVELS.default);
     setContentType('all');
     setAspectMode('both');
@@ -281,20 +305,20 @@ const FiltersModal: FC<{
       flow-children="vertical"
       onCancel={handleClose}
       onCancelButton={handleClose}
-      onCancelActionDescription="Applica e chiudi"
+      onCancelActionDescription={t('PA_APPLY_CLOSE', "Apply and close")}
     >
       {/* Clicking anywhere outside the panel applies and closes, like every other panel. */}
       <div className="pa-editor-backdrop" onClick={handleClose} />
 
       <div className="pa-filters-shell">
         <div className="pa-editor-head">
-          <strong>Filtri · {ASSET_TAB_LABEL[assetType] ?? assetType}</strong>
+          <strong>{t('LABEL_FILTER_MODAL_TITLE', '{assetType} Filter').replace('{assetType}', ASSET_TAB_LABEL[assetType] ?? assetType)}</strong>
           <span>{providerConfig.description}</span>
         </div>
 
         <Focusable className="pa-filters-scroll" flow-children="vertical">
           <div className="pa-filter-block">
-            <div className="pa-filter-block-head"><strong>Sorgente</strong></div>
+            <div className="pa-filter-block-head"><strong>{t('PA_SOURCE', "Source")}</strong></div>
             <Focusable className="pa-filter-choices" flow-children="grid">
               {availableProviders.map((item) => (
                 <DialogButton
@@ -310,9 +334,9 @@ const FiltersModal: FC<{
 
           <div className="pa-filter-block">
             <div className="pa-filter-block-head">
-              <strong>Gioco</strong>
+              <strong>{t('LABEL_FILTER_GAME', 'Game')}</strong>
               <span>
-                I suggerimenti arrivano da {providerConfig.label}. Cambia il titolo se i risultati non corrispondono.
+                {t('PA_GAME_SUGGESTIONS_DESC', 'Suggestions come from {source}. Change the title if the results do not match.').replace('{source}', providerConfig.label)}
               </span>
             </div>
             <Focusable className="pa-filter-game" flow-children="horizontal">
@@ -320,18 +344,18 @@ const FiltersModal: FC<{
                 className="pa-filter-game-value"
                 onClick={() => showModal(
                   <GameSelectionModal
-                    defaultTerm={activeGame?.name || defaultSearchTerm}
+                    defaultTerm={activeGame?.name || originalGameTitle}
                     searchGames={searchProviderGames}
-                    onSelect={(game: any) => (storeSearch ? setStoreGame(game) : setSelectedGame(game))}
+                    onSelect={selectProviderGame}
                   />
                 )}
               >
-                <Marquee>{activeGame?.name || defaultSearchTerm || 'Cerca un gioco…'}</Marquee>
+                <Marquee>{activeGame?.name || originalGameTitle || t('PA_SEARCH_GAME', 'Search for a game…')}</Marquee>
               </DialogButton>
               {Boolean(activeGame && !isNonsteam) && (
                 <DialogButton
                   className="pa-filter-game-clear"
-                  onClick={() => (storeSearch ? setStoreGame(undefined) : setSelectedGame(undefined))}
+                  onClick={clearProviderGame}
                 >
                   <HiXMark strokeWidth={1.5} />
                 </DialogButton>
@@ -341,8 +365,8 @@ const FiltersModal: FC<{
 
           {isSgdb && DIMENSIONS[assetType].options.length > 0 && (
             <CheckRow
-              label="Risoluzioni"
-              description="Solo gli artwork con queste dimensioni esatte."
+              label={t('LABEL_FILTER_DIMENSIONS', 'Dimensions')}
+              description={t('PA_EXACT_DIMENSIONS_DESC', 'Only artwork with these exact dimensions.')}
               options={DIMENSIONS[assetType].options as Option[]}
               selected={dimensions}
               onChange={setDimensions}
@@ -351,8 +375,8 @@ const FiltersModal: FC<{
 
           {aspectOptions.length > 0 && (
             <ChoiceRow
-              label="Forma della cover"
-              description="Tiene solo le immagini adatte alla libreria che vuoi costruire."
+              label={t('PA_COVER_SHAPE', "Cover shape")}
+              description={t('PA_COVER_SHAPE_DESC', 'Only keep images that match the library layout you want.')}
               options={aspectOptions}
               selected={aspectMode}
               onChange={setAspectMode}
@@ -361,8 +385,8 @@ const FiltersModal: FC<{
 
           {contentOptions.length > 0 && (
             <ChoiceRow
-              label="Contenuto"
-              description="Immagini promozionali pulite oppure screenshot di gioco."
+              label={t('PA_CONTENT', 'Content')}
+              description={t('PA_CONTENT_DESC', 'Clean promotional artwork or in-game screenshots.')}
               options={contentOptions}
               selected={contentType}
               onChange={setContentType}
@@ -371,7 +395,7 @@ const FiltersModal: FC<{
 
           {qualityOptions.length > 0 && (
             <ChoiceRow
-              label="Risoluzione minima"
+              label={t('PA_MIN_RESOLUTION', 'Minimum resolution')}
               description={qualityFilterDescription(assetType)}
               options={qualityOptions}
               selected={minimumQuality}
@@ -381,7 +405,7 @@ const FiltersModal: FC<{
 
           {isSgdb && (
             <CheckRow
-              label="Stili"
+              label={t('LABEL_FILTER_STYLES', 'Styles')}
               options={STYLES[assetType].options as Option[]}
               selected={styles}
               onChange={setStyles}
@@ -390,7 +414,7 @@ const FiltersModal: FC<{
 
           {providerConfig.fileTypes && (
             <CheckRow
-              label="Formati file"
+              label={t('LABEL_FILTER_FILE_TYPES', 'File Types')}
               options={MIMES[assetType].options as Option[]}
               selected={mimes}
               onChange={setMimes}
@@ -399,22 +423,22 @@ const FiltersModal: FC<{
 
           {isSgdb && (
             <ToggleRow
-              label="Tipo"
+              label={t('LABEL_FILTER_ANIMATION_TYPE_TITLE', 'Types')}
               items={[
-                { label: 'Statici', value: _static, onChange: (next) => (!animated && !next ? (setAnimated(true), setStatic(false)) : setStatic(next)) },
-                { label: 'Animati', value: animated, onChange: (next) => (!_static && !next ? (setStatic(true), setAnimated(false)) : setAnimated(next)) },
+                { label: t('LABEL_FILTER_TYPE_STATIC', 'Static'), value: _static, onChange: (next) => (!animated && !next ? (setAnimated(true), setStatic(false)) : setStatic(next)) },
+                { label: t('LABEL_FILTER_TYPE_ANIMATED', 'Animated'), value: animated, onChange: (next) => (!_static && !next ? (setStatic(true), setAnimated(false)) : setAnimated(next)) },
               ]}
             />
           )}
 
           {isSgdb && (
             <ToggleRow
-              label="Tag"
+              label={t('LABEL_FILTER_TAGS_TITLE', 'Tags')}
               items={[
-                { label: 'Contenuto adulto', value: adult, onChange: setAdult },
-                { label: 'Umorismo', value: humor, onChange: setHumor },
-                { label: 'Epilessia', value: epilepsy, onChange: setEpilepsy },
-                { label: 'Senza tag', value: untagged, onChange: setUntagged },
+                { label: t('LABEL_FILTER_TAG_NSFW', 'Adult Content'), value: adult, onChange: setAdult },
+                { label: t('LABEL_FILTER_TAG_HUMOR', 'Humor'), value: humor, onChange: setHumor },
+                { label: t('LABEL_FILTER_TAG_EPILEPSY', 'Epilepsy'), value: epilepsy, onChange: setEpilepsy },
+                { label: t('LABEL_FILTER_TAG_UNTAGGED', 'Untagged'), value: untagged, onChange: setUntagged },
               ]}
             />
           )}
@@ -423,7 +447,7 @@ const FiltersModal: FC<{
         {/* No apply button: filters are live and B closes the panel. */}
         {dirty && (
           <Focusable className="pa-filters-footer" flow-children="horizontal">
-            <DialogButton onClick={resetFilters}><MdRefresh /><span>Reimposta i filtri</span></DialogButton>
+            <DialogButton onClick={resetFilters}><MdRefresh /><span>{t('ACTION_FILTER_RESET', 'Reset Filters')}</span></DialogButton>
           </Focusable>
         )}
       </div>

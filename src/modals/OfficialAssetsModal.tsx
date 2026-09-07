@@ -183,7 +183,7 @@ const OfficialAssetsModal: FC<{
       flow-children="vertical"
       onCancel={close}
       onCancelButton={close}
-      onCancelActionDescription="Chiudi"
+      onCancelActionDescription={t('PA_CLOSE', "Close")}
     >
       <div className="pa-details-backdrop" onClick={close} />
 
@@ -191,14 +191,14 @@ const OfficialAssetsModal: FC<{
         The panel is a Focusable column, not a plain div.
 
         With a plain div between them, the language pills and the apply button were two
-        unrelated focus islands: pressing down on a language did not reach "Scarica e
-        applica", and pressing up from the button did not reach the languages. Every menu
+        unrelated focus islands: pressing down on a language did not reach "Download and
+        apply", and pressing up from the button did not reach the languages. Every menu
         in this plugin has to navigate in all four directions, so the column that owns
         both of them says so.
       */}
       <Focusable className="pa-details-panel" flow-children="vertical">
         <div className="pa-details-head">
-          <strong>Artwork ufficiale Steam</strong>
+          <strong>{t('PA_OFFICIAL_STEAM_ARTWORK', 'Official Steam artwork')}</strong>
         </div>
 
         <div className={`pa-details-preview type-${assetType}`}>
@@ -211,12 +211,12 @@ const OfficialAssetsModal: FC<{
 
         <Focusable className="pa-details-body" flow-children="vertical">
           <dl className="pa-details-meta">
-            <div><dt>Sorgente</dt><dd>Steam</dd></div>
+            <div><dt>{t('PA_SOURCE', "Source")}</dt><dd>Steam</dd></div>
             <div>
-              <dt>Dimensioni</dt>
-              <dd>{current.width > 0 ? `${current.width} × ${current.height}` : 'variabili'}</dd>
+              <dt>{t('PA_DIMENSIONS', "Dimensions")}</dt>
+              <dd>{current.width > 0 ? `${current.width} × ${current.height}` : t('PA_VARIABLE', 'Variable')}</dd>
             </div>
-            <div><dt>Lingua</dt><dd>{SteamLang(current.language, 'api', 'native') || current.language}</dd></div>
+            <div><dt>{t('LanguageTitle', 'Language', true)}</dt><dd>{SteamLang(current.language, 'api', 'native') || current.language}</dd></div>
           </dl>
 
           {/* An official asset often exists in several languages. */}
@@ -249,10 +249,10 @@ const OfficialAssetsModal: FC<{
           disabled={applying}
           onClick={() => void apply()}
           onOKActionDescription={applyLabel}
-          onCancelActionDescription="Chiudi"
+          onCancelActionDescription={t('PA_CLOSE', "Close")}
         >
           <HiArrowDownTray />
-          <span>{applying ? 'Download in corso…' : 'Scarica e applica'}</span>
+          <span>{applying ? t('PA_DOWNLOADING', "Downloading…") : t('PA_DOWNLOAD_APPLY', "Download and apply")}</span>
         </DialogButton>
       </Focusable>
     </Focusable>

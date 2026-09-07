@@ -14,6 +14,7 @@ import { attachHomeCarousel, homeUsesRouteScope, updateHomeRoute } from './patch
 import { guardAfterRoute, startLayoutGuard, stopLayoutGuard } from './patches/layoutGuard';
 import log from './utils/log';
 import { steamHref, steamPath } from './utils/steamRoute';
+import { cancelBulkArtworkJob } from './utils/bulkJobStore';
 
 const ROUTE = '/playhub-artworks/:appid/:assetType?';
 const RUNTIME_CLEANUP = '__playhubArtworksRuntimeCleanup';
@@ -118,7 +119,7 @@ export default definePlugin(() => {
   try {
     applyCachedLayout();
   } catch (error) {
-    log('layout da cache saltato', error);
+    log('cached layout skipped', error);
   }
 
   void (async () => {
@@ -139,6 +140,7 @@ export default definePlugin(() => {
     if (cleaned) return;
     cleaned = true;
     log('plugin dismounted');
+    cancelBulkArtworkJob();
     window.clearInterval(routeWatcher);
     stopLayoutGuard();
     window.removeEventListener('error', onError);

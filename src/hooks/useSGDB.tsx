@@ -11,6 +11,7 @@ import {
 import { call, fetchNoCors } from '@decky/api';
 
 import getAppOverview from '../utils/getAppOverview';
+import t from '../utils/i18n';
 import log from '../utils/log';
 import {
   ARTWORK_PROVIDERS, ASSET_TYPE, MIMES, STYLES, DIMENSIONS, providerForId, coverShapesForProvider,
@@ -176,7 +177,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const apiKey = await readApiKey();
     setApiConfigured(Boolean(apiKey));
     if (!apiKey) {
-      throw new Error('Inserisci la tua chiave API SteamGridDB nelle impostazioni di Playhub Artworks.');
+      throw new Error(t('PA_ERROR_API_KEY_SETTINGS', 'Enter your SteamGridDB API key in Playhub Artworks settings.'));
     }
 
     /*
@@ -197,12 +198,12 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     } catch (error: any) {
       if (error?.name === 'AbortError') throw error;
       log('sgdb request failed', { url, message: error?.message, stack: error?.stack });
-      throw new Error('SteamGridDB non raggiungibile. Controlla la connessione.');
+      throw new Error(t('PA_ERROR_SGDB_UNREACHABLE', 'SteamGridDB could not be reached. Check your connection.'));
     }
 
     if (!res) {
       log('sgdb request returned nothing', { url });
-      throw new Error('SteamGridDB non ha risposto.');
+      throw new Error(t('PA_ERROR_SGDB_NO_RESPONSE', 'SteamGridDB did not respond.'));
     }
 
     let assetRes: any;
@@ -215,14 +216,14 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
     } catch (error: any) {
       log('sgdb response unreadable', { url, status: res.status, message: error?.message, stack: error?.stack });
-      throw new Error('Risposta di SteamGridDB non leggibile.');
+      throw new Error(t('PA_ERROR_SGDB_UNREADABLE', 'The SteamGridDB response could not be read.'));
     }
 
     const ok = typeof res.ok === 'boolean' ? res.ok : (Number(res.status ?? 200) < 400);
     if (!ok || !assetRes?.success) {
       const message = Array.isArray(assetRes?.errors) && assetRes.errors.length > 0
         ? assetRes.errors.join(', ')
-        : `Richiesta SteamGridDB non riuscita${res.status ? ` (${res.status})` : ''}.`;
+        : t('PA_ERROR_SGDB_REQUEST', 'SteamGridDB request failed{status}.').replace('{status}', res.status ? ` (${res.status})` : '');
       const apiErr = new Error(message);
       (apiErr as any).status = res.status;
       throw apiErr;
@@ -304,7 +305,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       } else {
         const data = await getImageAsB64(url, path, reportProgress);
         if (!data) {
-          throw new Error('Failed to retrieve asset');
+          throw new Error(t('PA_ERROR_RETRIEVE_ASSET', 'The artwork could not be retrieved.'));
         }
         reportProgress(86);
         const normalized = await normalizeArtworkPayload(data);
@@ -418,9 +419,9 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
         */
         log('provider search', {
           provider,
-          titolo: storeTitle || gameName || appOverview?.display_name || '',
-          storePick: storePick ? `${storePick.name} (${storePick.id})` : 'nessuna, usa il nome del gioco',
-          forme: [wantsPortrait ? 'verticali' : '', wantsSquare ? 'quadrate' : ''].filter(Boolean).join('+'),
+          title: storeTitle || gameName || appOverview?.display_name || '',
+          storePick: storePick ? `${storePick.name} (${storePick.id})` : 'none; using the game title',
+          shapes: [wantsPortrait ? 'portrait' : '', wantsSquare ? 'square' : ''].filter(Boolean).join('+'),
         });
         if (wantsPortrait) jobs.push(providerSearch(false));
         if (wantsSquare) jobs.push(providerSearch(true));

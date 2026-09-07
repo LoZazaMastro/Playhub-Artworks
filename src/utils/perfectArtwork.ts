@@ -6,9 +6,23 @@ export type PerfectTarget = 'hero' | 'grid_l';
 
 const key = (appId: number, target: PerfectTarget) => `perfect_${target}_${appId}`;
 
+const withTimeout = async <T>(operation: Promise<T>, timeout = 4000): Promise<T> => {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_resolve, reject) => {
+        timer = window.setTimeout(() => reject(new Error('PA_ERROR_OPERATION_TIMEOUT')), timeout);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) window.clearTimeout(timer);
+  }
+};
+
 const safeCall = async <T>(fallback: T, method: string, ...args: any[]): Promise<T> => {
   try {
-    return await call<any, T>(method, ...args);
+    return await withTimeout(call<any, T>(method, ...args));
   } catch (_) {
     return fallback;
   }
@@ -32,13 +46,14 @@ export const isPerfectArtwork = async (appId: number, target: PerfectTarget): Pr
  * switched off to avoid showing it twice.
  */
 export const markPerfectArtwork = async (appId: number, target: PerfectTarget, withLogo: boolean) => {
-  await safeCall(false, 'set_setting', key(appId, target), true);
   /*
-    The composition carries the logo, so Steam's own logo layer goes down to the smallest
-    size it accepts. This used to be limited to the hero; a Perfect Banner showed the logo
-    twice.
+    Hide Steam's separate layer before marking the operation complete. The old order could
+    remain forever on a stalled settings write and never reach `hideLogo`, even though the
+    composed hero had already been applied.
   */
-  if (withLogo) await hideLogo(appId);
+  const logoHidden = withLogo ? await hideLogo(appId) : false;
+  await safeCall(false, 'set_setting', key(appId, target), true);
+  return logoHidden;
 };
 
 /** Back to Steam's own artwork plus the separate logo. */

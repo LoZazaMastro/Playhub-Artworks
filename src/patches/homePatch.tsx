@@ -172,7 +172,7 @@ const restoreColumnWidth = () => {
   try {
     props.fnGetColumnWidth = props[ORIGINAL_WIDTH_KEY];
     delete props.__playhubGeneration;
-    log('home: larghezza di colonna ripristinata');
+    log('home: column width restored');
   } catch (_) {
     // Steam dropped the object; nothing to restore.
   }
@@ -196,7 +196,7 @@ const releaseCarouselPatches = () => {
     settings changes, and handlers installed by earlier applications of this patch are still
     attached to Steam's component types, so they re-added the object to the fresh set before
     the current handler ever saw it. The result was that every change of setting reported
-    "carosello gia patchato, salto" and nothing was ever applied again. A generation stamped
+    "carousel already patched, skip" and nothing was ever applied again. A generation stamped
     ON the object cannot be confused: an older stamp means re-patch.
   */
   store.generation += 1;
@@ -326,7 +326,7 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
       (node: any) => node?.nItemHeight && node?.fnItemRenderer && node?.fnGetColumnWidth
     );
     if (!carouselProps) {
-      (window as any).__playhubHomeDiag = { installata: false, motivo: 'carosello non trovato' };
+      (window as any).__playhubHomeDiag = { installed: false, reason: 'carousel not found' };
       return;
     }
 
@@ -354,8 +354,8 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
     };
 
     (window as any).__playhubHomeDiag = {
-      installata: true,
-      larghezzaColonna: capsuleHeight,
+      installed: true,
+      columnWidth: capsuleHeight,
       generazione: store.generation,
     };
   };
@@ -381,7 +381,7 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
   /*
     And the same treatment for every OTHER cover carousel on the Home.
 
-    "Gioca ad un titolo della tua libreria" in the Consigliati tab is built from the same
+    "Play a title from your library" in the Consigliati tab is built from the same
     component as the recents row, so its covers were square inside portrait slots and ended
     up crammed together. This patches the method all carousels share and picks its targets
     by shape, so the shelves get square slots without a second tree descent.
@@ -404,7 +404,7 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
       try {
         afterPatch(props.children, 'type', descend);
       } catch (error: any) {
-        (window as any).__playhubHomeDiag = { installata: false, motivo: String(error?.message ?? error) };
+        (window as any).__playhubHomeDiag = { installed: false, reason: String(error?.message ?? error) };
       }
       return props;
     });

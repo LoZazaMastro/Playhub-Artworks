@@ -3,7 +3,7 @@ import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { HiArrowDownTray } from 'react-icons/hi2';
 
 import t from '../utils/i18n';
-import { SGDB_ASSET_TYPE_READABLE, SGDB_MIME_MAP, providerLabel } from '../constants';
+import { SGDB_ASSET_TYPE_READABLE, SGDB_MIME_MAP, providerLabel, styleLabel } from '../constants';
 
 /**
  * Full-height panel shown over the whole page.
@@ -70,14 +70,14 @@ const AssetDetailsModal: FC<{
       flow-children="vertical"
       onCancel={close}
       onCancelButton={close}
-      onCancelActionDescription="Chiudi"
+      onCancelActionDescription={t('PA_CLOSE', "Close")}
     >
       {/* Clicking anywhere outside the panel closes it. */}
       <div className="pa-details-backdrop" onClick={close} />
 
       <div className="pa-details-panel">
         <div className="pa-details-head">
-          <strong>Dettagli artwork</strong>
+          <strong>{t('PA_ART_DETAILS', "Artwork details")}</strong>
         </div>
 
         <div className={`pa-details-preview type-${assetType}`}>
@@ -86,11 +86,11 @@ const AssetDetailsModal: FC<{
 
         <div className="pa-details-body">
           <dl className="pa-details-meta">
-            <div><dt>Sorgente</dt><dd>{providerLabel(asset.provider) || asset.source || 'SteamGridDB'}</dd></div>
-            <div><dt>Dimensioni</dt><dd>{asset.width > 0 ? `${asset.width} × ${asset.height}` : 'non dichiarate'}</dd></div>
-            <div><dt>Formato</dt><dd>{SGDB_MIME_MAP[asset.mime] || String(asset.mime ?? '-').replace('image/', '').toUpperCase()}</dd></div>
-            {asset.style && <div><dt>Stile</dt><dd>{String(asset.style).replace(/_/g, ' ')}</dd></div>}
-            {asset.author?.name && <div><dt>Autore</dt><dd>{asset.author.name}</dd></div>}
+            <div><dt>{t('PA_SOURCE', "Source")}</dt><dd>{providerLabel(asset.provider) || asset.source || 'SteamGridDB'}</dd></div>
+            <div><dt>{t('PA_DIMENSIONS', "Dimensions")}</dt><dd>{asset.width > 0 ? `${asset.width} × ${asset.height}` : t('PA_DIMENSIONS_UNDECLARED', 'Dimensions not specified')}</dd></div>
+            <div><dt>{t('PA_FORMAT', "Format")}</dt><dd>{SGDB_MIME_MAP[asset.mime] || String(asset.mime ?? '-').replace('image/', '').toUpperCase()}</dd></div>
+            {asset.style && <div><dt>{t('PA_STYLE', "Style")}</dt><dd>{styleLabel(asset.style)}</dd></div>}
+            {asset.author?.name && <div><dt>{t('PA_AUTHOR', "Author")}</dt><dd>{asset.author.name}</dd></div>}
           </dl>
 
           {/*
@@ -101,7 +101,7 @@ const AssetDetailsModal: FC<{
           */}
           {plainNotes && (
             <div className="pa-details-notes">
-              <span className="pa-details-notes-label">Note</span>
+              <span className="pa-details-notes-label">{t('PA_NOTES', "Notes")}</span>
               <p>{plainNotes}</p>
             </div>
           )}
@@ -113,10 +113,10 @@ const AssetDetailsModal: FC<{
           disabled={applying}
           onClick={() => void apply()}
           onOKActionDescription={applyLabel}
-          onCancelActionDescription="Chiudi"
+          onCancelActionDescription={t('PA_CLOSE', "Close")}
         >
           <HiArrowDownTray />
-          <span>{applying ? 'Download in corso…' : 'Scarica e applica'}</span>
+          <span>{applying ? t('PA_DOWNLOADING', "Downloading…") : t('PA_DOWNLOAD_APPLY', "Download and apply")}</span>
         </DialogButton>
       </div>
     </Focusable>

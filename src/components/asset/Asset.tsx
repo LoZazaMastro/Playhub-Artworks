@@ -37,7 +37,7 @@ const assetCredit = (provider?: string, author?: string) => {
   const source = provider ? providerLabel(provider) : '';
   const name = String(author ?? '').trim();
   if (source && name && name.toLowerCase() !== source.toLowerCase()) return `${source} · ${name}`;
-  return source || name || 'Artwork';
+  return source || name || t('PA_ARTWORK', "Artwork");
 };
 
 const Asset: FC<AssetProps> = ({
@@ -108,11 +108,11 @@ const Asset: FC<AssetProps> = ({
       />
     </Focusable>
     <div className="asset-facts">
-      <span>{width > 0 && height > 0 ? `${width} × ${height}` : 'Dimensioni non dichiarate'}</span>
+      <span>{width > 0 && height > 0 ? `${width} × ${height}` : t('PA_DIMENSIONS_UNDECLARED', 'Dimensions not specified')}</span>
       <span>{assetCredit(provider, author?.name)}</span>
     </div>
     {(isDownloading || downloadProgress !== undefined) && (
-      <div className={joinClassNames('asset-download-progress', downloadStatus, downloadProgress === undefined ? 'indeterminate' : '')} aria-label="Avanzamento download">
+      <div className={joinClassNames('asset-download-progress', downloadStatus, downloadProgress === undefined ? 'indeterminate' : '')} aria-label={t('PA_DOWNLOAD_PROGRESS', 'Download progress')}>
         <div style={downloadProgress === undefined ? undefined : { width: `${Math.max(2, Math.min(100, downloadProgress))}%` }} />
       </div>
     )}

@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+import t, { localizeError } from './i18n';
+
 export type ArtworkJobStatus = 'running' | 'success' | 'error';
 
 export interface ArtworkJob {
@@ -55,7 +57,7 @@ export const runArtworkJob = async <T>(
   const existing = runningTargets.get(targetKey);
   if (existing) {
     if (existing.key === key) return await existing.promise;
-    throw new Error('Attendi il completamento dell’artwork già in applicazione.');
+    throw new Error(t('PA_ERROR_WAIT_ARTWORK_JOB', 'Wait for the current artwork operation to finish.'));
   }
 
   jobs.set(key, { key, targetKey, appId, assetType, identity, progress: 5, status: 'running' });
@@ -78,7 +80,7 @@ export const runArtworkJob = async <T>(
       removeLater(key, 3500);
       return result;
     } catch (error: any) {
-      update(key, { progress: 100, status: 'error', error: error?.message ?? String(error) });
+      update(key, { progress: 100, status: 'error', error: localizeError(error) });
       removeLater(key, 6000);
       throw error;
     } finally {

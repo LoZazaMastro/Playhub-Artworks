@@ -218,7 +218,7 @@ const watchLibraryRoute = () => {
       readRoute();
       if (!routePatchSeen) {
         routePatchSeen = true;
-        log('square library: route patch attivo');
+        log('square library: route patch active');
       }
       return props;
     });
@@ -269,7 +269,7 @@ const patchPrototype = (prototype: GridPrototype): boolean => {
         */
         if (inLibrary !== lastDecision) {
           lastDecision = inLibrary;
-          log('square library: decisione altezza', { quadrata: inLibrary, path: steamPath() });
+          log('square library: height decision', { square: inLibrary, path: steamPath() });
         }
         if (inLibrary) return this.props.childWidth * this.props.scaleGridItems;
       }
@@ -439,7 +439,7 @@ export const remeasureGrids = () => {
       timed, so a stutter can be attributed to it instead of guessed at.
     */
     const started = performance.now();
-    markWork('rimisurazione griglie');
+    markWork('grid remeasurement');
     const grids = mountedGrids(view);
     grids.forEach((grid) => {
       try {
@@ -452,7 +452,7 @@ export const remeasureGrids = () => {
     markWork('');
     const spent = Math.round(performance.now() - started);
     if (grids.length) log('square library: grids remeasured', { count: grids.length, ms: spent });
-    if (spent > 24) log('square library: rimisurazione LENTA', { count: grids.length, ms: spent });
+    if (spent > 24) log('square library: SLOW remeasurement', { count: grids.length, ms: spent });
   } catch (error) {
     log('square library: remeasure failed', error);
   }

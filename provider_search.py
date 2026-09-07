@@ -12,10 +12,10 @@ from urllib.parse import parse_qs, quote, unquote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.0'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.1'
 
 PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'google': {'label': 'Collegamento diretto', 'hosts': ()},
+    'google': {'label': 'URL', 'hosts': ()},
     'playstation': {'label': 'PlayStation', 'hosts': ('image.api.playstation.com',)},
     'igdb': {'label': 'IGDB', 'hosts': ('images.igdb.com',)},
     'alphacoders': {'label': 'AlphaCoders', 'hosts': ('images.alphacoders.com', 'images2.alphacoders.com', 'images3.alphacoders.com', 'images4.alphacoders.com')},
@@ -52,7 +52,7 @@ def _google_url(query: str) -> str:
         'q': query,
         'udm': '2',
         'safe': 'active',
-        'hl': 'it',
+        'hl': 'en',
         'client': 'firefox-b-d',
     })
 
@@ -61,7 +61,7 @@ def _fetch_html(url: str, timeout: int = 12) -> str:
     request = Request(url, headers={
         'User-Agent': USER_AGENT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.7,en;q=0.6',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+410; SOCS=CAESHAgBEhIaAB',
     })
     with urlopen(request, timeout=timeout) as response:
@@ -258,7 +258,7 @@ def _result(provider: str, url: str, width: int, height: int, mime: str, label: 
         'author': {'name': source},
         'provider': provider,
         'source': source,
-        'notes': f'{label or source} · {width}×{height}',
+        'notes': '',
         'humor': False,
         'epilepsy': False,
         'nsfw': False,
@@ -469,7 +469,7 @@ def _search_nintendo(title: str, asset_type: str, limit: int, product_id: str = 
         square = str(hit.get('productImageSquare') or '')
         if square:
             square = square.replace('/f_auto/', '/f_jpg/')
-            candidates.append((square, 1024, 1024, 'Nintendo cover quadrata'))
+            candidates.append((square, 1024, 1024, 'Nintendo square cover'))
     else:
         product_image = str(hit.get('productImage') or '')
         if product_image:
@@ -970,18 +970,18 @@ def inspect_remote_artwork(url: str, asset_type: str, aspect_mode: str = 'portra
     direct_url = _decode_url(url)
     parsed = urlparse(direct_url)
     if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
-        raise ValueError('Inserisci l’indirizzo diretto di un’immagine HTTP o HTTPS.')
+        raise ValueError('PA_ERROR_DIRECT_IMAGE_URL')
     info = _remote_image_info(direct_url)
     if not info:
-        raise ValueError('Il collegamento non contiene un’immagine valida o il sito ne impedisce il download.')
+        raise ValueError('PA_ERROR_INVALID_IMAGE_LINK')
     width, height, mime = info
     if not _matches_aspect_mode(width, height, asset_type, aspect_mode):
-        raise ValueError('L’immagine non ha proporzioni adatte a questa scheda.')
+        raise ValueError('PA_ERROR_WRONG_ASPECT')
     square_only = asset_type == 'grid_p' and str(aspect_mode).lower() == 'square'
     if not _meets_quality(width, height, asset_type, square_only, minimum_quality):
-        raise ValueError('L’immagine è più piccola della qualità minima selezionata.')
+        raise ValueError('PA_ERROR_IMAGE_TOO_SMALL')
     if not _mime_allowed(mime, mimes):
-        raise ValueError('Il formato dell’immagine è escluso dai filtri correnti.')
+        raise ValueError('PA_ERROR_FORMAT_FILTERED')
     return _result('google', direct_url, width, height, mime, 'Google')
 
 

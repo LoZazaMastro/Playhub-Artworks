@@ -78,11 +78,11 @@ const capsules = (view: Window, scope: string): Element[] => {
 export const verifyLayout = (): { verdict: Verdict; detail: string } => {
   try {
     const view = findSP()?.window;
-    if (!view) return { verdict: 'unknown', detail: 'nessuna finestra' };
+    if (!view) return { verdict: 'unknown', detail: 'no window' };
 
     const path = steamPath();
     if (isCollectionsOverview(path)) {
-      return { verdict: 'unknown', detail: 'panoramica collezioni gestita da Steam' };
+      return { verdict: 'unknown', detail: 'collection overview managed by Steam' };
     }
 
     const { square } = currentLayoutSettings();
@@ -93,7 +93,7 @@ export const verifyLayout = (): { verdict: Verdict; detail: string } => {
 
     const rows: Array<[string, string]> = [];
     if (isHomeRoute(path)) rows.push(['home', sel(appportraitClasses, 'InRecentGames')]);
-    if (isSquareLibraryRoute(path)) rows.push(['libreria', sel(gamepadLibraryClasses, 'GamepadLibrary')]);
+    if (isSquareLibraryRoute(path)) rows.push(['library', sel(gamepadLibraryClasses, 'GamepadLibrary')]);
 
     for (const [name, scope] of rows) {
       const nodes = capsules(view, scope);
@@ -106,10 +106,10 @@ export const verifyLayout = (): { verdict: Verdict; detail: string } => {
       seen.push(`${name} ${Math.round(box.width)}x${Math.round(box.height)} r${ratio.toFixed(2)}${off ? ' NO' : ''}`);
     }
 
-    if (measured === 0) return { verdict: 'unknown', detail: 'nessuna cover sullo schermo' };
+    if (measured === 0) return { verdict: 'unknown', detail: 'no cover on screen' };
     return {
       verdict: wrong > 0 ? 'wrong' : 'ok',
-      detail: `${seen.join(' · ')} (attesa ${square ? 'quadrata' : 'verticale'})`,
+      detail: `${seen.join(' · ')} (expected ${square ? 'square' : 'portrait'})`,
     };
   } catch (error: any) {
     return { verdict: 'unknown', detail: String(error?.message ?? error) };
@@ -131,7 +131,7 @@ export const guardLayout = async (reason: string): Promise<Verdict> => {
   */
   if (verdict !== 'wrong' && logged < 4) {
     logged += 1;
-    log('layout guard: verifica', { reason, esito: verdict, detail });
+    log('layout guard: check', { reason, result: verdict, detail });
   }
   if (verdict === 'ok') repairs = 0;
   if (verdict !== 'wrong') return verdict;
@@ -139,13 +139,13 @@ export const guardLayout = async (reason: string): Promise<Verdict> => {
   const now = performance.now();
   if (now - lastRepair < MIN_INTERVAL_MS) return verdict;
   if (repairs >= MAX_REPAIRS) {
-    log('layout guard: troppe correzioni, mi fermo', { reason, detail });
+    log('layout guard: too many corrections, stopping', { reason, detail });
     return verdict;
   }
 
   lastRepair = now;
   repairs += 1;
-  log('layout guard: forma sbagliata, riapplico', { reason, detail, tentativo: repairs });
+  log('layout guard: wrong shape, reapplying', { reason, detail, tentativo: repairs });
   await reapply();
   return verdict;
 };
@@ -153,13 +153,13 @@ export const guardLayout = async (reason: string): Promise<Verdict> => {
 /** Re-runs the whole layout setup and reads the result back into the log. */
 const reapply = async () => {
   try {
-    markWork('riapplicazione layout');
+    markWork('layout reapplication');
     restoreStyles();
     await refreshLayoutPatches(true);
     attachHomeCarousel();
     remeasureGrids();
   } catch (error) {
-    log('layout guard: riapplicazione fallita', error);
+    log('layout guard: reapplication failed', error);
   } finally {
     markWork('');
   }
@@ -167,7 +167,7 @@ const reapply = async () => {
   window.setTimeout(() => {
     const after = verifyLayout();
     if (after.verdict === 'ok') repairs = 0;
-    log('layout guard: dopo la correzione', { esito: after.verdict, detail: after.detail });
+    log('layout guard: after correction', { result: after.verdict, detail: after.detail });
   }, 1200);
 };
 
@@ -191,7 +191,7 @@ export const startLayoutGuard = () => {
     is worth repeating.
   */
   [400, 1200, 3000, 8000]
-    .forEach((delay) => later(delay, `avvio +${delay}ms`));
+    .forEach((delay) => later(delay, `start +${delay}ms`));
 
   bindView(currentView());
   bindPopupCreation();
@@ -209,10 +209,10 @@ const bindPopupCreation = () => {
       if (!name.startsWith('SP BPM') && !title.includes('Big Picture')) return;
       const doc = popup?.m_popup?.document as Document | undefined;
       const restored = restoreStylesTo(doc);
-      log('layout guard: stili inseriti alla creazione della finestra', { restored: restored.join(', ') });
+      log('layout guard: styles inserted when window was created', { restored: restored.join(', ') });
     });
   } catch (error) {
-    log('layout guard: registro finestre non disponibile', error);
+    log('layout guard: window registry unavailable', error);
   }
 };
 
@@ -280,7 +280,7 @@ const onViewLeaving = () => {
       transitionTimer = undefined;
       bindView(view);
       const restored = restoreStyles();
-      log('layout guard: nuova interfaccia intercettata subito', { restored: restored.join(', ') });
+      log('layout guard: new interface detected immediately', { restored: restored.join(', ') });
       applyCachedLayout();
       attachHomeCarousel();
       remeasureGrids();
@@ -329,7 +329,7 @@ const beat = async () => {
     const rebuilt = knownDocument !== null;
     knownDocument = doc;
     if (rebuilt) {
-      log('layout guard: interfaccia ricostruita, riapplico tutto');
+      log('layout guard: interface rebuilt, reapplying everything');
       bindView(currentView());
       await reapply();
       return;
@@ -338,7 +338,7 @@ const beat = async () => {
 
   const restored = restoreStyles();
   if (restored.length > 0) {
-    log('layout guard: stili spariti, rimessi', { restored: restored.join(', ') });
+    log('layout guard: missing styles restored', { restored: restored.join(', ') });
     await reapply();
     return;
   }
@@ -349,7 +349,7 @@ const beat = async () => {
 /** Two checks after a page that shows covers has had time to draw. */
 export const guardAfterRoute = (path: string) => {
   if (path.includes('/library/home')) watchCarouselMount(currentView());
-  later(700, `rotta ${path}`);
+  later(700, `route ${path}`);
 };
 
 export const stopLayoutGuard = () => {

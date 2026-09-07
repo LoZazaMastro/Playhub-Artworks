@@ -11,7 +11,6 @@ import {
 } from 'react';
 import { showModal } from '@decky/ui';
 import isEqual from 'react-fast-compare';
-import debounce from 'just-debounce';
 
 import useSettings from '../hooks/useSettings';
 import { useSGDB } from '../hooks/useSGDB';
@@ -27,7 +26,6 @@ export type AssetSearchContextType = {
   loadMore: (assetType: SGDBAssetType, onSuccess?: (res: any[]) => void) => Promise<void>;
   externalSgdbData: any;
   openFilters: (assetType: SGDBAssetType) => void;
-  games: any[];
   selectedGame: any;
   isFilterActive: boolean;
   moreLoading: boolean;
@@ -38,282 +36,370 @@ export type AssetSearchContextType = {
 
 export const SearchContext = createContext({});
 
-let abortCont: AbortController | null = null;
+const providerFromFilters = (filters: any): string => String(
+  filters?.provider ?? filters?.providers?.[0] ?? 'steamgriddb'
+);
+
+const normalizeProviderGame = (provider: string, game: any) => {
+  if (!game) return undefined;
+  return game.provider === provider ? game : { ...game, provider };
+};
+
+const sameProviderGame = (left: any, right: any) => {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+  return String(left.provider ?? '') === String(right.provider ?? '')
+    && String(left.id ?? '') === String(right.id ?? '')
+    && String(left.name ?? '') === String(right.name ?? '');
+};
 
 export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) => {
   const { set, get } = useSettings();
   const { appId, searchAssets, searchGames, getSgdbGame, getSgdbGameBySteamAppId, appOverview } = useSGDB();
   const [assets, setAssets] = useState<Array<any>>([]);
-  const [currentFilters, setCurrentFilters] = useState();
+  const [currentFilters, setCurrentFilters] = useState<any>();
   const [isFilterActive, setIsFilterActive] = useState(false);
   const [loading, setLoading] = useState(false);
+  /* `selectedGame` is intentionally SteamGridDB-only: SGDB external data depends on it. */
   const [selectedGame, setSelectedGame] = useState<any>();
   const [externalSgdbData, setExternalSgdbData] = useState<any>(null);
   const [moreLoading, setMoreLoading] = useState(false);
   const [endReached, setEndReached] = useState(false);
   const [page, setPage] = useState(0);
+
   const filterCache = useRef<Record<string, any>>({});
+  /* Every provider owns its own title. No suggestion can leak into another source. */
+  const providerGames = useRef<Record<string, any>>({});
+  const requestToken = useRef(0);
+  const activeAssetType = useRef<SGDBAssetType | null>(null);
+  const searchAbort = useRef<AbortController | null>(null);
+  const loadMoreAbort = useRef<AbortController | null>(null);
+  const moreLoadingRef = useRef(false);
+  const shortcutResolve = useRef<Promise<any> | null>(null);
+
   const searchSgdbGames = useCallback(async (term: string) =>
     (await searchGames(term)).map((game: any) => ({ ...game, provider: 'steamgriddb' })), [searchGames]);
 
-  /*
-    The store pick belongs to the GAME, and to nothing else.
-
-    It used to travel inside the saved filters, which are stored once per asset type for
-    the whole plugin: the PlayStation title picked while scraping Cars was still selected
-    when opening another game, so Beast of Reincarnation was served Cars artwork. It now
-    lives here, keyed to nothing but the app currently open, and is thrown away the moment
-    the app changes. Nothing about it is persisted.
-  */
-  const storeGame = useRef<any>(undefined);
-  const storePickChanged = useRef(false);
-  useEffect(() => { storeGame.current = undefined; }, [appId]);
-
-  /* A saved filter set must never carry a store pick, not even a legacy one. */
-  const withoutStorePick = (filters: any) => {
-    if (!filters || typeof filters !== 'object' || !('storeGame' in filters)) return filters;
-    const { storeGame: _drop, ...rest } = filters;
+  /* A saved filter set must never carry a title picked for a particular game. */
+  const withoutTransientGame = useCallback((filters: any) => {
+    if (!filters || typeof filters !== 'object') return filters;
+    const { storeGame: _storeGame, providerGame: _providerGame, ...rest } = filters;
     return rest;
-  };
-  /*
-    Both searches are debounced, so a trailing call from the tab you just left could
-    still land - and `loadMore` appends. That is how banners ended up mixed into the
-    cover grid. Every request carries a token plus the asset type it belongs to, and
-    anything that does not match the newest request is dropped on arrival.
-  */
-  const requestToken = useRef(0);
-  const activeAssetType = useRef<SGDBAssetType | null>(null);
-  const searchAndSetAssetsRef = useRef<AssetSearchContextType['searchAndSetAssets'] | null>(null);
+  }, []);
+
+  useEffect(() => {
+    requestToken.current += 1;
+    searchAbort.current?.abort();
+    loadMoreAbort.current?.abort();
+    searchAbort.current = null;
+    loadMoreAbort.current = null;
+    shortcutResolve.current = null;
+    moreLoadingRef.current = false;
+    providerGames.current = {};
+    setSelectedGame(undefined);
+    setAssets([]);
+    setMoreLoading(false);
+    setEndReached(false);
+    setPage(0);
+  }, [appId]);
+
+  useEffect(() => () => {
+    requestToken.current += 1;
+    searchAbort.current?.abort();
+    loadMoreAbort.current?.abort();
+  }, []);
+
+  const rememberSgdbGame = useCallback((game: any, persist = true) => {
+    const normalized = normalizeProviderGame('steamgriddb', game);
+    if (normalized) providerGames.current.steamgriddb = normalized;
+    else delete providerGames.current.steamgriddb;
+    setSelectedGame(normalized);
+    if (persist && appId) void set(`nonsteam_${appId}`, normalized ?? false);
+    return normalized;
+  }, [appId, set]);
 
   const showGameSelection = useCallback(() => {
+    const title = appOverview?.display_name ?? '';
     showModal(
       <GameSelectionModal
-        defaultTerm={appOverview.display_name}
+        defaultTerm={title}
         searchGames={searchSgdbGames}
-        onSelect={(game: any) => {
-          setSelectedGame(game);
-          set(`nonsteam_${appId}`, game);
-        }}
-      />
+        onSelect={(game: any) => rememberSgdbGame(game)}
+      />,
+      window
     );
-  }, [appId, appOverview.display_name, searchSgdbGames, set]);
+  }, [appOverview?.display_name, rememberSgdbGame, searchSgdbGames]);
 
-  /*
-    A non-Steam game resolves itself on first open.
-
-    SteamGridDB has no entry for a shortcut's app id, so the search came back
-    "Game not found" and the grid simply stayed empty until the user opened Filters and
-    confirmed the game by hand - which looked like the plugin wanting confirmation that
-    "yes, we really are talking about this game". Now the title is looked up once,
-    silently, and the picker is only shown when that lookup finds nothing.
-  */
-  const resolveShortcutGame = useCallback(async () => {
+  /** Resolve one SGDB identity at a time; repeated tab effects reuse the same request. */
+  const resolveSgdbGameByTitle = useCallback(async () => {
     const title = appOverview?.display_name?.trim();
     if (!title) return null;
-    try {
-      const matches = await searchSgdbGames(title);
-      const match = matches?.[0];
-      if (!match) return null;
-      log('resolved non-Steam game', { title, id: match.id, name: match.name });
-      setSelectedGame(match);
-      void set(`nonsteam_${appId}`, match);
-      return match;
-    } catch (error) {
-      log('non-Steam game lookup failed', { title, error });
-      return null;
-    }
-  }, [appId, appOverview, searchSgdbGames, set]);
+    if (shortcutResolve.current) return shortcutResolve.current;
 
-  const searchAndSetAssets = useMemo(() => debounce(async (assetType, page, filters, onSuccess, gameOverride, retried = false) => {
-    let searchGame = gameOverride ?? selectedGame;
-    if (appOverview?.BIsModOrShortcut() && !searchGame) {
-      searchGame = await resolveShortcutGame();
-      if (!searchGame) {
-        showGameSelection();
-        onSuccess?.();
-        return;
+    const pending = (async () => {
+      try {
+        const matches = await searchSgdbGames(title);
+        const match = matches?.[0];
+        if (!match) return null;
+        log('resolved SteamGridDB game', { title, id: match.id, name: match.name });
+        const persist = Boolean(appOverview?.BIsModOrShortcut());
+        return rememberSgdbGame(match, persist);
+      } catch (error) {
+        log('SteamGridDB title lookup failed', { title, error });
+        return null;
+      } finally {
+        shortcutResolve.current = null;
       }
-    }
-    if (abortCont) abortCont?.abort();
-    abortCont = new AbortController();
+    })();
 
+    shortcutResolve.current = pending;
+    return pending;
+  }, [appOverview, rememberSgdbGame, searchSgdbGames]);
+
+  /*
+    Searches run immediately and cancel only their own predecessor. The old shared,
+    debounced AbortController could leave a dropped callback holding the loading state
+    forever and `loadMore` could abort the main search. These paths are now independent.
+  */
+  const searchAndSetAssets = useCallback<AssetSearchContextType['searchAndSetAssets']>(async (
+    assetType,
+    requestedPage,
+    rawFilters,
+    onSuccess,
+    gameOverride,
+    retried = false
+  ) => {
+    const filters = withoutTransientGame(rawFilters);
+    const provider = providerFromFilters(filters);
     const token = ++requestToken.current;
     activeAssetType.current = assetType;
 
+    searchAbort.current?.abort();
+    loadMoreAbort.current?.abort();
+    loadMoreAbort.current = null;
+    moreLoadingRef.current = false;
+    setMoreLoading(false);
+
+    const controller = new AbortController();
+    searchAbort.current = controller;
+
+    setCurrentFilters(filters);
+    setAssets([]);
+    setEndReached(false);
+    setPage(requestedPage + 1);
+    setIsFilterActive(compareFilterWithDefaults(assetType, filters));
+
     try {
-      setCurrentFilters(filters);
-      setAssets([]);
-      setIsFilterActive(compareFilterWithDefaults(assetType, filters));
-      const resp = await searchAssets(assetType, {
-        gameId: searchGame?.id,
-        gameName: searchGame?.name,
-        gameProvider: searchGame?.provider,
-        page,
-        // Merged here, never stored: the pick is valid for this game only.
-        filters: { ...filters, storeGame: storeGame.current },
-        signal: abortCont.signal,
+      if (!appOverview || !appId) return;
+
+      let searchGame = gameOverride !== undefined
+        ? normalizeProviderGame(provider, gameOverride)
+        : providerGames.current[provider];
+
+      if (gameOverride !== undefined) {
+        if (searchGame) providerGames.current[provider] = searchGame;
+        else delete providerGames.current[provider];
+      }
+
+      if (!searchGame && provider === 'steamgriddb') {
+        searchGame = selectedGame?.provider === 'steamgriddb' ? selectedGame : undefined;
+      }
+
+      if (provider === 'steamgriddb' && appOverview.BIsModOrShortcut() && !searchGame) {
+        searchGame = await resolveSgdbGameByTitle();
+        if (controller.signal.aborted || token !== requestToken.current) return;
+        if (!searchGame) {
+          showGameSelection();
+          return;
+        }
+      }
+
+      const runSearch = (game: any) => searchAssets(assetType, {
+        gameId: game?.id,
+        gameName: game?.name,
+        gameProvider: game?.provider,
+        page: requestedPage,
+        /* useSGDB consumes this only for a matching store provider. */
+        filters: { ...filters, storeGame: game },
+        signal: controller.signal,
       });
-      if (token !== requestToken.current) {
+
+      let response: any[];
+      try {
+        response = await runSearch(searchGame);
+      } catch (error: any) {
+        if (
+          provider !== 'steamgriddb'
+          || retried
+          || error?.status !== 404
+          || controller.signal.aborted
+        ) throw error;
+
+        const resolved = await resolveSgdbGameByTitle();
+        if (controller.signal.aborted || token !== requestToken.current) return;
+        if (!resolved) {
+          showGameSelection();
+          return;
+        }
+        searchGame = resolved;
+        response = await runSearch(resolved);
+      }
+
+      if (controller.signal.aborted || token !== requestToken.current || activeAssetType.current !== assetType) {
         log('stale search discarded', assetType);
         return;
       }
-      log('search resp', assetType, resp);
 
-      /*
-        An empty first answer is retried once, resolving the title first.
-
-        SteamGridDB answers by Steam app id, and for a game it does not have under that id
-        it returns nothing at all rather than an error - so the grid stayed empty until the
-        user opened Filters, waited for the title to appear and reloaded by hand. That is a
-        chore, not a choice.
-      */
-      if (resp.length === 0 && !searchGame && !retried) {
-        const resolved = await resolveShortcutGame();
-        if (resolved) {
-          searchAndSetAssetsRef.current?.(assetType, page, filters, onSuccess, resolved, true);
-          return;
-        }
+      /* Steam-app lookup may be empty even though title lookup succeeds: retry once. */
+      if (provider === 'steamgriddb' && response.length === 0 && !searchGame && !retried) {
+        const resolved = await resolveSgdbGameByTitle();
+        if (controller.signal.aborted || token !== requestToken.current) return;
+        if (resolved) response = await runSearch(resolved);
       }
 
-      setAssets(resp);
+      if (controller.signal.aborted || token !== requestToken.current || activeAssetType.current !== assetType) return;
+      log('search resp', assetType, response);
+      setAssets(response);
       setEndReached(false);
-      setPage(page + 1); // set to next page so correct page is requested when loadMore() is used
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+      setPage(requestedPage + 1);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
         log('Search Aborted');
-      } else if (err?.status === 404) {
-        /*
-          SteamGridDB does not know this app id. Resolve the title once and retry before
-          bothering the user: making them go Filters > Game > pick > close > Apply just to
-          see any artwork at all is not a choice, it is a chore.
-        */
-        const resolved = await resolveShortcutGame();
-        if (resolved) {
-          searchAndSetAssetsRef.current?.(assetType, page, filters, onSuccess, resolved);
-          return;
-        }
-        showGameSelection();
       } else {
-        log('search failed', { assetType, message: err?.message, stack: err?.stack });
-        if (selectedGame) {
-          set(`nonsteam_${appId}`, false);
-        }
+        log('search failed', { assetType, provider, message: error?.message, stack: error?.stack });
       }
     } finally {
-      onSuccess?.();
+      if (searchAbort.current === controller) searchAbort.current = null;
+      if (token === requestToken.current) onSuccess?.();
     }
-  }, 500), [appId, appOverview, searchAssets, showGameSelection, selectedGame, set, resolveShortcutGame]) as AssetSearchContextType['searchAndSetAssets'];
-  searchAndSetAssetsRef.current = searchAndSetAssets;
+  }, [appId, appOverview, resolveSgdbGameByTitle, searchAssets, selectedGame, showGameSelection, withoutTransientGame]);
 
-  const loadMore = useMemo(() => debounce(async (assetType, onSuccess) => {
-    if (appOverview?.BIsModOrShortcut() && !selectedGame) return;
-    // Never append to a grid that has since moved to another artwork type.
-    if (activeAssetType.current !== assetType) return;
-    if (abortCont) abortCont?.abort();
-    abortCont = new AbortController();
+  const loadMore = useCallback<AssetSearchContextType['loadMore']>(async (assetType, onSuccess) => {
+    if (
+      activeAssetType.current !== assetType
+      || assets.length === 0
+      || moreLoadingRef.current
+    ) return;
 
-    if (assets.length === 0) return;
+    const provider = providerFromFilters(currentFilters);
+    /* The non-SGDB providers return their complete result set on page zero. */
+    if (provider !== 'steamgriddb') {
+      setEndReached(true);
+      onSuccess?.([]);
+      return;
+    }
 
+    const searchGame = providerGames.current.steamgriddb
+      ?? (selectedGame?.provider === 'steamgriddb' ? selectedGame : undefined);
+    if (appOverview?.BIsModOrShortcut() && !searchGame) return;
+
+    loadMoreAbort.current?.abort();
+    const controller = new AbortController();
+    loadMoreAbort.current = controller;
     const token = requestToken.current;
+    moreLoadingRef.current = true;
+    setMoreLoading(true);
 
     try {
-      setMoreLoading(true);
-      const resp = await searchAssets(assetType, {
+      const response = await searchAssets(assetType, {
         page,
-        gameId: selectedGame?.id,
-        gameName: selectedGame?.name,
-        gameProvider: selectedGame?.provider,
+        gameId: searchGame?.id,
+        gameName: searchGame?.name,
+        gameProvider: searchGame?.provider,
         filters: currentFilters,
-        signal: abortCont.signal,
+        signal: controller.signal,
       });
-      if (token !== requestToken.current || activeAssetType.current !== assetType) {
+
+      if (
+        controller.signal.aborted
+        || token !== requestToken.current
+        || activeAssetType.current !== assetType
+      ) {
         log('stale load more discarded', assetType);
         return;
       }
-      log('search load more resp', resp);
-      setAssets((assets) => [...assets, ...resp]);
-      setMoreLoading(false);
-      if (resp.length > 0) {
-        setPage((x) => x + 1);
-      }
-      if (resp.length === 0) {
+
+      log('search load more resp', response);
+      if (response.length > 0) {
+        setAssets((current) => [...current, ...response]);
+        setPage((current) => current + 1);
+      } else {
         setEndReached(true);
       }
-      onSuccess?.(resp);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        log('Load more aborted');
-      } else {
-        log('load more failed', { assetType, message: err?.message, stack: err?.stack });
+      onSuccess?.(response);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') log('Load more aborted');
+      else log('load more failed', { assetType, message: error?.message, stack: error?.stack });
+    } finally {
+      if (loadMoreAbort.current === controller) {
+        loadMoreAbort.current = null;
+        moreLoadingRef.current = false;
+        setMoreLoading(false);
       }
     }
-  }, 500), [appOverview, assets.length, currentFilters, page, searchAssets, selectedGame]);
+  }, [appOverview, assets.length, currentFilters, page, searchAssets, selectedGame]);
 
   const handleFiltersSave = useCallback(async (assetType: SGDBAssetType, rawFilters: any, game: any) => {
-    const filters = withoutStorePick(rawFilters);
-    filterCache.current[assetType] = filters;
+    const filters = withoutTransientGame(rawFilters);
+    const provider = providerFromFilters(filters);
+    const normalizedGame = normalizeProviderGame(provider, game);
+    const previousGame = providerGames.current[provider];
     const filtersChanged = !isEqual(filters, currentFilters);
-    const gameChanged = game?.id !== selectedGame?.id;
-    const storeChanged = storePickChanged.current;
-    storePickChanged.current = false;
-    if (filtersChanged || gameChanged || storeChanged) {
-      setLoading(true);
-      searchAndSetAssets(assetType, 0, filters, () => {
-        setLoading(false);
-      }, game);
+    const gameChanged = !sameProviderGame(previousGame, normalizedGame);
+
+    filterCache.current[assetType] = filters;
+    if (normalizedGame) providerGames.current[provider] = normalizedGame;
+    else delete providerGames.current[provider];
+
+    if (provider === 'steamgriddb' && gameChanged) {
+      rememberSgdbGame(normalizedGame);
     }
+
     if (filtersChanged) {
-      set(`filters_${assetType}`, filters, true);
+      void set(`filters_${assetType}`, filters, true);
       setCurrentFilters(filters);
     }
-    if (gameChanged) {
-      setSelectedGame(game ?? false);
-      // save selected game to reuse for this shortcut
-      set(`nonsteam_${appId}`, game ?? false);
-    }
-    if (filtersChanged || gameChanged || storeChanged) {
-      log('filtersChanged');
+
+    if (filtersChanged || gameChanged) {
+      setLoading(true);
+      await searchAndSetAssets(assetType, 0, filters, () => setLoading(false), normalizedGame);
       setMoreLoading(false);
     }
+
     setIsFilterActive(compareFilterWithDefaults(assetType, filters));
-  }, [currentFilters, selectedGame, searchAndSetAssets, set, appId]);
+  }, [currentFilters, rememberSgdbGame, searchAndSetAssets, set, withoutTransientGame]);
 
   const openFilters = useCallback((assetType: SGDBAssetType) => {
+    if (!appOverview) return;
     log('Open Filters');
     const defaultFilters = filterCache.current[assetType] ?? currentFilters ?? null;
+    const provider = providerFromFilters(defaultFilters);
+    const providerGame = providerGames.current[provider]
+      ?? (provider === 'steamgriddb' ? selectedGame : undefined);
+
     showModal((
       <FiltersModal
         assetType={assetType}
         onSave={handleFiltersSave}
         defaultFilters={defaultFilters}
-        defaultSelectedGame={selectedGame}
-        defaultSearchTerm={selectedGame?.name || appOverview.display_name}
+        defaultSelectedGame={providerGame}
+        /* Reset always returns to Steam's real title, never to an SGDB fallback. */
+        defaultSearchTerm={appOverview.display_name}
         isNonsteam={appOverview.BIsModOrShortcut()}
         searchGames={searchSgdbGames}
-        defaultStoreGame={storeGame.current}
-        onStoreGameChange={(game: any) => {
-          /*
-            Changing the store title has to re-run the search.
-            Closing the panel after picking another PlayStation entry used to leave the
-            previous results on screen, because only "filters" and "game" counted as a
-            change and the store pick was neither.
-          */
-          const changed = storeGame.current?.id !== game?.id;
-          storeGame.current = game;
-          if (changed) storePickChanged.current = true;
-        }}
+        defaultStoreGame={providerGame}
       />
     ), window);
   }, [appOverview, currentFilters, handleFiltersSave, searchSgdbGames, selectedGame]);
 
   useEffect(() => {
     void Promise.all(['grid_p', 'grid_l', 'hero', 'logo', 'icon'].map(async (type) => {
-      filterCache.current[type] = withoutStorePick(await get(`filters_${type}`, null));
+      filterCache.current[type] = withoutTransientGame(await get(`filters_${type}`, null));
     }));
-  }, [get]);
+  }, [get, withoutTransientGame]);
 
   const setCoverAspect = useCallback(async (mode: 'portrait' | 'square') => {
-    const saved = await get('filters_grid_p', null);
+    const saved = withoutTransientGame(await get('filters_grid_p', null));
     const filters = {
       ...(saved ?? currentFilters ?? {}),
       aspectMode: mode,
@@ -321,40 +407,51 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
         ? ['1024x1024', '512x512']
         : ['600x900', '342x482', '660x930'],
     };
-    await handleFiltersSave('grid_p', filters, selectedGame);
-  }, [currentFilters, get, handleFiltersSave, selectedGame]);
-
-  useEffect(() => {
-    if (!appOverview) return;
-    (async () => {
-      setLoading(true);
-      const game = await get(`nonsteam_${appId}`, false);
-      if (game) {
-        setSelectedGame(game);
-      } else {
-        if (appOverview.BIsModOrShortcut()) {
-          const gameRes = await searchSgdbGames(appOverview.display_name);
-          if (gameRes.length) {
-            setSelectedGame(gameRes[0]);
-          } else {
-            showGameSelection();
-          }
-        }
-      }
-      setLoading(false);
-    })();
-  }, [appOverview, appId, get, searchSgdbGames, set, showGameSelection]);
+    const provider = providerFromFilters(filters);
+    const game = providerGames.current[provider]
+      ?? (provider === 'steamgriddb' ? selectedGame : undefined);
+    await handleFiltersSave('grid_p', filters, game);
+  }, [currentFilters, get, handleFiltersSave, selectedGame, withoutTransientGame]);
 
   useEffect(() => {
     if (!appOverview || !appId) return;
-    (async () => {
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      try {
+        const saved = await get(`nonsteam_${appId}`, false);
+        if (!active) return;
+
+        /* Purge legacy values accidentally saved by a different provider. */
+        if (saved && saved.provider && saved.provider !== 'steamgriddb') {
+          await set(`nonsteam_${appId}`, false);
+        } else if (saved) {
+          rememberSgdbGame(saved, false);
+        } else if (appOverview.BIsModOrShortcut()) {
+          const resolved = await resolveSgdbGameByTitle();
+          if (active && !resolved) showGameSelection();
+        }
+      } catch (error) {
+        log('saved game restore failed', error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [appId, appOverview, get, rememberSgdbGame, resolveSgdbGameByTitle, set, showGameSelection]);
+
+  useEffect(() => {
+    if (!appOverview || !appId) return;
+    let active = true;
+    void (async () => {
       const sgdbGame = selectedGame
         ? await getSgdbGame(selectedGame)
         : !appOverview.BIsModOrShortcut()
           ? await getSgdbGameBySteamAppId(appId)
           : null;
-      setExternalSgdbData(sgdbGame?.external_platform_data ?? null);
+      if (active) setExternalSgdbData(sgdbGame?.external_platform_data ?? null);
     })();
+    return () => { active = false; };
   }, [appId, appOverview, getSgdbGame, getSgdbGameBySteamAppId, selectedGame]);
 
   const value = useMemo(() => ({

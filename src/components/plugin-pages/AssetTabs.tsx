@@ -27,7 +27,7 @@ import LogoPositionerModal from '../../modals/LogoPositionerModal';
 import ArtworkComposerModal from '../../modals/ArtworkComposerModal';
 import OfficialAssetsModal from '../../modals/OfficialAssetsModal';
 import MenuIcon from '../Icons/MenuIcon';
-import t from '../../utils/i18n';
+import t, { localizeError } from '../../utils/i18n';
 import { hideLogo, isLogoHidden, showLogo } from '../../utils/logoControl';
 import { clearPerfectArtwork, isPerfectArtwork, markPerfectArtwork } from '../../utils/perfectArtwork';
 
@@ -160,14 +160,14 @@ const AssetTabs: FC<{
 
   /* Live description of what the current scraper is actually returning. */
   const statusLine = useMemo(() => {
-    if (active === 'manage') return 'Artwork attualmente installati per questo gioco';
+    if (active === 'manage') return t('PA_INSTALLED_ARTWORK', 'Artwork currently installed for this game');
     const label = providerLabel(currentFilters?.provider ?? currentFilters?.providers?.[0]);
-    if (loading) return `Ricerca in corso su ${label}…`;
-    if (!assets?.length) return `Nessun risultato su ${label} con i filtri attuali`;
+    if (loading) return t('PA_SEARCHING_SOURCE', 'Searching {source}…').replace('{source}', label);
+    if (!assets?.length) return t('PA_NO_RESULTS_SOURCE', 'No results from {source} with the current filters').replace('{source}', label);
     /*
       The shape named here is what was really searched.
 
-      It used to repeat the filter blindly and announced "cover verticali e quadrate" even
+      It used to repeat the filter blindly and announced "portrait and square covers" even
       on a source that only has square ones - which is exactly the promise the search
       cannot keep.
     */
@@ -180,14 +180,14 @@ const AssetTabs: FC<{
         ? available.filter((entry) => entry === chosen)
         : available;
       shape = shapes.length > 1
-        ? 'cover verticali e quadrate'
-        : shapes[0] === 'square' ? 'cover quadrate' : 'cover verticali';
+        ? t('PA_COVERS_BOTH', 'portrait and square covers')
+        : shapes[0] === 'square' ? t('PA_SQUARE_COVERS', 'square covers') : t('PA_PORTRAIT_COVERS', 'portrait covers');
     }
-    return `${assets.length} risultati da ${label}${shape ? ` · ${shape}` : ''}`;
+    return t('PA_RESULTS_FROM', '{count} results from {source}{shape}').replace('{count}', String(assets.length)).replace('{source}', label).replace('{shape}', shape ? ` · ${shape}` : '');
   }, [active, assetType, assets, currentFilters, loading]);
 
   const composerTarget = assetType === 'hero' ? 'hero' : 'grid_l';
-  const composerLabel = assetType === 'hero' ? 'Crea Perfect Hero' : 'Crea Perfect Banner';
+  const composerLabel = assetType === 'hero' ? t('PA_CREATE_PERFECT_HERO', 'Create Perfect Hero') : t('PA_CREATE_PERFECT_BANNER', 'Create Perfect Banner');
 
   const openComposer = () => showModal(
     <ArtworkComposerModal
@@ -201,17 +201,19 @@ const AssetTabs: FC<{
           drawn twice. When the logo was deliberately left out of the composition the
           opposite is true: Steam's own layer is what shows it, so it goes back on.
         */
-        await markPerfectArtwork(appOverview.appid, composerTarget, withLogo);
+        const separateLogoHidden = await markPerfectArtwork(appOverview.appid, composerTarget, withLogo);
         if (composerTarget === 'hero') {
           // From this point it is a manual composition, no longer the untouched Zaza hero.
-          await Promise.all([
+          /* Non-critical legacy cleanup must never hold the composer or later searches open. */
+          void Promise.allSettled([
             call('delete_setting', `manual_zazamastro_hero_${appOverview.appid}`),
             call('delete_setting', `zazamastro_hero_${appOverview.appid}`),
           ]);
         }
         if (!withLogo) await showLogo(appOverview.appid);
         await refreshPerfect();
-        setLogoHidden(await isLogoHidden(appOverview.appid));
+        /* Avoid another SteamUI/backend round trip after save; it could stall the next search. */
+        setLogoHidden(withLogo ? separateLogoHidden : false);
       }}
     />,
     window
@@ -226,13 +228,13 @@ const AssetTabs: FC<{
       toaster.toast({
         title: appOverview.display_name,
         body: composerTarget === 'hero'
-          ? 'Perfect Hero rimosso, tornano hero di Steam e logo separato.'
-          : 'Perfect Banner rimosso, torna il banner di Steam.',
+          ? t('PA_PERFECT_HERO_REMOVED', 'Perfect Hero removed; the Steam hero and separate logo have been restored.')
+          : t('PA_PERFECT_BANNER_REMOVED', 'Perfect Banner removed; Steam banner restored.'),
         icon: <MenuIcon />,
         duration: 2200,
       });
     } catch (error: any) {
-      toaster.toast({ title: 'Rimozione non riuscita', body: error?.message ?? 'Riprova.', icon: <MenuIcon fill="#ff5d5d" /> });
+      toaster.toast({ title: t('PA_REMOVE_FAILED', 'Removal failed'), body: localizeError(error, 'PA_TRY_AGAIN'), icon: <MenuIcon fill="#ff5d5d" /> });
     }
   };
 
@@ -250,7 +252,7 @@ const AssetTabs: FC<{
         } catch (err: any) {
           toaster.toast({
             title: t('MSG_ASSET_APPLY_ERROR', 'There was a problem applying this asset.'),
-            body: err.message,
+            body: localizeError(err),
             icon: <MenuIcon fill="#f3171e" />,
           });
         }
@@ -266,10 +268,10 @@ const AssetTabs: FC<{
       flow-children="vertical"
       onButtonDown={handleButtonDown}
       onSecondaryButton={isAssetTab ? () => openFilters(assetType) : undefined}
-      onSecondaryActionDescription={isAssetTab ? 'Filtri' : undefined}
+      onSecondaryActionDescription={isAssetTab ? t('PA_FILTERS', "Filters") : undefined}
       actionDescriptionMap={tabs.length > 1 ? {
-        [GamepadButton.BUMPER_LEFT]: 'Scheda precedente',
-        [GamepadButton.BUMPER_RIGHT]: 'Scheda successiva',
+        [GamepadButton.BUMPER_LEFT]: t('PA_PREVIOUS_TAB', 'Previous tab'),
+        [GamepadButton.BUMPER_RIGHT]: t('PA_NEXT_TAB', 'Next tab'),
       } : undefined}
     >
       <header className="pa-ws-head">
@@ -297,14 +299,14 @@ const AssetTabs: FC<{
       {isAssetTab && (
         <Focusable className="pa-ws-actions" flow-children="grid">
           <DialogButton className="pa-action" onClick={() => openFilters(assetType)}>
-            <FaSlidersH /><span>Filtri</span>
+            <FaSlidersH /><span>{t('PA_FILTERS', "Filters")}</span>
           </DialogButton>
 
           {/*
-            Verticali/Quadrate only exists where BOTH shapes exist.
+            Portrait/Square only exists where BOTH shapes exist.
 
             IGN, PlayStation and Nintendo publish square covers only, so offering
-            "Verticali" on them is a button whose only possible outcome is an empty grid.
+            t('PA_PORTRAIT_PL', "Portrait") on them is a button whose only possible outcome is an empty grid.
           */}
           {assetType === 'grid_p' && coverShapesForProvider(providerForId(String(
             currentFilters?.provider ?? currentFilters?.providers?.[0] ?? ''
@@ -314,13 +316,13 @@ const AssetTabs: FC<{
                 className={`pa-action pa-toggle ${currentFilters?.aspectMode !== 'square' ? 'active' : ''}`}
                 onClick={() => void setCoverAspect('portrait')}
               >
-                <MdCropPortrait /><span>Verticali</span>
+                <MdCropPortrait /><span>{t('PA_PORTRAIT_PL', "Portrait")}</span>
               </DialogButton>
               <DialogButton
                 className={`pa-action pa-toggle ${currentFilters?.aspectMode === 'square' ? 'active' : ''}`}
                 onClick={() => void setCoverAspect('square')}
               >
-                <MdApps /><span>Quadrate</span>
+                <MdApps /><span>{t('PA_SQUARE_PL', "Square")}</span>
               </DialogButton>
             </>
           )}
@@ -336,12 +338,12 @@ const AssetTabs: FC<{
                   className="pa-action"
                   onClick={() => showModal(<LogoPositionerModal appId={appOverview.appid} />, window)}
                 >
-                  <MdTune /><span>Posiziona logo</span>
+                  <MdTune /><span>{t('PA_POSITION_LOGO', "Position logo")}</span>
                 </DialogButton>
               )}
               {perfect[composerTarget] && (
                 <DialogButton className="pa-action" onClick={() => void removePerfect()}>
-                  <HiTrash /><span>{assetType === 'hero' ? 'Rimuovi Perfect Hero' : 'Rimuovi Perfect Banner'}</span>
+                  <HiTrash /><span>{assetType === 'hero' ? t('PA_REMOVE_PERFECT_HERO', 'Remove Perfect Hero') : t('PA_REMOVE_PERFECT_BANNER', 'Remove Perfect Banner')}</span>
                 </DialogButton>
               )}
             </>
@@ -353,7 +355,7 @@ const AssetTabs: FC<{
                 className="pa-action"
                 onClick={() => showModal(<LogoPositionerModal appId={appOverview.appid} />, window)}
               >
-                <MdTune /><span>Posiziona logo</span>
+                <MdTune /><span>{t('PA_POSITION_LOGO', "Position logo")}</span>
               </DialogButton>
               <DialogButton
                 className="pa-action"
@@ -364,14 +366,14 @@ const AssetTabs: FC<{
                 })()}
               >
                 {logoHidden ? <HiEye /> : <HiEyeSlash />}
-                <span>{logoHidden ? 'Mostra logo' : 'Nascondi logo'}</span>
+                <span>{logoHidden ? t('PA_SHOW_LOGO', "Show logo") : t('PA_HIDE_LOGO', "Hide logo")}</span>
               </DialogButton>
             </>
           )}
 
           {hasOfficialAsset(externalSgdbData, assetType) && (
             <DialogButton className="pa-action" onClick={openOfficialAssets}>
-              <FaSteam /><span>Ufficiali Steam</span>
+              <FaSteam /><span>{t('PA_OFFICIAL_STEAM', "Official Steam")}</span>
             </DialogButton>
           )}
         </Focusable>

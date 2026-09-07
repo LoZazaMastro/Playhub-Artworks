@@ -1,5 +1,6 @@
 import sys
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from platform import system
 from os.path import dirname
 from os import W_OK, access, stat
@@ -45,6 +46,13 @@ WINDOWS = system() == "Windows"
 DIAGNOSTIC_DIR = Path(decky.DECKY_PLUGIN_LOG_DIR).parent / 'Playhub-Artworks'
 DIAGNOSTIC_FILE = DIAGNOSTIC_DIR / 'playhub-artworks.jsonl'
 DIAGNOSTIC_MAX_BYTES = 5 * 1024 * 1024
+ARTWORK_DOWNLOAD_MAX_BYTES = 16 * 1024 * 1024
+ARTWORK_IMAGE_MAX_PIXELS = 16_000_000
+ARTWORK_IMAGE_MAX_DIMENSION = 6144
+ARTWORK_DOWNLOAD_CONCURRENCY = 2
+PROVIDER_SEARCH_CONCURRENCY = 3
+DOWNLOAD_CHUNK_BYTES = 128 * 1024
+PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.1'
 _diagnostic_lock = threading.Lock()
 _download_progress_lock = threading.Lock()
 _download_progress = {}
@@ -90,7 +98,7 @@ def _asset_format(content, content_type='', source=''):
         suffix = 'jpg'
     if suffix in {'png', 'jpg', 'webp', 'gif', 'webm', 'ico'}:
         return suffix
-    raise ValueError('Formato artwork non riconosciuto.')
+    raise ValueError('PA_ERROR_ARTWORK_FORMAT_UNKNOWN')
 
 def _asset_is_animated(content, asset_format):
     if asset_format == 'webm':
@@ -105,11 +113,149 @@ def _asset_is_animated(content, asset_format):
         return b'acTL' in content[:1024]
     return False
 
+def _jpeg_size_bytes(data):
+    if len(data) < 4 or data[0:2] != b'\xff\xd8':
+        return None
+    offset = 2
+    sof_markers = {
+        0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7,
+        0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+    }
+    while offset + 4 <= len(data):
+        while offset < len(data) and data[offset] != 0xff:
+            offset += 1
+        while offset < len(data) and data[offset] == 0xff:
+            offset += 1
+        if offset >= len(data):
+            return None
+        marker = data[offset]
+        offset += 1
+        if marker in {0x01, 0xd8, 0xd9} or 0xd0 <= marker <= 0xd7:
+            continue
+        if offset + 2 > len(data):
+            return None
+        segment_size = int.from_bytes(data[offset:offset + 2], 'big')
+        if segment_size < 2 or offset + segment_size > len(data):
+            return None
+        if marker in sof_markers and segment_size >= 7:
+            height = int.from_bytes(data[offset + 3:offset + 5], 'big')
+            width = int.from_bytes(data[offset + 5:offset + 7], 'big')
+            return width, height
+        offset += segment_size
+    return None
+
+def _image_size_bytes(content, asset_format):
+    if asset_format == 'png' and len(content) >= 24 and content[12:16] == b'IHDR':
+        return unpack('>II', content[16:24])
+    if asset_format == 'jpg':
+        return _jpeg_size_bytes(content)
+    if asset_format == 'webp' and len(content) >= 30:
+        chunk = content[12:16]
+        if chunk == b'VP8X':
+            return 1 + int.from_bytes(content[24:27], 'little'), 1 + int.from_bytes(content[27:30], 'little')
+        if chunk == b'VP8 ':
+            return unpack('<H', content[26:28])[0] & 0x3fff, unpack('<H', content[28:30])[0] & 0x3fff
+        if chunk == b'VP8L' and len(content) >= 25:
+            b0, b1, b2, b3 = content[21], content[22], content[23], content[24]
+            return 1 + (((b1 & 0x3f) << 8) | b0), 1 + (((b3 & 0x0f) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6))
+    if asset_format == 'gif' and len(content) >= 10:
+        return int.from_bytes(content[6:8], 'little'), int.from_bytes(content[8:10], 'little')
+    if asset_format == 'ico' and len(content) >= 8:
+        return content[6] or 256, content[7] or 256
+    return None
+
+def _validate_artwork_content(content, content_type='', source=''):
+    if not content:
+        raise ValueError('PA_ERROR_INVALID_ARTWORK')
+    if len(content) > ARTWORK_DOWNLOAD_MAX_BYTES:
+        raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+    asset_format = _asset_format(content, content_type, source)
+    dimensions = _image_size_bytes(content, asset_format)
+    if dimensions:
+        width, height = dimensions
+        if (
+            width <= 0
+            or height <= 0
+            or width > ARTWORK_IMAGE_MAX_DIMENSION
+            or height > ARTWORK_IMAGE_MAX_DIMENSION
+            or width * height > ARTWORK_IMAGE_MAX_PIXELS
+        ):
+            raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+    return asset_format, dimensions
+
+def _decoded_base64_size(value):
+    normalized = str(value or '').strip()
+    if not normalized:
+        return 0
+    padding = 2 if normalized.endswith('==') else 1 if normalized.endswith('=') else 0
+    return max(0, (len(normalized) * 3) // 4 - padding)
+
+def _response_length(response):
+    try:
+        return max(0, int(response.headers.get('Content-Length') or 0))
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+def _download_limited(url, job_id='', shutdown_event=None, validate_artwork=True):
+    req = Request(url, headers={'User-Agent': PLUGIN_USER_AGENT})
+    received = 0
+    content = bytearray()
+    with urlopen(req, context=get_ssl_context(), timeout=20) as response:
+        total = _response_length(response)
+        content_type = response.headers.get('Content-Type') or ''
+        if total > ARTWORK_DOWNLOAD_MAX_BYTES:
+            raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+        if job_id:
+            with _download_progress_lock:
+                _download_progress[str(job_id)] = {'received': 0, 'total': total, 'percent': 0, 'status': 'running'}
+        while True:
+            if shutdown_event is not None and shutdown_event.is_set():
+                raise RuntimeError('PA_OPERATION_CANCELLED')
+            chunk = response.read(DOWNLOAD_CHUNK_BYTES)
+            if not chunk:
+                break
+            received += len(chunk)
+            if received > ARTWORK_DOWNLOAD_MAX_BYTES:
+                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+            content.extend(chunk)
+            if job_id:
+                percent = min(99, round(received * 100 / total)) if total > 0 else 0
+                with _download_progress_lock:
+                    _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': percent, 'status': 'running'}
+    if job_id:
+        with _download_progress_lock:
+            _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
+    if validate_artwork:
+        asset_format, dimensions = _validate_artwork_content(content, content_type, url)
+    else:
+        asset_format, dimensions = '', None
+    return content, content_type, asset_format, dimensions
+
+def _remote_sha256_limited(url, shutdown_event=None):
+    req = Request(url, headers={'User-Agent': PLUGIN_USER_AGENT})
+    digest = sha256()
+    received = 0
+    with urlopen(req, context=get_ssl_context(), timeout=15) as response:
+        total = _response_length(response)
+        if total > ARTWORK_DOWNLOAD_MAX_BYTES:
+            raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+        while True:
+            if shutdown_event is not None and shutdown_event.is_set():
+                raise RuntimeError('PA_OPERATION_CANCELLED')
+            chunk = response.read(DOWNLOAD_CHUNK_BYTES)
+            if not chunk:
+                break
+            received += len(chunk)
+            if received > ARTWORK_DOWNLOAD_MAX_BYTES:
+                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+            digest.update(chunk)
+    return digest.hexdigest()
+
 def _read_json_object(path):
     with open(path, 'r', encoding='utf-8') as stream:
         value = json.load(stream)
     if not isinstance(value, dict):
-        raise ValueError('Settings root must be a JSON object')
+        raise ValueError('PA_ERROR_GENERIC')
     return value
 
 def _read_settings_file():
@@ -437,9 +583,16 @@ class Plugin:
         self.settings = SettingsManager(name="playhub_artworks", settings_directory=decky.DECKY_PLUGIN_SETTINGS_DIR)
         self._settings_lock = asyncio.Lock()
         self._settings_data = _read_settings_file()
+        self._shutdown_event = threading.Event()
+        self._download_semaphore = asyncio.Semaphore(ARTWORK_DOWNLOAD_CONCURRENCY)
+        self._download_executor = ThreadPoolExecutor(max_workers=ARTWORK_DOWNLOAD_CONCURRENCY, thread_name_prefix='artwork-download')
+        self._provider_executor = ThreadPoolExecutor(max_workers=PROVIDER_SEARCH_CONCURRENCY, thread_name_prefix='artwork-provider')
         _diagnostic('backend.started', platform=system(), plugin_dir=decky.DECKY_PLUGIN_DIR, settings_dir=decky.DECKY_PLUGIN_SETTINGS_DIR, log_dir=DIAGNOSTIC_DIR)
 
     async def _unload(self):
+        self._shutdown_event.set()
+        self._download_executor.shutdown(wait=False, cancel_futures=True)
+        self._provider_executor.shutdown(wait=False, cancel_futures=True)
         _diagnostic('backend.stopped')
 
     async def write_diagnostic_events(self, events=None):
@@ -450,34 +603,19 @@ class Plugin:
 
     async def download_as_base64(self, url='', job_id=''):
         started = asyncio.get_running_loop().time()
-        def _download():
-            req = Request(url, headers={'User-Agent': 'Playhub-Artworks/1.0'})
-            chunks = []
-            received = 0
-            with urlopen(req, context=get_ssl_context(), timeout=20) as response:
-                total = int(response.headers.get('Content-Length') or 0)
-                if job_id:
-                    with _download_progress_lock:
-                        _download_progress[str(job_id)] = {'received': 0, 'total': total, 'percent': 0, 'status': 'running'}
-                while True:
-                    chunk = response.read(128 * 1024)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                    received += len(chunk)
-                    if job_id:
-                        percent = min(99, round(received * 100 / total)) if total > 0 else 0
-                        with _download_progress_lock:
-                            _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': percent, 'status': 'running'}
-            if job_id:
-                with _download_progress_lock:
-                    _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
-            return b''.join(chunks)
-
         try:
-            content = await asyncio.to_thread(_download)
+            loop = asyncio.get_running_loop()
+            async with self._download_semaphore:
+                content, _content_type, _asset_format_name, _dimensions = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: _download_limited(url, job_id, self._shutdown_event),
+                )
+                encoded = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: b64encode(content).decode('ascii'),
+                )
             _diagnostic('download.completed', url=url, bytes=len(content), duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return b64encode(content).decode('utf-8')
+            return encoded
         except Exception as error:
             if job_id:
                 with _download_progress_lock:
@@ -488,36 +626,19 @@ class Plugin:
 
     async def download_artwork_payload(self, url='', job_id=''):
         started = asyncio.get_running_loop().time()
-        def _download():
-            req = Request(url, headers={'User-Agent': 'Playhub-Artworks/1.0'})
-            chunks = []
-            received = 0
-            with urlopen(req, context=get_ssl_context(), timeout=20) as response:
-                total = int(response.headers.get('Content-Length') or 0)
-                content_type = response.headers.get('Content-Type') or ''
-                if job_id:
-                    with _download_progress_lock:
-                        _download_progress[str(job_id)] = {'received': 0, 'total': total, 'percent': 0, 'status': 'running'}
-                while True:
-                    chunk = response.read(128 * 1024)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                    received += len(chunk)
-                    if job_id:
-                        percent = min(99, round(received * 100 / total)) if total > 0 else 0
-                        with _download_progress_lock:
-                            _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': percent, 'status': 'running'}
-            if job_id:
-                with _download_progress_lock:
-                    _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
-            return b''.join(chunks), content_type
-
         try:
-            content, content_type = await asyncio.to_thread(_download)
-            asset_format = _asset_format(content, content_type, url)
-            _diagnostic('artwork.download.completed', url=url, bytes=len(content), format=asset_format, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return {'data': b64encode(content).decode('utf-8'), 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
+            loop = asyncio.get_running_loop()
+            async with self._download_semaphore:
+                content, _content_type, asset_format, dimensions = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: _download_limited(url, job_id, self._shutdown_event),
+                )
+                encoded = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: b64encode(content).decode('ascii'),
+                )
+            _diagnostic('artwork.download.completed', url=url, bytes=len(content), format=asset_format, dimensions=dimensions, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
+            return {'data': encoded, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
         except Exception as error:
             if job_id:
                 with _download_progress_lock:
@@ -542,31 +663,49 @@ class Plugin:
         small preparation pool to overlap downloads without blocking Decky's plugin
         event loop.
         """
-        def _download():
-            req = Request(url, headers={'User-Agent': 'Playhub-Artworks/1.0'})
-            with urlopen(req, context=get_ssl_context(), timeout=20) as response:
-                return response.read(), response.headers.get('Content-Type') or ''
-
         started = asyncio.get_running_loop().time()
         try:
-            content, content_type = await asyncio.to_thread(_download)
-            digest = sha256(content).hexdigest()
-            asset_format = _asset_format(content, content_type, url)
-            _diagnostic('artwork.download.completed', url=url, bytes=len(content), sha256=digest, format=asset_format, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return {'data': b64encode(content).decode('utf-8'), 'sha256': digest, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
+            loop = asyncio.get_running_loop()
+            async with self._download_semaphore:
+                content, _content_type, asset_format, dimensions = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: _download_limited(url, '', self._shutdown_event),
+                )
+                digest = sha256(content).hexdigest()
+                encoded = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: b64encode(content).decode('ascii'),
+                )
+            _diagnostic('artwork.download.completed', url=url, bytes=len(content), sha256=digest, format=asset_format, dimensions=dimensions, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
+            return {'data': encoded, 'sha256': digest, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
         except Exception as error:
             _diagnostic('artwork.download.failed', url=url, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000), error=error)
             raise
 
     async def read_file_as_base64(self, path=''):
-        with open(path, 'rb') as image_file:
-            return b64encode(image_file.read()).decode('utf-8')
+        def read_sync():
+            source = Path(path)
+            if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+            content = source.read_bytes()
+            _validate_artwork_content(content, source=path)
+            return b64encode(content).decode('ascii')
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_sync)
 
     async def read_artwork_payload(self, path=''):
-        with open(path, 'rb') as image_file:
-            content = image_file.read()
-        asset_format = _asset_format(content, source=path)
-        return {'data': b64encode(content).decode('utf-8'), 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
+        def read_sync():
+            source = Path(path)
+            if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+            content = source.read_bytes()
+            asset_format, dimensions = _validate_artwork_content(content, source=path)
+            return {
+                'data': b64encode(content).decode('ascii'),
+                'format': asset_format,
+                'animated': _asset_is_animated(content, asset_format),
+                'dimensions': dimensions,
+            }
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_sync)
 
     async def get_local_start(self):
         return decky.DECKY_USER_HOME
@@ -575,15 +714,16 @@ class Plugin:
         _diagnostic('file.download.started', url=url, output_dir=output_dir, file_name=file_name)
         try:
             if access(dirname(output_dir), W_OK):
-                req = Request(url, headers={'User-Agent': 'Playhub-Artworks/1.0'})
-                res = urlopen(req, context=get_ssl_context())
-                if res.status == 200:
-                    with open(Path(output_dir) / file_name, mode='wb') as f:
-                        f.write(res.read())
+                loop = asyncio.get_running_loop()
+                async with self._download_semaphore:
+                    content, _content_type, _format, _dimensions = await loop.run_in_executor(
+                        self._download_executor,
+                        lambda: _download_limited(url, '', self._shutdown_event),
+                    )
                     saved_path = str(Path(output_dir) / file_name)
-                    _diagnostic('file.download.completed', url=url, path=saved_path)
-                    return saved_path
-                return False
+                    await loop.run_in_executor(self._download_executor, lambda: Path(saved_path).write_bytes(content))
+                _diagnostic('file.download.completed', url=url, path=saved_path, bytes=len(content))
+                return saved_path
         except Exception as error:
             _diagnostic('file.download.failed', url=url, output_dir=output_dir, file_name=file_name, error=error)
             return False
@@ -605,7 +745,7 @@ class Plugin:
         if saved_path:
             return await self.set_shortcut_icon(appid, owner_id, path=saved_path)
         else:
-            raise Exception("Failed to download icon from %s" % url)
+            raise Exception('PA_ERROR_RETRIEVE_ASSET')
 
     async def set_shortcut_icon(self, appid, owner_id, path=None):
         shortcuts_vdf = get_userdata_config(owner_id) / 'shortcuts.vdf'
@@ -624,7 +764,7 @@ class Plugin:
                     shortcut['icon'] = path
                 binary_dump(d, open(shortcuts_vdf, 'wb'))
                 return True
-        raise Exception('Could not find shortcut to edit')
+        raise Exception('PA_CANT_OPEN_GAME')
 
     async def set_steam_icon_from_url(self, appid, url):
         await self.download_file(url, get_steam_libcache(), file_name=("%s_icon.jpg" % appid))
@@ -681,45 +821,61 @@ class Plugin:
         return None
 
     async def save_perfect_source(self, appid=0, target='hero', data='', ext='jpg'):
-        try:
-            PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
-            existing = self._find_perfect_source(appid, target)
-            if existing:
-                return {'saved': True, 'existing': True}
-            payload = b64decode(str(data or ''))
-            if not payload:
+        def save_sync():
+            try:
+                PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+                existing = self._find_perfect_source(appid, target)
+                if existing:
+                    return {'saved': True, 'existing': True}
+                if _decoded_base64_size(data) > ARTWORK_DOWNLOAD_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                payload = b64decode(str(data or ''), validate=True)
+                if not payload:
+                    return {'saved': False}
+                _validate_artwork_content(payload, source=f'perfect-source.{ext}')
+                path = self._perfect_source_path(appid, target, ext)
+                temporary = path.with_suffix(path.suffix + '.tmp')
+                temporary.write_bytes(payload)
+                temporary.replace(path)
+                _diagnostic('perfect.source.saved', appid=appid, target=target, bytes=len(payload))
+                return {'saved': True, 'existing': False}
+            except Exception as error:
+                _diagnostic('perfect.source.save_failed', appid=appid, target=target, error=error)
                 return {'saved': False}
-            path = self._perfect_source_path(appid, target, ext)
-            temporary = path.with_suffix(path.suffix + '.tmp')
-            temporary.write_bytes(payload)
-            temporary.replace(path)
-            _diagnostic('perfect.source.saved', appid=appid, target=target, bytes=len(payload))
-            return {'saved': True, 'existing': False}
-        except Exception as error:
-            _diagnostic('perfect.source.save_failed', appid=appid, target=target, error=error)
-            return {'saved': False}
+
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, save_sync)
 
     async def get_perfect_source(self, appid=0, target='hero'):
-        try:
-            path = self._find_perfect_source(appid, target)
-            if not path:
+        def read_sync():
+            try:
+                path = self._find_perfect_source(appid, target)
+                if not path:
+                    return ''
+                if path.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                payload = path.read_bytes()
+                _validate_artwork_content(payload, source=path)
+                mime = 'image/png' if path.suffix.lower() == '.png' else 'image/webp' if path.suffix.lower() == '.webp' else 'image/jpeg'
+                return f'data:{mime};base64,' + b64encode(payload).decode('ascii')
+            except Exception as error:
+                _diagnostic('perfect.source.read_failed', appid=appid, target=target, error=error)
                 return ''
-            mime = 'image/png' if path.suffix.lower() == '.png' else 'image/webp' if path.suffix.lower() == '.webp' else 'image/jpeg'
-            return f'data:{mime};base64,' + b64encode(path.read_bytes()).decode('ascii')
-        except Exception as error:
-            _diagnostic('perfect.source.read_failed', appid=appid, target=target, error=error)
-            return ''
+
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_sync)
 
     async def clear_perfect_source(self, appid=0, target='hero'):
-        try:
-            path = self._find_perfect_source(appid, target)
-            if path:
-                path.unlink()
-                _diagnostic('perfect.source.cleared', appid=appid, target=target)
-            return True
-        except Exception as error:
-            _diagnostic('perfect.source.clear_failed', appid=appid, target=target, error=error)
-            return False
+        def clear_sync():
+            try:
+                path = self._find_perfect_source(appid, target)
+                if path:
+                    path.unlink()
+                    _diagnostic('perfect.source.cleared', appid=appid, target=target)
+                return True
+            except Exception as error:
+                _diagnostic('perfect.source.clear_failed', appid=appid, target=target, error=error)
+                return False
+
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, clear_sync)
 
     async def get_steamgriddb_api_key(self):
         return str(self._settings_data.get('steamgriddb_api_key', '') or '')
@@ -740,7 +896,7 @@ class Plugin:
                 return []
             loop = asyncio.get_running_loop()
             games = await loop.run_in_executor(
-                None,
+                self._provider_executor,
                 lambda: finder(str(title or ''), int(limit)),
             )
             _diagnostic('provider.games', provider=provider, title=title, found=len(games))
@@ -757,18 +913,20 @@ class Plugin:
         try:
             bounded_limit = max(1, min(36, int(limit)))
             results = await asyncio.wait_for(
-                asyncio.to_thread(
-                    search_provider_assets_sync,
-                    provider,
-                    title,
-                    asset_type,
-                    bool(square_only),
-                    bounded_limit,
-                    minimum_quality,
-                    mimes or [],
-                    content_type,
-                    query,
-                    exact_size,
+                asyncio.get_running_loop().run_in_executor(
+                    self._provider_executor,
+                    lambda: search_provider_assets_sync(
+                        provider,
+                        title,
+                        asset_type,
+                        bool(square_only),
+                        bounded_limit,
+                        minimum_quality,
+                        mimes or [],
+                        content_type,
+                        query,
+                        exact_size,
+                    ),
                 ),
                 timeout=28,
             )
@@ -787,13 +945,15 @@ class Plugin:
         started = asyncio.get_running_loop().time()
         try:
             result = await asyncio.wait_for(
-                asyncio.to_thread(
-                    inspect_remote_artwork_sync,
-                    url,
-                    asset_type,
-                    aspect_mode,
-                    minimum_quality,
-                    mimes or [],
+                asyncio.get_running_loop().run_in_executor(
+                    self._provider_executor,
+                    lambda: inspect_remote_artwork_sync(
+                        url,
+                        asset_type,
+                        aspect_mode,
+                        minimum_quality,
+                        mimes or [],
+                    ),
                 ),
                 timeout=22,
             )
@@ -801,7 +961,7 @@ class Plugin:
             return result
         except asyncio.TimeoutError as error:
             _diagnostic('artwork.inspect.timeout', url=url, asset_type=asset_type, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            raise ValueError('La verifica dell’immagine ha impiegato troppo tempo.') from error
+            raise ValueError('PA_ERROR_IMAGE_CHECK_TIMEOUT') from error
         except Exception as error:
             _diagnostic('artwork.inspect.failed', url=url, asset_type=asset_type, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000), error=error)
             raise
@@ -1027,15 +1187,11 @@ class Plugin:
             return False
 
         try:
-            req = Request(url, headers={'User-Agent': 'Playhub-Artworks/1.0'})
-            remote_digest = sha256()
-            with urlopen(req, context=get_ssl_context(), timeout=15) as response:
-                while True:
-                    chunk = response.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    remote_digest.update(chunk)
-            return _sha256_file(local_file) == remote_digest.hexdigest()
+            remote_digest = await asyncio.get_running_loop().run_in_executor(
+                self._download_executor,
+                lambda: _remote_sha256_limited(url, self._shutdown_event),
+            )
+            return _sha256_file(local_file) == remote_digest
         except Exception as e:
             decky.logger.debug(f'Failed to compare local artwork for {appid}: {e}')
             return False

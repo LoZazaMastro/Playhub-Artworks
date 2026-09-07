@@ -4,7 +4,7 @@ import { useState, FC, useRef, useEffect, useCallback } from 'react';
 
 import { useSGDB } from '../../hooks/useSGDB';
 import Asset from '../asset/Asset';
-import t from '../../utils/i18n';
+import t, { localizeError } from '../../utils/i18n';
 import MenuIcon from '../Icons/MenuIcon';
 import AssetDetailsModal from '../../modals/AssetDetailsModal';
 import { SGDB_ASSET_TYPE_READABLE } from '../../constants';
@@ -66,7 +66,7 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
       toaster.toast({
         title: appOverview?.display_name,
         body: zazaHero
-          ? 'Perfect Hero applicato. Il logo separato è stato nascosto.'
+          ? t('PA_PERFECT_HERO_APPLIED', 'Perfect Hero applied. The separate logo has been hidden.')
           : t('MSG_ASSET_APPLY_SUCCESS', '{assetType} has been successfully applied!').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType]),
         icon: <MenuIcon />,
         duration: zazaHero ? 2600 : 1500,
@@ -74,7 +74,7 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
     } catch (err: any) {
       toaster.toast({
         title: t('MSG_ASSET_APPLY_ERROR', 'There was a problem applying this asset.'),
-        body: err.message,
+        body: localizeError(err),
         icon: <MenuIcon fill="#f3171e" />,
       });
     }
@@ -122,7 +122,7 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
         {loading ? (
           <div className="pa-inline-state">
             <img alt="" src="/images/steam_spinner.png" />
-            <span>Sto cercando gli artwork…</span>
+            <span>{t('PA_SEARCHING_ARTWORK', 'Searching for artwork…')}</span>
           </div>
         ) : (
           <Focusable className={`pa-grid type-${assetType}`} flow-children="grid">
@@ -148,9 +148,9 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
                   downloadStatus={job?.status}
                   onActivate={() => setAsset(asset)}
                   onOKActionDescription={t('ACTION_ASSET_APPLY', 'Apply {assetType}').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType])}
-                  onSecondaryActionDescription="Filtri"
+                  onSecondaryActionDescription={t('PA_FILTERS', "Filters")}
                   onSecondaryButton={() => openFilters(assetType)}
-                  onMenuActionDescription="Dettagli"
+                  onMenuActionDescription={t('ACTION_OPEN_DETAILS', 'Details')}
                   onMenuButton={() => openDetails(asset)}
                   onContextMenu={(evt: any) => {
                     evt.preventDefault();

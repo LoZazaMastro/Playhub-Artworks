@@ -39,7 +39,7 @@ const classesReady = (): boolean =>
   At a Big Picture start the plugin has to ask its python backend what the cover format is,
   and that is three websocket round trips through a process that is itself still starting.
   Steam draws the Home in the meantime - with Steam's own portrait covers - and the format
-  only lands a beat later: the couple of seconds of "verticali più alte del banner" before
+  only lands a beat later: the couple of seconds of "portrait cards taller than the banner" before
   everything snaps into place.
 
   So the answer is also kept in the Steam client's own localStorage, which reads
@@ -87,10 +87,10 @@ export const applyCachedLayout = (): boolean => {
     const homeApplied = addHomePatch(true, cached.square);
     const heroApplied = applyHomeHeroCentering(cached.hero);
     cachedBootstrapPending = squareApplied && homeApplied && heroApplied && classesReady();
-    log('layout da cache', cached);
+    log('cached layout', cached);
     return true;
   } catch (error) {
-    log('layout da cache fallito', error);
+    log('cached layout failed', error);
     return false;
   }
 };
@@ -123,7 +123,7 @@ export const refreshLayoutPatches = async (mounting = false) => {
   if (mounting && cachedLayoutMatches) {
     cachedBootstrapPending = false;
     retries = 0;
-    log('layout da cache confermato');
+    log('cached layout confirmed');
     return;
   }
   cachedBootstrapPending = false;

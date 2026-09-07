@@ -12,7 +12,18 @@ import getAppOverview from '../utils/getAppOverview';
 import { artworkSources, steamOwnArtworkSources, useArtworkPreview } from '../utils/artworkSources';
 import MenuIcon from '../components/Icons/MenuIcon';
 import log from '../utils/log';
+import t, { localizeError } from '../utils/i18n';
 import { getPerfectSource, isPerfectArtwork, savePerfectSource } from '../utils/perfectArtwork';
+import {
+  assertBase64PayloadSize,
+  assertDataUrlSize,
+  blobToSafeDataUrl,
+  fetchWithCancellation,
+  loadSafeImage,
+  releaseCanvas,
+  releaseImage,
+  withCompositionLock,
+} from '../utils/imageSafety';
 
 export type ComposerTarget = 'hero' | 'grid_l';
 
@@ -39,15 +50,15 @@ const TARGETS: Record<ComposerTarget, {
   hero: {
     width: 3840,
     height: 1240,
-    title: 'Crea Perfect Hero',
-    intro: 'Sfondo e logo fusi in un unico hero 3840 × 1240.',
+    title: t('PA_CREATE_PERFECT_HERO', 'Create Perfect Hero'),
+    intro: t('PA_PERFECT_HERO_DESC', 'Background and logo merged into a single 3840 × 1240 hero.'),
     format: 'jpg',
   },
   grid_l: {
     width: 1926,
     height: 900,
-    title: 'Crea Perfect Banner',
-    intro: 'Sfondo e logo fusi in un unico banner 1926 × 900, stesse proporzioni di Steam ad alta risoluzione.',
+    title: t('PA_CREATE_PERFECT_BANNER', 'Create Perfect Banner'),
+    intro: t('PA_PERFECT_BANNER_DESC', 'Background and logo merged into a single 1926 × 900 banner, matching Steam proportions at high resolution.'),
     format: 'jpg',
   },
 };
@@ -103,26 +114,13 @@ const logoShadowFilter = (opacityPercent: number, blurPercent: number, scale: nu
   return `${one} ${one}`;
 };
 
-/** Reads an image the UI can already display and returns its raw base64 payload. */
-const loadImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image();
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('Immagine non disponibile.'));
-  image.src = source;
-});
-
 const toBase64 = async (source: string): Promise<{ data: string; ext: string } | null> => {
   try {
-    const response = await fetch(source);
+    const response = await fetchWithCancellation(fetch, source);
     if (!response.ok) return null;
     const blob = await response.blob();
     const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
-    const data: string = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? '').split(',', 2)[1] ?? '');
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(blob);
-    });
+    const data = (await blobToSafeDataUrl(blob)).split(',', 2)[1] ?? '';
     return data ? { data, ext } : null;
   } catch (_) {
     return null;
@@ -137,24 +135,23 @@ const toBase64 = async (source: string): Promise<{ data: string; ext: string } |
  * save that fails at the very last step, after the preview has looked perfect all along.
  */
 const asDataUrl = async (source: string): Promise<string> => {
-  if (!source || source.startsWith('data:')) return source;
+  if (!source) return '';
+  if (source.startsWith('data:')) {
+    assertDataUrlSize(source);
+    return source;
+  }
   try {
-    const response = await fetch(source);
+    const response = await fetchWithCancellation(fetch, source);
     if (!response.ok) return source;
-    const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? '') || source);
-      reader.onerror = () => resolve(source);
-      reader.readAsDataURL(blob);
-    });
-  } catch (_) {
+    return await blobToSafeDataUrl(await response.blob());
+  } catch (error: any) {
+    if (String(error?.message || '').startsWith('PA_ERROR_')) throw error;
     return source;
   }
 };
 
-/** Same as `loadImage`, but guaranteed not to taint whatever it is drawn onto. */
-const loadDrawableImage = async (source: string) => loadImage(await asDataUrl(source));
+/** Same as the preview image, but guaranteed not to taint the output canvas. */
+const loadDrawableImage = async (source: string) => loadSafeImage(await asDataUrl(source));
 
 /**
  * Shrinks the kept-aside original before it is handed to the backend.
@@ -167,20 +164,27 @@ const loadDrawableImage = async (source: string) => loadImage(await asDataUrl(so
 const PRISTINE_MAX_WIDTH = 4096;
 
 const boundedSource = async (source: string): Promise<{ data: string; ext: string } | null> => {
+  let image: HTMLImageElement | null = null;
+  let canvas: HTMLCanvasElement | null = null;
   try {
-    const image = await loadDrawableImage(source);
+    image = await loadDrawableImage(source);
     if (image.naturalWidth <= PRISTINE_MAX_WIDTH) return toBase64(await asDataUrl(source));
 
     const scale = PRISTINE_MAX_WIDTH / image.naturalWidth;
-    const canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas');
     canvas.width = PRISTINE_MAX_WIDTH;
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext('2d');
     if (!context) return toBase64(await asDataUrl(source));
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return { data: canvas.toDataURL('image/jpeg', 0.95).split(',', 2)[1] ?? '', ext: 'jpg' };
+    const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
+    assertBase64PayloadSize(data);
+    return { data, ext: 'jpg' };
   } catch (_) {
     return null;
+  } finally {
+    releaseImage(image);
+    releaseCanvas(canvas);
   }
 };
 
@@ -253,7 +257,7 @@ const ArtworkComposerModal: FC<{
   const [sourceReady, setSourceReady] = useState(false);
 
   const [backgroundNatural, setBackgroundNatural] = useState({ width: 0, height: 0 });
-  const [, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { void getAppOverview(appId).then(setApp); }, [appId]);
 
@@ -340,7 +344,6 @@ const ArtworkComposerModal: FC<{
     background, logo, backgroundSource, logoSource: activeLogo,
     backgroundOpacity, logoShadowOpacity, logoShadowBlur,
   });
-  const persistOnExit = useRef<() => Promise<void>>(async () => undefined);
 
   useEffect(() => {
     latest.current = {
@@ -370,7 +373,7 @@ const ArtworkComposerModal: FC<{
     `useArtworkPreview` hands back a `blob:` object URL and REVOKES it when its inputs
     change or the component unmounts. Holding on to that string meant the compose step
     could reach a URL that no longer pointed at anything, and the save died with
-    "Immagine non disponibile." on a game whose artwork was perfectly present. A data URL
+    "The image is unavailable." on a game whose artwork was perfectly present. A data URL
     cannot be revoked out from under us.
   */
   useEffect(() => {
@@ -382,11 +385,11 @@ const ArtworkComposerModal: FC<{
         /*
           Which picture the editor started from, in the log.
 
-          "Non ci deve essere un altro perfect hero nell'editor" cannot be judged from a
+          Whether another Perfect Hero is present in the editor cannot be judged from a
           screenshot - the logo layer sits exactly where a baked-in logo would be. The
           source is named here so it can be checked instead of guessed.
         */
-        log('composer source', { target, origine: 'originale messo da parte', bytes: stored.length });
+        log('composer source', { target, source: 'original preserved', bytes: stored.length });
         setBackgroundSource(stored);
         setSourceReady(true);
         return;
@@ -397,8 +400,8 @@ const ArtworkComposerModal: FC<{
       const adopted = inlined || steamBackground;
       log('composer source', {
         target,
-        origine: composed ? 'artwork di Steam (il gioco ha gia una composizione)' : 'artwork attuale del gioco',
-        candidati: (composed ? originalCandidates : currentCandidates).slice(0, 3),
+        source: composed ? 'Steam artwork (the game already has a composition)' : 'current game artwork',
+        candidates: (composed ? originalCandidates : currentCandidates).slice(0, 3),
       });
       setBackgroundSource(adopted);
       setSourceReady(true);
@@ -443,52 +446,68 @@ const ArtworkComposerModal: FC<{
 
   const compose = useCallback(async (state = latest.current) => {
     if (!state.backgroundSource) return null;
-    const backgroundImage = await loadDrawableImage(state.backgroundSource);
-    const canvas = document.createElement('canvas');
-    canvas.width = spec.width;
-    canvas.height = spec.height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Compositing non disponibile.');
-    context.fillStyle = '#000';
-    context.fillRect(0, 0, spec.width, spec.height);
+    return await withCompositionLock(async () => {
+      let backgroundImage: HTMLImageElement | null = null;
+      let logoImage: HTMLImageElement | null = null;
+      let canvas: HTMLCanvasElement | null = null;
+      try {
+        backgroundImage = await loadDrawableImage(state.backgroundSource);
+        canvas = document.createElement('canvas');
+        canvas.width = spec.width;
+        canvas.height = spec.height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('PA_ERROR_COMPOSITING_UNAVAILABLE');
+        context.fillStyle = '#000';
+        context.fillRect(0, 0, spec.width, spec.height);
 
-    const box = backgroundPlacement(
-      { width: backgroundImage.naturalWidth, height: backgroundImage.naturalHeight },
-      state.background,
-      spec
-    );
-    context.globalAlpha = clamp(state.backgroundOpacity, 0, 100) / 100;
-    context.drawImage(
-      backgroundImage,
-      (box.left / 100) * spec.width,
-      (box.top / 100) * spec.height,
-      (box.width / 100) * spec.width,
-      (box.height / 100) * spec.height
-    );
-    context.globalAlpha = 1;
+        const box = backgroundPlacement(
+          { width: backgroundImage.naturalWidth, height: backgroundImage.naturalHeight },
+          state.background,
+          spec
+        );
+        context.globalAlpha = clamp(state.backgroundOpacity, 0, 100) / 100;
+        context.drawImage(
+          backgroundImage,
+          (box.left / 100) * spec.width,
+          (box.top / 100) * spec.height,
+          (box.width / 100) * spec.width,
+          (box.height / 100) * spec.height
+        );
+        context.globalAlpha = 1;
 
-    if (state.logoSource) {
-      const logoImage = await loadDrawableImage(state.logoSource);
-      const width = (spec.width * state.logo.scale) / 100;
-      const height = (width * logoImage.naturalHeight) / logoImage.naturalWidth;
-      const left = (spec.width * state.logo.x) / 100 - width / 2;
-      const top = (spec.height * state.logo.y) / 100 - height / 2;
-      const opacity = clamp(state.logoShadowOpacity, 0, 100) / 100;
-      if (opacity > 0) {
-        const { blur, offset } = shadowGeometry(state.logoShadowBlur, spec.width / REFERENCE_WIDTH);
-        context.shadowColor = `rgba(0,0,0,${opacity})`;
-        context.shadowBlur = blur;
-        context.shadowOffsetY = offset;
-        // Drawn twice to match the doubled CSS drop-shadow used in the preview.
-        context.drawImage(logoImage, left, top, width, height);
-        context.drawImage(logoImage, left, top, width, height);
-        context.shadowColor = 'transparent';
-        context.shadowBlur = 0;
-        context.shadowOffsetY = 0;
+        if (state.logoSource) {
+          logoImage = await loadDrawableImage(state.logoSource);
+          const width = (spec.width * state.logo.scale) / 100;
+          const height = (width * logoImage.naturalHeight) / logoImage.naturalWidth;
+          const left = (spec.width * state.logo.x) / 100 - width / 2;
+          const top = (spec.height * state.logo.y) / 100 - height / 2;
+          const opacity = clamp(state.logoShadowOpacity, 0, 100) / 100;
+          if (opacity > 0) {
+            const { blur, offset } = shadowGeometry(state.logoShadowBlur, spec.width / REFERENCE_WIDTH);
+            context.shadowColor = `rgba(0,0,0,${opacity})`;
+            context.shadowBlur = blur;
+            context.shadowOffsetY = offset;
+            context.drawImage(logoImage, left, top, width, height);
+            context.drawImage(logoImage, left, top, width, height);
+            context.shadowColor = 'transparent';
+            context.shadowBlur = 0;
+            context.shadowOffsetY = 0;
+          }
+          context.drawImage(logoImage, left, top, width, height);
+        }
+
+        const data = spec.format === 'jpg'
+          ? canvas.toDataURL('image/jpeg', 0.92).replace(/^data:image\/jpeg;base64,/, '')
+          : canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+        if (!data) throw new Error('PA_ERROR_EMPTY_IMAGE');
+        assertBase64PayloadSize(data);
+        return { data, width: canvas.width, height: canvas.height };
+      } finally {
+        releaseImage(backgroundImage);
+        releaseImage(logoImage);
+        releaseCanvas(canvas);
       }
-      context.drawImage(logoImage, left, top, width, height);
-    }
-    return canvas;
+    });
   }, [spec]);
 
   /*
@@ -514,7 +533,7 @@ const ArtworkComposerModal: FC<{
       the user's artwork.
     */
     if ((window as any).__playhubSelfTest) {
-      log('composer: salvataggio saltato (autotest)');
+      log('composer: save skipped (autotest)');
       return;
     }
     if (inFlight.current) return inFlight.current;
@@ -525,20 +544,15 @@ const ArtworkComposerModal: FC<{
     const run = (async () => {
       setSaving(true);
       try {
-        const canvas = await compose(state);
-        if (!canvas) throw new Error('Composizione non riuscita.');
+        const composition = await compose(state);
+        if (!composition) throw new Error('PA_ERROR_COMPOSITION_FAILED');
 
-        const data = spec.format === 'jpg'
-          ? canvas.toDataURL('image/jpeg', 0.95).replace(/^data:image\/jpeg;base64,/, '')
-          : canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
-        if (!data) throw new Error('Immagine vuota.');
-
-        await onSave(data, spec.format, Boolean(state.logoSource));
+        await onSave(composition.data, spec.format, Boolean(state.logoSource));
         dirty.current = false;
         log('composer saved', {
           target,
-          bytes: data.length,
-          canvas: `${canvas.width}x${canvas.height}`,
+          bytes: composition.data.length,
+          canvas: `${composition.width}x${composition.height}`,
         });
 
         /*
@@ -555,15 +569,15 @@ const ArtworkComposerModal: FC<{
         }
         toaster.toast({
           title: app?.display_name ?? 'Playhub Artworks',
-          body: `${spec.title.replace('Crea ', '')} creato.`,
+          body: target === 'hero' ? t('PA_PERFECT_HERO_CREATED', 'Perfect Hero created.') : t('PA_PERFECT_BANNER_CREATED', 'Perfect Banner created.'),
           icon: <MenuIcon />,
           duration: 1800,
         });
       } catch (error: any) {
         log('composer save failed', { target, message: error?.message, stack: error?.stack });
         toaster.toast({
-          title: `${spec.title.replace('Crea ', '')} non salvato`,
-          body: error?.message ?? 'Riprova.',
+          title: target === 'hero' ? t('PA_PERFECT_HERO_NOT_SAVED', 'Perfect Hero was not saved') : t('PA_PERFECT_BANNER_NOT_SAVED', 'Perfect Banner was not saved'),
+          body: localizeError(error, 'PA_TRY_AGAIN'),
           icon: <MenuIcon fill="#ff5d5d" />,
         });
       } finally {
@@ -576,22 +590,15 @@ const ArtworkComposerModal: FC<{
     return run;
   }, [app?.display_name, appId, compose, onSave, spec, target]);
 
-  /*
-    B closes IMMEDIATELY; the save carries on behind it.
+  const closing = useRef(false);
 
-    This used to `await persist()` before calling `closeModal`, and a save is not quick:
-    it fetches the source, composes a 3840 x 1240 canvas and hands Steam a couple of
-    megabytes, with a deliberate pause while the old artwork is cleared. For those seconds
-    B did nothing at all and the editor looked stuck. The save is started here and the
-    unmount effect below picks up the very same in-flight promise, so it still runs
-    exactly once and still finishes.
-  */
+  /* Keep the editor mounted until the write finishes so errors remain visible and no
+     canvas or plugin call is left running from an unmounted component. */
   const close = useCallback(() => {
-    void persist();
-    closeModal?.();
+    if (closing.current) return;
+    closing.current = true;
+    void persist().finally(() => closeModal?.());
   }, [closeModal, persist]);
-
-  useEffect(() => { persistOnExit.current = persist; }, [persist]);
 
   useEffect(() => {
     const modal = modalRef.current;
@@ -604,8 +611,6 @@ const ArtworkComposerModal: FC<{
     modal.addEventListener('vgp_oncancel', onGamepadCancel);
     return () => modal.removeEventListener('vgp_oncancel', onGamepadCancel);
   }, [app, close]);
-
-  useEffect(() => () => { void persistOnExit.current(); }, []);
 
   const activeTransform = layer === 'background' ? background : logo;
   const setActiveTransform = useCallback((change: (value: Transform) => Transform) => {
@@ -673,10 +678,11 @@ const ArtworkComposerModal: FC<{
       onButtonDown={handleButton}
       onCancel={close}
       onCancelButton={close}
-      onCancelActionDescription="Salva ed esci"
+      onCancelActionDescription={saving ? t('PA_SAVING', 'Saving…') : t('PA_SAVE_EXIT', 'Save and exit')}
+      aria-busy={saving}
       actionDescriptionMap={{
-        [GamepadButton.BUMPER_LEFT]: 'Rimpicciolisci',
-        [GamepadButton.BUMPER_RIGHT]: 'Ingrandisci',
+        [GamepadButton.BUMPER_LEFT]: t('PA_SHRINK', 'Shrink'),
+        [GamepadButton.BUMPER_RIGHT]: t('PA_ENLARGE', 'Enlarge'),
       }}
     >
       <div className="pa-editor-backdrop" />
@@ -711,7 +717,7 @@ const ArtworkComposerModal: FC<{
                 />
               ) : (
                 <div className="pa-editor-empty">
-                  {sourceReady ? 'Nessuno sfondo installato per questo gioco.' : 'Carico lo sfondo…'}
+                  {sourceReady ? t('PA_NO_BACKGROUND_GAME', 'No background is installed for this game.') : t('PA_LOADING_BACKGROUND', 'Loading background…')}
                 </div>
               )}
 
@@ -737,7 +743,7 @@ const ArtworkComposerModal: FC<{
           </div>
 
           <Focusable className="pa-editor-controls" flow-children="vertical">
-            <span className="pa-editor-label">Cosa vuoi modificare?</span>
+            <span className="pa-editor-label">{t('PA_WHAT_EDIT', 'What do you want to edit?')}</span>
             {/* Logo first, on the left: it is what the editor is opened for. */}
             <Focusable className="pa-editor-row" flow-children="horizontal">
               <DialogButton
@@ -747,7 +753,7 @@ const ArtworkComposerModal: FC<{
                 disabled={!canEditLogo}
                 onClick={() => setLayer('logo')}
               >
-                <MdOutlineBrandingWatermark /><span>Logo</span>
+                <MdOutlineBrandingWatermark /><span>{t('ASSET_TYPE_LOGO', 'Logo')}</span>
               </DialogButton>
               <DialogButton
                 data-pa-layer="background"
@@ -755,12 +761,12 @@ const ArtworkComposerModal: FC<{
                 className={layer === 'background' ? 'active' : ''}
                 onClick={() => setLayer('background')}
               >
-                <MdImage /><span>Sfondo</span>
+                <MdImage /><span>{t('PA_BACKGROUND', 'Background')}</span>
               </DialogButton>
             </Focusable>
 
             {!inlineLogo && (
-              <span className="pa-editor-hint">Questo gioco non ha un logo: verrà composto solo lo sfondo.</span>
+              <span className="pa-editor-hint">{t('PA_NO_LOGO_COMPOSE_BG_ONLY', 'This game has no logo, so only the background will be composed.')}</span>
             )}
 
             {Boolean(inlineLogo) && (
@@ -770,55 +776,55 @@ const ArtworkComposerModal: FC<{
                   onClick={toggleLogo}
                 >
                   {logoHidden ? <MdVisibilityOff /> : <MdVisibility />}
-                  <span>{logoHidden ? 'Logo escluso' : 'Logo incluso'}</span>
+                  <span>{logoHidden ? t('PA_LOGO_EXCLUDED', 'Logo excluded') : t('PA_LOGO_INCLUDED', 'Logo included')}</span>
                 </DialogButton>
               </Focusable>
             )}
 
             {logoHidden && Boolean(inlineLogo) && (
               <span className="pa-editor-hint">
-                {'Il logo non viene fuso nell’immagine: resta quello di Steam, sopra lo sfondo.'}
+                {t('PA_LOGO_EXCLUDED_DESC', 'The logo is not merged into the image; Steam keeps displaying it over the background.')}
               </span>
             )}
 
             {/* Marked so the self test can read the values back instead of eyeballing them. */}
             <span className="pa-editor-label" data-pa-readout="transform">
-              Posizione · {Math.round(activeTransform.x)}% / {Math.round(activeTransform.y)}% · scala {Math.round(activeTransform.scale)}%
+              {t('PA_POSITION_SCALE', 'Position · {x}% / {y}% · scale {scale}%').replace('{x}', String(Math.round(activeTransform.x))).replace('{y}', String(Math.round(activeTransform.y))).replace('{scale}', String(Math.round(activeTransform.scale)))}
             </span>
 
             <Focusable className="pa-editor-row pa-editor-row-center" flow-children="horizontal">
-              <DialogButton data-pa-move="up" onClick={() => move(0, -1)}><HiArrowUp /></DialogButton>
+              <DialogButton data-pa-move="up" aria-label={t('PA_MOVE_UP', 'Move up')} onOKActionDescription={t('PA_MOVE_UP', 'Move up')} onClick={() => move(0, -1)}><HiArrowUp /></DialogButton>
             </Focusable>
             <Focusable className="pa-editor-row" flow-children="horizontal">
-              <DialogButton data-pa-move="left" onClick={() => move(-1, 0)}><HiArrowLeft /></DialogButton>
-              <DialogButton onClick={reset}><MdRefresh /><span>Reimposta</span></DialogButton>
-              <DialogButton data-pa-move="right" onClick={() => move(1, 0)}><HiArrowRight /></DialogButton>
+              <DialogButton data-pa-move="left" aria-label={t('PA_MOVE_LEFT', 'Move left')} onOKActionDescription={t('PA_MOVE_LEFT', 'Move left')} onClick={() => move(-1, 0)}><HiArrowLeft /></DialogButton>
+              <DialogButton onClick={reset}><MdRefresh /><span>{t('PA_RESET', 'Reset')}</span></DialogButton>
+              <DialogButton data-pa-move="right" aria-label={t('PA_MOVE_RIGHT', 'Move right')} onOKActionDescription={t('PA_MOVE_RIGHT', 'Move right')} onClick={() => move(1, 0)}><HiArrowRight /></DialogButton>
             </Focusable>
             <Focusable className="pa-editor-row pa-editor-row-center" flow-children="horizontal">
-              <DialogButton data-pa-move="down" onClick={() => move(0, 1)}><HiArrowDown /></DialogButton>
+              <DialogButton data-pa-move="down" aria-label={t('PA_MOVE_DOWN', 'Move down')} onOKActionDescription={t('PA_MOVE_DOWN', 'Move down')} onClick={() => move(0, 1)}><HiArrowDown /></DialogButton>
             </Focusable>
 
             <Focusable className="pa-editor-row" flow-children="horizontal">
-              <DialogButton data-pa-scale="down" onClick={() => resize(-2)}><MdZoomOut /><span>Riduci</span></DialogButton>
-              <DialogButton data-pa-scale="up" onClick={() => resize(2)}><MdZoomIn /><span>Ingrandisci</span></DialogButton>
+              <DialogButton data-pa-scale="down" onClick={() => resize(-2)}><MdZoomOut /><span>{t('PA_SHRINK', 'Shrink')}</span></DialogButton>
+              <DialogButton data-pa-scale="up" onClick={() => resize(2)}><MdZoomIn /><span>{t('PA_ENLARGE', 'Enlarge')}</span></DialogButton>
             </Focusable>
 
-            <span className="pa-editor-label">Rifinitura</span>
+            <span className="pa-editor-label">{t('PA_REFINEMENT', 'Fine tuning')}</span>
             <DropdownItem
-              label="Opacità dello sfondo"
+              label={t('PA_BACKGROUND_OPACITY', 'Background opacity')}
               rgOptions={percentOptions}
               selectedOption={backgroundOpacity}
               onChange={(option) => { dirty.current = true; setBackgroundOpacity(Number(option.data)); }}
             />
             <DropdownItem
-              label="Opacità ombra del logo"
+              label={t('PA_LOGO_SHADOW_OPACITY', 'Logo shadow opacity')}
               disabled={!canEditLogo}
               rgOptions={percentOptions}
               selectedOption={logoShadowOpacity}
               onChange={(option) => { dirty.current = true; setLogoShadowOpacity(Number(option.data)); }}
             />
             <DropdownItem
-              label="Sfocatura ombra del logo"
+              label={t('PA_LOGO_SHADOW_BLUR', 'Logo shadow blur')}
               disabled={!canEditLogo}
               rgOptions={percentOptions}
               selectedOption={logoShadowBlur}
@@ -826,8 +832,7 @@ const ArtworkComposerModal: FC<{
             />
 
             <span className="pa-editor-hint">
-              LB e RB regolano la dimensione da qualsiasi punto.
-              Uscendo con B la composizione viene salvata.
+              {t('PA_COMPOSER_CONTROLS_HINT', 'LB and RB adjust the size from anywhere. Closing with B saves the composition.')}
             </span>
           </Focusable>
         </div>

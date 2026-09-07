@@ -1,3 +1,4 @@
+import t from '../../utils/i18n';
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
 import { call } from '@decky/api';
 import { DialogButton, Focusable } from '@decky/ui';
@@ -10,11 +11,11 @@ import openFilePicker from '../../utils/openFilePicker';
 import { artworkSources, useArtworkPreview } from '../../utils/artworkSources';
 
 const SLOTS: Array<{ assetType: SGDBAssetType; title: string; hint: string }> = [
-  { assetType: 'grid_p', title: 'Cover', hint: 'Verticale o quadrata, usata nella libreria' },
-  { assetType: 'grid_l', title: 'Banner', hint: 'Capsule orizzontale' },
-  { assetType: 'hero', title: 'Sfondo', hint: 'Testata della pagina gioco' },
-  { assetType: 'logo', title: 'Logo', hint: 'Trasparente, sovrapposto allo sfondo' },
-  { assetType: 'icon', title: 'Icona', hint: 'Quadrata, usata nelle liste' },
+  { assetType: 'grid_p', title: t('PA_COVER', 'Cover'), hint: t('PA_COVER_HINT', 'Portrait or square, used in the library') },
+  { assetType: 'grid_l', title: t('PA_BANNER', 'Banner'), hint: t('PA_BANNER_HINT', 'Horizontal capsule') },
+  { assetType: 'hero', title: t('PA_BACKGROUND', 'Background'), hint: t('PA_BACKGROUND_HINT', 'Game page header') },
+  { assetType: 'logo', title: t('ASSET_TYPE_LOGO', 'Logo'), hint: t('PA_LOGO_HINT', 'Transparent, overlaid on the background') },
+  { assetType: 'icon', title: t('ASSET_TYPE_ICON', 'Icon'), hint: t('PA_ICON_HINT', 'Square, used in lists') },
 ];
 
 const AssetSlot: FC<{
@@ -77,18 +78,18 @@ const AssetSlot: FC<{
       focusClassName="is-focused"
       focusWithinClassName="is-focused"
       onActivate={editable && !active ? onActivate : undefined}
-      onOKActionDescription={editable && !active ? `Gestisci ${title.toLowerCase()}` : undefined}
+      onOKActionDescription={editable && !active ? t('PA_MANAGE_ITEM', 'Manage {item}').replace('{item}', title.toLowerCase()) : undefined}
     >
       <div className="pa-slot-art">
         {preview
           ? <img className="pa-slot-image" src={preview} alt="" />
-          : <span className="pa-slot-missing">Nessun artwork</span>}
+          : <span className="pa-slot-missing">{t('PA_NO_ARTWORK', "No artwork")}</span>}
       </div>
 
       <div className="pa-slot-copy">
         <strong>{title}</strong>
         <span>{hint}</span>
-        {!editable && <span className="pa-slot-locked">Non modificabile per questa scorciatoia</span>}
+        {!editable && <span className="pa-slot-locked">{t('PA_NOT_EDITABLE_SHORTCUT', 'Not editable for this shortcut')}</span>}
       </div>
 
       {/*
@@ -101,14 +102,14 @@ const AssetSlot: FC<{
           className="pa-slot-actions"
           flow-children="horizontal"
           onCancelButton={leave}
-          onCancelActionDescription="Torna alle card"
+          onCancelActionDescription={t('PA_BACK_TO_CARDS', 'Back to cards')}
         >
           <DialogButton
             disabled={busy}
             onClick={browse}
-            onOKActionDescription="Scegli un file locale"
+            onOKActionDescription={t('PA_CHOOSE_LOCAL_FILE', 'Choose a local file')}
           >
-            <HiFolderOpen /><span>Scegli file</span>
+            <HiFolderOpen /><span>{t('PA_CHOOSE_FILE', "Choose file")}</span>
           </DialogButton>
           <DialogButton
             disabled={busy}
@@ -119,15 +120,15 @@ const AssetSlot: FC<{
               }
               await clearAsset(assetType);
             })}
-            onOKActionDescription="Ripristina l’artwork di Steam"
+            onOKActionDescription={t('PA_RESTORE_STEAM_ART', 'Restore Steam artwork')}
           >
-            <HiTrash /><span>Cancella</span>
+            <HiTrash /><span>{t('PA_DELETE', "Delete")}</span>
           </DialogButton>
         </Focusable>
       )}
 
       {!active && editable && (
-        <span className="pa-slot-cta">Premi A per gestire</span>
+        <span className="pa-slot-cta">{t('PA_PRESS_A_MANAGE', "Press A to manage")}</span>
       )}
     </Focusable>
   );

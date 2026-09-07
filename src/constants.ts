@@ -17,21 +17,21 @@ export const SGDB_ASSET_TYPE_READABLE: Record<SGDBAssetType, string> = {
 };
 
 export const ASSET_TAB_LABEL: Record<string, string> = {
-  grid_p: 'Cover',
-  grid_l: 'Banner',
-  hero: 'Sfondo',
-  logo: 'Logo',
-  icon: 'Icona',
-  manage: 'Gestisci',
+  grid_p: t('PA_COVER', 'Cover'),
+  grid_l: t('PA_BANNER', 'Banner'),
+  hero: t('PA_BACKGROUND', 'Background'),
+  logo: t('ASSET_TYPE_LOGO', 'Logo'),
+  icon: t('ASSET_TYPE_ICON', 'Icon'),
+  manage: t('LABEL_TAB_MANAGE', 'Manage'),
 };
 
 const gridStyles = {
   options: [
-    { label: 'Alternate', value: 'alternate' },
-    { label: 'White Logo', value: 'white_logo' },
-    { label: 'No Logo', value: 'no_logo' },
-    { label: 'Blurred', value: 'blurred' },
-    { label: 'Minimal', value: 'material' },
+    { label: t('PA_STYLE_ALTERNATE', 'Alternate'), value: 'alternate' },
+    { label: t('PA_STYLE_WHITE_LOGO', 'White logo'), value: 'white_logo' },
+    { label: t('PA_STYLE_NO_LOGO', 'No logo'), value: 'no_logo' },
+    { label: t('PA_STYLE_BLURRED', 'Blurred'), value: 'blurred' },
+    { label: t('PA_STYLE_MINIMAL', 'Minimal'), value: 'material' },
   ],
   default: ['alternate', 'white_logo', 'no_logo', 'blurred', 'material'],
 };
@@ -41,28 +41,48 @@ export const STYLES = {
   grid_l: gridStyles,
   hero: {
     options: [
-      { label: 'Alternate', value: 'alternate' },
-      { label: 'Blurred', value: 'blurred' },
-      { label: 'Minimal', value: 'material' },
+      { label: t('PA_STYLE_ALTERNATE', 'Alternate'), value: 'alternate' },
+      { label: t('PA_STYLE_BLURRED', 'Blurred'), value: 'blurred' },
+      { label: t('PA_STYLE_MINIMAL', 'Minimal'), value: 'material' },
     ],
     default: ['alternate', 'blurred', 'material'],
   },
   logo: {
     options: [
-      { label: 'Ufficiale', value: 'official' },
-      { label: 'Bianco', value: 'white' },
-      { label: 'Nero', value: 'black' },
-      { label: 'Custom', value: 'custom' },
+      { label: t('PA_STYLE_OFFICIAL', 'Official'), value: 'official' },
+      { label: t('PA_STYLE_WHITE', 'White'), value: 'white' },
+      { label: t('PA_STYLE_BLACK', 'Black'), value: 'black' },
+      { label: t('PA_STYLE_CUSTOM', 'Custom'), value: 'custom' },
     ],
     default: ['official', 'white', 'black', 'custom'],
   },
   icon: {
     options: [
-      { label: 'Ufficiale', value: 'official' },
-      { label: 'Custom', value: 'custom' },
+      { label: t('PA_STYLE_OFFICIAL', 'Official'), value: 'official' },
+      { label: t('PA_STYLE_CUSTOM', 'Custom'), value: 'custom' },
     ],
     default: ['official', 'custom'],
   },
+};
+
+const STYLE_LABELS: Record<string, [string, string]> = {
+  alternate: ['PA_STYLE_ALTERNATE', 'Alternate'],
+  white_logo: ['PA_STYLE_WHITE_LOGO', 'White logo'],
+  no_logo: ['PA_STYLE_NO_LOGO', 'No logo'],
+  blurred: ['PA_STYLE_BLURRED', 'Blurred'],
+  material: ['PA_STYLE_MINIMAL', 'Minimal'],
+  minimal: ['PA_STYLE_MINIMAL', 'Minimal'],
+  official: ['PA_STYLE_OFFICIAL', 'Official'],
+  white: ['PA_STYLE_WHITE', 'White'],
+  black: ['PA_STYLE_BLACK', 'Black'],
+  custom: ['PA_STYLE_CUSTOM', 'Custom'],
+};
+
+/** Localized display label for style metadata returned by artwork providers. */
+export const styleLabel = (style: unknown): string => {
+  const normalized = String(style ?? '').trim().toLowerCase().replaceAll(' ', '_');
+  const known = STYLE_LABELS[normalized];
+  return known ? t(known[0], known[1]) : t('PA_STYLE_OTHER', 'Other');
 };
 
 export const SGDB_MIME_MAP: Record<string, string> = {
@@ -156,8 +176,8 @@ export type ArtworkProvider = {
     Which cover shapes this source actually has.
 
     PlayStation, Nintendo and IGN publish SQUARE covers (the PS5 tile is 1024x1024);
-    asking them for portrait covers is why they "found nothing", and offering a "Solo
-    verticali" option on them is a promise the search cannot keep. This list decides both
+    asking them for portrait covers is why they "found nothing", and offering a "Portrait
+    only" option on them is a promise the search cannot keep. This list decides both
     what is searched and what the interface may offer.
   */
   coverShapes?: Array<'portrait' | 'square'>;
@@ -176,35 +196,35 @@ export type ArtworkProvider = {
 
 const landscapeContent = {
   grid_l: [
-    { label: 'Artwork e screenshot', value: 'all' },
-    { label: 'Solo artwork', value: 'artwork' },
-    { label: 'Solo screenshot', value: 'screenshot' },
+    { label: t('PA_ART_AND_SCREENSHOTS', 'Artwork and screenshots'), value: 'all' },
+    { label: t('PA_ARTWORK_ONLY', 'Artwork only'), value: 'artwork' },
+    { label: t('PA_SCREENSHOTS_ONLY', 'Screenshots only'), value: 'screenshot' },
   ],
   hero: [
-    { label: 'Artwork e screenshot', value: 'all' },
-    { label: 'Solo artwork', value: 'artwork' },
-    { label: 'Solo screenshot', value: 'screenshot' },
+    { label: t('PA_ART_AND_SCREENSHOTS', 'Artwork and screenshots'), value: 'all' },
+    { label: t('PA_ARTWORK_ONLY', 'Artwork only'), value: 'artwork' },
+    { label: t('PA_SCREENSHOTS_ONLY', 'Screenshots only'), value: 'screenshot' },
   ],
 };
 
 const mixedCoverAspects = {
   grid_p: [
-    { label: 'Verticali e quadrate', value: 'both' },
-    { label: 'Solo verticali', value: 'portrait' },
-    { label: 'Solo quadrate', value: 'square' },
+    { label: t('PA_BOTH_PORTRAIT_SQUARE', 'Portrait and square'), value: 'both' },
+    { label: t('PA_PORTRAIT_ONLY', 'Portrait only'), value: 'portrait' },
+    { label: t('PA_SQUARE_ONLY', 'Square only'), value: 'square' },
   ],
 };
 
 export const ARTWORK_PROVIDERS: { options: ArtworkProvider[]; default: ArtworkProviderId } = {
   options: [
-    { label: 'SteamGridDB', value: 'steamgriddb', assets: ['grid_p', 'grid_l', 'hero', 'logo', 'icon'], exactDimensions: true, fileTypes: true, coverShapes: ['portrait', 'square'], gameSearch: 'steamgriddb', description: 'Artwork della community, asset ufficiali, stili e animazioni. La forma della cover è già decisa dalle risoluzioni.' },
-    { label: 'PlayStation', value: 'playstation', assets: ['grid_p', 'grid_l', 'hero', 'logo'], contentTypes: landscapeContent, storeSearch: true, gameSearch: 'provider', coverShapes: ['square'], description: 'Cover, key art, screenshot e loghi ufficiali PlayStation.' },
-    { label: 'IGDB', value: 'igdb', assets: ['grid_p', 'grid_l', 'hero'], contentTypes: landscapeContent, gameSearch: 'provider', exactSearch: true, coverShapes: ['portrait'], description: 'Cover, artwork e screenshot da IGDB.' },
-    { label: 'AlphaCoders', value: 'alphacoders', assets: ['grid_l', 'hero'], fileTypes: true, gameSearch: 'provider', exactSearch: true, description: 'Wallpaper orizzontali anche in alta risoluzione.' },
-    { label: 'Nintendo', value: 'nintendo', assets: ['grid_p', 'grid_l', 'hero'], contentTypes: landscapeContent, storeSearch: true, gameSearch: 'provider', coverShapes: ['square'], description: 'Cover quadrate, key art e screenshot ufficiali Nintendo.' },
-    { label: 'Xbox', value: 'xbox', assets: ['grid_p', 'grid_l', 'hero', 'icon'], contentTypes: landscapeContent, gameSearch: 'provider', coverShapes: ['portrait', 'square'], aspectModes: mixedCoverAspects, defaultAspectMode: { grid_p: 'both' }, description: 'Cover, key art, screenshot e icone ufficiali Xbox.' },
-    { label: 'iiDB', value: 'iidb', assets: ['grid_l', 'hero', 'logo', 'icon'], fileTypes: true, gameSearch: 'provider', description: 'Banner, hero, loghi e icone da iiDB.' },
-    { label: 'IGN', value: 'ign', assets: ['grid_p'], gameSearch: 'provider', coverShapes: ['square'], description: 'Cover quadrate editoriali da IGN.' },
+    { label: 'SteamGridDB', value: 'steamgriddb', assets: ['grid_p', 'grid_l', 'hero', 'logo', 'icon'], exactDimensions: true, fileTypes: true, coverShapes: ['portrait', 'square'], gameSearch: 'steamgriddb', description: t('PA_PROVIDER_SGDB_DESC', 'Community artwork, official assets, styles and animations. Cover shape is determined by the selected resolutions.') },
+    { label: 'PlayStation', value: 'playstation', assets: ['grid_p', 'grid_l', 'hero', 'logo'], contentTypes: landscapeContent, storeSearch: true, gameSearch: 'provider', coverShapes: ['square'], description: t('PA_PROVIDER_PLAYSTATION_DESC', 'Official PlayStation covers, key art, screenshots and logos.') },
+    { label: 'IGDB', value: 'igdb', assets: ['grid_p', 'grid_l', 'hero'], contentTypes: landscapeContent, gameSearch: 'provider', exactSearch: true, coverShapes: ['portrait'], description: t('PA_PROVIDER_IGDB_DESC', 'Covers, artwork and screenshots from IGDB.') },
+    { label: 'AlphaCoders', value: 'alphacoders', assets: ['grid_l', 'hero'], fileTypes: true, gameSearch: 'provider', exactSearch: true, description: t('PA_PROVIDER_ALPHACODERS_DESC', 'Landscape wallpapers, including high-resolution images.') },
+    { label: 'Nintendo', value: 'nintendo', assets: ['grid_p', 'grid_l', 'hero'], contentTypes: landscapeContent, storeSearch: true, gameSearch: 'provider', coverShapes: ['square'], description: t('PA_PROVIDER_NINTENDO_DESC', 'Official Nintendo square covers, key art and screenshots.') },
+    { label: 'Xbox', value: 'xbox', assets: ['grid_p', 'grid_l', 'hero', 'icon'], contentTypes: landscapeContent, gameSearch: 'provider', coverShapes: ['portrait', 'square'], aspectModes: mixedCoverAspects, defaultAspectMode: { grid_p: 'both' }, description: t('PA_PROVIDER_XBOX_DESC', 'Official Xbox covers, key art, screenshots and icons.') },
+    { label: 'iiDB', value: 'iidb', assets: ['grid_l', 'hero', 'logo', 'icon'], fileTypes: true, gameSearch: 'provider', description: t('PA_PROVIDER_IIDB_DESC', 'Banners, heroes, logos and icons from iiDB.') },
+    { label: 'IGN', value: 'ign', assets: ['grid_p'], gameSearch: 'provider', coverShapes: ['square'], description: t('PA_PROVIDER_IGN_DESC', 'Editorial square covers from IGN.') },
   ],
   default: 'steamgriddb',
 };
@@ -213,21 +233,25 @@ export const providersForAsset = (assetType: SGDBAssetType) => ARTWORK_PROVIDERS
 
 export const providerForId = (provider: string) => ARTWORK_PROVIDERS.options.find((item) => item.value === provider) ?? ARTWORK_PROVIDERS.options[0];
 
-export const providerLabel = (provider?: string) => providerForId(String(provider ?? '')).label;
+export const providerLabel = (provider?: string) => {
+  const id = String(provider ?? '').trim().toLowerCase();
+  if (id === 'google') return 'URL';
+  return ARTWORK_PROVIDERS.options.find((item) => item.value === id)?.label ?? String(provider ?? '');
+};
 
 export const QUALITY_LEVELS = {
   options: [
-    { label: 'Qualsiasi', value: 'any' },
-    { label: 'Buona', value: 'standard' },
-    { label: 'Alta', value: 'high' },
-    { label: 'Molto alta', value: 'ultra' },
+    { label: t('PA_ANY', 'Any'), value: 'any' },
+    { label: t('PA_QUALITY_GOOD', 'Good'), value: 'standard' },
+    { label: t('PA_QUALITY_HIGH', 'High'), value: 'high' },
+    { label: t('PA_QUALITY_VERY_HIGH', 'Very high'), value: 'ultra' },
   ],
   default: 'standard',
 };
 
 /** Which side of the artwork the threshold is measured on. */
 export const qualityAxis = (assetType: SGDBAssetType) =>
-  assetType === 'grid_p' ? 'altezza' : assetType === 'icon' ? 'lato' : 'larghezza';
+  assetType === 'grid_p' ? 'height' : assetType === 'icon' ? 'side' : 'width';
 
 export const QUALITY_THRESHOLDS: Record<string, Record<SGDBAssetType, number>> = {
   standard: { grid_p: 720, grid_l: 920, hero: 1280, logo: 512, icon: 128 },
@@ -235,21 +259,30 @@ export const QUALITY_THRESHOLDS: Record<string, Record<SGDBAssetType, number>> =
   ultra: { grid_p: 1440, grid_l: 2560, hero: 3200, logo: 1600, icon: 512 },
 };
 
-export const qualityFilterDescription = (assetType: SGDBAssetType) =>
-  `Scarta gli artwork sotto la risoluzione scelta, misurata sull’${qualityAxis(assetType) === 'altezza' ? 'altezza' : `a ${qualityAxis(assetType)}`}.`;
+export const qualityFilterDescription = (assetType: SGDBAssetType) => {
+  const key = qualityAxis(assetType) === 'height'
+    ? 'PA_QUALITY_DESC_HEIGHT'
+    : qualityAxis(assetType) === 'side' ? 'PA_QUALITY_DESC_SIDE' : 'PA_QUALITY_DESC_WIDTH';
+  const fallback = qualityAxis(assetType) === 'height'
+    ? 'Discard artwork below the selected resolution, measured by height.'
+    : qualityAxis(assetType) === 'side'
+      ? 'Discard artwork below the selected resolution, measured by side length.'
+      : 'Discard artwork below the selected resolution, measured by width.';
+  return t(key, fallback);
+};
 
 /**
  * The levels are shown as the resolution they actually enforce, not as adjectives:
- * "da 900 px" says something, "Alta" does not.
+ * "from 900 px" says something, "High" does not.
  */
 export const qualityLevelsForProvider = (provider: ArtworkProvider, assetType?: SGDBAssetType) => {
   const levels = (assetType && provider.qualityLevelsByAsset?.[assetType]) || provider.qualityLevels || [];
   return QUALITY_LEVELS.options
     .filter((option) => levels.includes(option.value))
     .map((option) => {
-      if (option.value === 'any' || !assetType) return { label: 'Qualsiasi', value: option.value };
+      if (option.value === 'any' || !assetType) return { label: t('PA_ANY', 'Any'), value: option.value };
       const threshold = QUALITY_THRESHOLDS[option.value]?.[assetType];
-      return { label: threshold ? `da ${threshold} px` : option.label, value: option.value };
+      return { label: threshold ? t('PA_FROM_PX', 'From {value} px').replace('{value}', String(threshold)) : option.label, value: option.value };
     });
 };
 
@@ -258,7 +291,7 @@ export const contentTypesForProvider = (provider: ArtworkProvider, assetType: SG
 /*
   Only the shapes the source can actually deliver.
 
-  A selector offering "Solo verticali" on a source that only has square covers is a
+  A selector offering "Portrait only" on a source that only has square covers is a
   promise the search cannot keep: the user picks it and gets nothing, with no explanation.
 */
 export const aspectModesForProvider = (provider: ArtworkProvider, assetType: SGDBAssetType) => {

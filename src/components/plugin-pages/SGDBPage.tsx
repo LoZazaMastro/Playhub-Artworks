@@ -1,3 +1,4 @@
+import t from '../../utils/i18n';
 import { useParams } from '@decky/ui';
 import { useEffect, useState, VFC, useCallback } from 'react';
 
@@ -60,8 +61,8 @@ const SGDBPage: VFC = () => {
         ) : (
           <div className="pa-page-state">
             <img alt="" src="/images/steam_spinner.png" />
-            <strong>{loadTimedOut ? 'Impossibile aprire questo gioco' : 'Caricamento artwork'}</strong>
-            <span>{loadTimedOut ? 'Torna alla libreria e riapri Playhub Artworks.' : ''}</span>
+            <strong>{loadTimedOut ? t('PA_CANT_OPEN_GAME', "Unable to open this game") : t('PA_LOADING_ART', "Loading artwork")}</strong>
+            <span>{loadTimedOut ? t('PA_REOPEN_PLUGIN', 'Return to the library and reopen Playhub Artworks.') : ''}</span>
           </div>
         )}
       </div>

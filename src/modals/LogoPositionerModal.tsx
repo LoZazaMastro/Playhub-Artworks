@@ -1,3 +1,4 @@
+import t from '../utils/i18n';
 import { DialogButton, Focusable, GamepadButton, GamepadEvent, ModalRoot } from '@decky/ui';
 import {
   FC, useCallback, useEffect, useMemo, useRef, useState,
@@ -215,16 +216,16 @@ const LogoPositionerModal: FC<{ closeModal?: () => void; appId: number }> = ({ c
         onButtonDown={handleButton}
         onCancel={close}
         onCancelButton={close}
-        onCancelActionDescription="Chiudi"
+        onCancelActionDescription={t('PA_CLOSE', "Close")}
         onSecondaryButton={() => void toggleHidden()}
-        onSecondaryActionDescription={hidden ? 'Mostra logo' : 'Nascondi logo'}
+        onSecondaryActionDescription={hidden ? t('PA_SHOW_LOGO', "Show logo") : t('PA_HIDE_LOGO', "Hide logo")}
         onOptionsButton={() => setGuides((value) => !value)}
-        onOptionsActionDescription={guides ? 'Nascondi guide' : 'Mostra guide'}
+        onOptionsActionDescription={guides ? t('ACTION_HIDE_POS_GUIDES', 'Hide Guides') : t('ACTION_SHOW_OUTLINE', 'Show Guides')}
         onMenuButton={() => void reset()}
-        onMenuActionDescription="Reimposta"
+        onMenuActionDescription={t('PA_RESET', 'Reset')}
         actionDescriptionMap={{
-          [GamepadButton.BUMPER_LEFT]: 'Ancoraggio precedente',
-          [GamepadButton.BUMPER_RIGHT]: 'Ancoraggio successivo',
+          [GamepadButton.BUMPER_LEFT]: t('PA_PREVIOUS_ANCHOR', 'Previous anchor'),
+          [GamepadButton.BUMPER_RIGHT]: t('PA_NEXT_ANCHOR', 'Next anchor'),
         }}
       >
         <div className="pa-logo-stage">
@@ -236,12 +237,12 @@ const LogoPositionerModal: FC<{ closeModal?: () => void; appId: number }> = ({ c
           <DialogButton
             ref={stageRef}
             className={`pa-logo-frame ${guides ? 'with-guides' : ''}`}
-            onOKActionDescription="Sposta con i direzionali"
+            onOKActionDescription={t('PA_MOVE_DIRECTIONS', 'Adjust with the directional buttons')}
             onClick={() => setGuides((value) => !value)}
           >
             {heroUrl
               ? <img className="pa-logo-hero" src={heroUrl} alt="" />
-              : <div className="pa-editor-empty">Nessuno sfondo installato per questo gioco.</div>}
+              : <div className="pa-editor-empty">{t('PA_NO_BACKGROUND_GAME', 'No background is installed for this game.')}</div>}
 
             {guides && (
               <div className="pa-logo-guide" aria-hidden="true">
@@ -279,10 +280,10 @@ const LogoPositionerModal: FC<{ closeModal?: () => void; appId: number }> = ({ c
             <strong>{LOGO_ANCHOR_LABEL[position.pinnedPosition] ?? position.pinnedPosition}</strong>
             <span>
               {position.nWidthPct.toFixed(0)}% × {position.nHeightPct.toFixed(0)}%
-              {hidden ? ' · logo nascosto' : ''}
-              {busy ? ' · attendi…' : ''}
+              {hidden ? ` · ${t('PA_LOGO_HIDDEN', 'logo hidden')}` : ''}
+              {busy ? ` · ${t('PA_PLEASE_WAIT', 'please wait…')}` : ''}
             </span>
-            <span className="pa-logo-hint">Direzionali: dimensione · LB/RB: ancoraggio · B: chiudi</span>
+            <span className="pa-logo-hint">{t('PA_LOGO_CONTROLS_HINT', 'Directional buttons: size · LB/RB: anchor · B: close')}</span>
           </div>
         </div>
       </Focusable>

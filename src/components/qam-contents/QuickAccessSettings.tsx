@@ -1,3 +1,4 @@
+import t, { localizeError } from '../../utils/i18n';
 import {
   ConfirmModal, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, showModal,
 } from '@decky/ui';
@@ -32,27 +33,27 @@ type BulkAction = {
 const BULK_ACTIONS: BulkAction[] = [
   {
     kind: 'banner920',
-    title: 'Ottimizza i banner',
-    description: 'Aggiunge quelli mancanti e porta quelli in bassa risoluzione a 920 × 430.',
+    title: t('PA_OPTIMIZE_BANNERS', "Optimize banners"),
+    description: t('PA_OPTIMIZE_BANNERS_DESC', 'Adds missing banners and upgrades low-resolution ones to 920 × 430.'),
     icon: <FaImage />,
   },
   {
     kind: 'missingLogos',
-    title: 'Loghi mancanti',
-    description: 'Aggiunge un logo ai giochi che non ne hanno.',
+    title: t('PA_MISSING_LOGOS', "Missing logos"),
+    description: t('PA_MISSING_LOGOS_DESC', 'Adds a logo to games that do not have one.'),
     icon: <FaMagic />,
   },
 ];
 
 const RESET_ACTION: BulkAction = {
   kind: 'resetArtwork',
-  title: 'Ripristina gli artwork di Steam',
-  description: 'Rimuove tutti gli artwork personalizzati.',
+  title: t('PA_RESTORE_STEAM_ART', "Restore Steam artwork"),
+  description: t('PA_REMOVE_CUSTOM_DESC', "Removes all custom artwork."),
   icon: <FaTrash />,
   confirm: {
-    title: 'Rimuovere tutti gli artwork personalizzati?',
-    body: 'Cover, banner, sfondi, loghi e icone tornano a quelli di Steam. Steam li riscarica da solo.',
-    ok: 'Rimuovi',
+    title: t('PA_REMOVE_ALL_CUSTOM_TITLE', 'Remove all custom artwork?'),
+    body: t('PA_RESET_DESC', 'Covers, banners, backgrounds, logos and icons are restored to Steam defaults. Steam downloads them again automatically.'),
+    ok: t('PA_REMOVE', "Remove"),
   },
 };
 
@@ -68,38 +69,38 @@ const COVER_CARDS: Array<{
 }> = [
   {
     shape: 'portrait',
-    title: 'Cover verticali',
-    subtitle: 'Cerca nelle sorgenti attive seguendo l’ordine qui sotto e usa il primo risultato adatto.',
+    title: t('PA_PORTRAIT_COVERS', "Portrait covers"),
+    subtitle: t('PA_SOURCE_ORDER_DESC', 'Search active sources in the order below and use the first suitable result.'),
     replaceKind: 'portraitReplace',
     missingKind: 'portraitMissing',
   },
   {
     shape: 'square',
-    title: 'Cover quadrate',
-    subtitle: 'Cerca nelle sorgenti attive seguendo l’ordine qui sotto e usa il primo risultato adatto.',
+    title: t('PA_SQUARE_COVERS', "Square covers"),
+    subtitle: t('PA_SOURCE_ORDER_DESC', 'Search active sources in the order below and use the first suitable result.'),
     replaceKind: 'squareReplace',
     missingKind: 'squareMissing',
   },
   {
     shape: 'hero',
-    title: 'Perfect Hero',
-    subtitle: 'Un Perfect Hero unisce sfondo e logo in un’unica immagine, in modo che il logo sia sempre visibile anche dalla home quando usi il profilo CSS Loader di Playhub! Gli hero di ZazaMastro sono già pronti; per gli altri giochi Playhub Artworks crea la composizione automaticamente.',
+    title: t('PA_BATCH_PERFECT_HERO', 'Perfect Hero'),
+    subtitle: t('PA_PERFECT_HERO_QAM_DESC', 'A Perfect Hero merges background and logo into one image so the logo stays visible from Home when using the Playhub CSS Loader profile. ZazaMastro heroes are already prepared; Playhub Artworks creates the composition automatically for other games.'),
     replaceKind: 'perfectHeroReplace',
     missingKind: 'perfectHeroMissing',
-    missingLabel: 'Applica i mancanti',
-    replaceLabel: 'Rigenera tutti',
+    missingLabel: t('PA_APPLY_MISSING', "Apply missing"),
+    replaceLabel: t('PA_REGENERATE_ALL', 'Regenerate all'),
     replaceConfirm: {
-      title: 'Rifare tutti i Perfect Hero?',
-      body: 'Gli hero di tutti i giochi verranno rigenerati, anche quelli già a posto.',
-      ok: 'Rifai',
+      title: t('PA_REMAKE_PERFECT_HERO_TITLE', 'Rebuild all Perfect Heroes?'),
+      body: t('PA_REMAKE_PERFECT_HERO_DESC', 'Heroes for all games will be regenerated, including those already correct.'),
+      ok: t('PA_REBUILD', 'Rebuild'),
     },
   },
 ];
 
 const REPLACE_CONFIRM = {
-  title: 'Sostituire tutte le cover?',
-  body: 'Le cover attuali di tutti i giochi verranno sostituite. I giochi senza una nuova cover restano come sono.',
-  ok: 'Sostituisci',
+  title: t('PA_REPLACE_ALL_COVERS_TITLE', 'Replace all covers?'),
+  body: t('PA_REPLACE_ALL_COVERS_DESC', 'Current covers for all games will be replaced. Games without a new cover remain unchanged.'),
+  ok: t('PA_REPLACE', "Replace"),
 };
 
 const openExternal = (url: string) => {
@@ -116,9 +117,10 @@ const Progress: VFC<{ value: ZazaBatchProgress }> = ({ value }) => {
       <div className="pa-progress-copy">
         <strong>{value.message}</strong>
         <span>
-          {value.total > 0 ? `${value.processed} di ${value.total}` : 'In corso'}
-          {' · '}{value.changed} applicati · {value.skipped} saltati{value.failed ? ` · ${value.failed} errori` : ''}
+          {value.total > 0 ? `${value.processed} ${t('PA_OF', 'of')} ${value.total}` : t('PA_IN_PROGRESS', "In progress")}
+          {' · '}{t('PA_PROGRESS_SUMMARY', '{changed} applied · {skipped} skipped{failed}').replace('{changed}', String(value.changed)).replace('{skipped}', String(value.skipped)).replace('{failed}', value.failed ? ` · ${value.failed} ${t('PA_ERRORS', 'errors')}` : '')}
         </span>
+        {value.lastError && <span style={{ color: '#ff9a9a' }}>{value.lastError}</span>}
       </div>
     </div>
   );
@@ -217,11 +219,11 @@ const QuickAccessSettings: VFC = () => {
     setSavingApiKey(true);
     try {
       const result = await call<[string], { saved: boolean }>('save_steamgriddb_api_key', normalized);
-      if (!result?.saved) throw new Error('La chiave non è stata confermata dal backend.');
+      if (!result?.saved) throw new Error(t('PA_KEY_BACKEND_UNCONFIRMED', 'The key was not confirmed by the backend.'));
       setSavedApiKey(normalized);
-      toaster.toast({ title: 'Playhub Artworks', body: normalized ? 'Chiave salvata.' : 'Chiave rimossa.', icon: <MenuIcon /> });
+      toaster.toast({ title: 'Playhub Artworks', body: normalized ? t('PA_KEY_SAVED', "Key saved.") : t('PA_KEY_REMOVED', "Key removed."), icon: <MenuIcon /> });
     } catch (error: any) {
-      toaster.toast({ title: 'Chiave API non salvata', body: error?.message ?? 'Riprova dopo aver riavviato il plugin.', icon: <MenuIcon fill="#ff5d5d" /> });
+      toaster.toast({ title: t('PA_KEY_NOT_SAVED', "API key not saved"), body: localizeError(error, 'PA_TRY_RESTART'), icon: <MenuIcon fill="#ff5d5d" /> });
     } finally {
       setSavingApiKey(false);
     }
@@ -232,20 +234,20 @@ const QuickAccessSettings: VFC = () => {
     if (kind !== 'resetArtwork') {
       const configuredKey = apiKey.trim() || await readApiKey();
       if (!configuredKey) {
-        toaster.toast({ title: 'Chiave mancante', body: 'Inserisci la chiave SteamGridDB.', icon: <FaKey /> });
+        toaster.toast({ title: t('PA_KEY_MISSING', "Missing key"), body: t('PA_ENTER_KEY', "Enter your SteamGridDB key."), icon: <FaKey /> });
         return;
       }
     }
     try {
-      const result = await startBulkArtworkJob(kind, 6);
+      const result = await startBulkArtworkJob(kind, 2);
       toaster.toast({
         title: label,
-        body: `${result.changed} applicati, ${result.skipped} saltati.`,
+        body: t('PA_PROGRESS_SUMMARY', '{changed} applied · {skipped} skipped{failed}').replace('{changed}', String(result.changed)).replace('{skipped}', String(result.skipped)).replace('{failed}', result.failed ? ` · ${result.failed} ${t('PA_ERRORS', 'errors')}` : ''),
         icon: <MenuIcon />,
         duration: 5000,
       });
     } catch (error: any) {
-      toaster.toast({ title: label, body: error?.message ?? 'Non riuscito.', icon: <MenuIcon fill="#ff5d5d" />, duration: 6000 });
+      toaster.toast({ title: label, body: localizeError(error, 'PA_FAILED'), icon: <MenuIcon fill="#ff5d5d" />, duration: 6000 });
     }
   }, [apiKey, batchProgress?.running]);
 
@@ -259,7 +261,7 @@ const QuickAccessSettings: VFC = () => {
         strTitle={action.confirm.title}
         strDescription={action.confirm.body}
         strOKButtonText={action.confirm.ok}
-        strCancelButtonText="Annulla"
+        strCancelButtonText={t('PA_CANCEL', "Cancel")}
         onOK={() => void runBulk(action.kind, action.title)}
       />
     );
@@ -282,10 +284,10 @@ const QuickAccessSettings: VFC = () => {
       `}</style>
       <PanelSectionRow>
         <div className="pa-qam">
-          <div className="pa-intro"><FaMagic /><div><strong>Playhub Artworks</strong><span>Cover, sfondi e loghi. Tutto come lo vuoi tu.</span></div></div>
+          <div className="pa-intro"><FaMagic /><div><strong>Playhub Artworks</strong><span>{t('PA_TAGLINE', "Covers, backgrounds and logos. Exactly how you want them.")}</span></div></div>
           <div className="pa-heading">SteamGridDB</div>
           <div className="pa-key">
-            <Field label="Chiave API personale" childrenLayout="below">
+            <Field label={t('PA_PERSONAL_API_KEY', "Personal API key")} childrenLayout="below">
               <Focusable ref={secretFocusRef} className="pa-secret-focus" focusClassName="gpfocus" noFocusRing onActivate={() => secretInputRef.current?.focus()}>
                 <input
                   ref={secretInputRef}
@@ -293,7 +295,7 @@ const QuickAccessSettings: VFC = () => {
                   type="password"
                   value={apiKey}
                   tabIndex={-1}
-                  aria-label="Chiave API SteamGridDB"
+                  aria-label={t('PA_SGDB_API_KEY', "SteamGridDB API key")}
                   autoComplete="new-password"
                   autoCapitalize="none"
                   spellCheck={false}
@@ -302,11 +304,11 @@ const QuickAccessSettings: VFC = () => {
               </Focusable>
             </Field>
             <Focusable className="pa-key-actions" flow-children="horizontal">
-              <DialogButton onClick={() => openExternal('https://www.steamgriddb.com/profile/preferences/api')}><FaExternalLinkAlt /> Ottieni chiave</DialogButton>
-              <DialogButton disabled={savingApiKey || apiKey.trim() === savedApiKey} onClick={() => void saveApiKey()}><FaKey /> {savingApiKey ? 'Salvataggio…' : 'Salva'}</DialogButton>
+              <DialogButton onClick={() => openExternal('https://www.steamgriddb.com/profile/preferences/api')}><FaExternalLinkAlt /> {t('PA_GET_KEY', 'Get key')}</DialogButton>
+              <DialogButton disabled={savingApiKey || apiKey.trim() === savedApiKey} onClick={() => void saveApiKey()}><FaKey /> {savingApiKey ? t('PA_SAVING', "Saving…") : t('PA_SAVE', "Save")}</DialogButton>
             </Focusable>
           </div>
-          <div className="pa-heading">Artwork</div>
+          <div className="pa-heading">{t('PA_ARTWORK', "Artwork")}</div>
           {COVER_CARDS.map((card) => (
             <div className="pa-panel" key={card.shape}>
               <div className="pa-panel-head">
@@ -326,11 +328,13 @@ const QuickAccessSettings: VFC = () => {
                       >
                         <span className="pa-source-index">{index + 1}</span>
                         <span className="pa-source-label">{providerLabel(provider)}</span>
-                        <span className="pa-source-state">{on ? 'Attiva' : 'Disattivata'}</span>
+                        <span className="pa-source-state">{on ? t('PA_ENABLED', "Enabled") : t('PA_DISABLED', "Disabled")}</span>
                       </DialogButton>
                       <DialogButton
                         className="pa-source-move"
                         disabled={index === 0}
+                        aria-label={t('PA_MOVE_SOURCE_UP', 'Move source up')}
+                        onOKActionDescription={t('PA_MOVE_SOURCE_UP', 'Move source up')}
                         onClick={() => moveSource(card.shape, provider, -1)}
                       >
                         <FaChevronUp />
@@ -338,6 +342,8 @@ const QuickAccessSettings: VFC = () => {
                       <DialogButton
                         className="pa-source-move"
                         disabled={index === sourceOrder[card.shape].length - 1}
+                        aria-label={t('PA_MOVE_SOURCE_DOWN', 'Move source down')}
+                        onOKActionDescription={t('PA_MOVE_SOURCE_DOWN', 'Move source down')}
                         onClick={() => moveSource(card.shape, provider, 1)}
                       >
                         <FaChevronDown />
@@ -352,24 +358,24 @@ const QuickAccessSettings: VFC = () => {
                   disabled={batchProgress?.running}
                   onClick={() => startAction({
                     kind: card.missingKind,
-                    title: `${card.title}: mancanti`,
+                    title: `${card.title}: ${t('PA_MISSING', 'missing')}`,
                     description: '',
                     icon: <FaImage />,
                   })}
                 >
-                  {card.missingLabel ?? 'Applica i mancanti'}
+                  {card.missingLabel ?? t('PA_APPLY_MISSING', "Apply missing")}
                 </DialogButton>
                 <DialogButton
                   disabled={batchProgress?.running}
                   onClick={() => startAction({
                     kind: card.replaceKind,
-                    title: `${card.title}: sostituzione`,
+                    title: `${card.title}: ${t('PA_REPLACEMENT', 'replacement')}`,
                     description: '',
                     icon: <FaImage />,
                     confirm: card.replaceConfirm ?? REPLACE_CONFIRM,
                   })}
                 >
-                  {card.replaceLabel ?? 'Applica e sostituisci'}
+                  {card.replaceLabel ?? t('PA_APPLY_REPLACE', "Apply and replace")}
                 </DialogButton>
               </Focusable>
 
@@ -378,7 +384,7 @@ const QuickAccessSettings: VFC = () => {
             </div>
           ))}
 
-          <div className="pa-heading">Altri artwork</div>
+          <div className="pa-heading">{t('PA_OTHER_ARTWORK', "Other artwork")}</div>
           <Focusable className="pa-list" flow-children="vertical">
             {BULK_ACTIONS.map((action) => (
               <Fragment key={action.kind}>
@@ -397,23 +403,23 @@ const QuickAccessSettings: VFC = () => {
             ))}
           </Focusable>
 
-          <div className="pa-heading">Aspetto</div>
+          <div className="pa-heading">{t('PA_APPEARANCE', "Appearance")}</div>
           <div className="pa-choice">
-            <span className="pa-choice-label"><FaThLarge /> Forma delle cover</span>
+            <span className="pa-choice-label"><FaThLarge /> {t('PA_COVER_SHAPE', 'Cover shape')}</span>
             <Focusable className="pa-choice-buttons" flow-children="horizontal">
-              <DialogButton className={libraryCoverFormat === 'portrait' ? 'active' : ''} onClick={() => void saveLayout('library_cover_format', 'portrait', setLibraryCoverFormat)}>Verticale</DialogButton>
-              <DialogButton className={libraryCoverFormat === 'square' ? 'active' : ''} onClick={() => void saveLayout('library_cover_format', 'square', setLibraryCoverFormat)}>Quadrato</DialogButton>
+              <DialogButton className={libraryCoverFormat === 'portrait' ? 'active' : ''} onClick={() => void saveLayout('library_cover_format', 'portrait', setLibraryCoverFormat)}>{t('PA_PORTRAIT', "Portrait")}</DialogButton>
+              <DialogButton className={libraryCoverFormat === 'square' ? 'active' : ''} onClick={() => void saveLayout('library_cover_format', 'square', setLibraryCoverFormat)}>{t('PA_SQUARE', "Square")}</DialogButton>
             </Focusable>
           </div>
           <div className="pa-choice">
-            <span className="pa-choice-label"><FaHome /> Hero centrata nella Home</span>
-            <span className="pa-help">Utile con il tema Playhub, che allinea la hero in alto.</span>
+            <span className="pa-choice-label"><FaHome /> {t('PA_CENTER_HOME_HERO', 'Centered Home hero')}</span>
+            <span className="pa-help">{t('PA_CENTER_HOME_HERO_DESC', 'Useful with the Playhub theme, which aligns the hero to the top.')}</span>
             <Focusable className="pa-choice-buttons" flow-children="horizontal">
-              <DialogButton className={centerHomeHero ? '' : 'active'} onClick={() => void saveLayout('home_hero_center', false, setCenterHomeHero)}>No</DialogButton>
-              <DialogButton className={centerHomeHero ? 'active' : ''} onClick={() => void saveLayout('home_hero_center', true, setCenterHomeHero)}>Sì</DialogButton>
+              <DialogButton className={centerHomeHero ? '' : 'active'} onClick={() => void saveLayout('home_hero_center', false, setCenterHomeHero)}>{t('PA_NO', "No")}</DialogButton>
+              <DialogButton className={centerHomeHero ? 'active' : ''} onClick={() => void saveLayout('home_hero_center', true, setCenterHomeHero)}>{t('PA_YES', "Yes")}</DialogButton>
             </Focusable>
           </div>
-          <div className="pa-heading">Ripristino</div>
+          <div className="pa-heading">{t('PA_RESET', "Reset")}</div>
           <DialogButton
             className="pa-danger"
             disabled={batchProgress?.running}
