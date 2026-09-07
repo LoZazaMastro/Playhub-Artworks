@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement } from 'react';
 import { call, routerHook, RoutePatch } from '@decky/api';
-import { afterPatch, createReactTreePatcher, findInReactTree } from '@decky/ui';
+import { afterPatch, createReactTreePatcher, findInReactTree, findSP } from '@decky/ui';
 
 import { rerenderAfterPatchUpdate } from './patchUtils';
 
@@ -9,6 +9,14 @@ let enabled = false;
 let revision = 0;
 let routePatch: RoutePatch | undefined;
 const rootPatches = new Map<object, { unpatch: () => void }>();
+const CACHE_KEY = 'playhub_artworks_home_recent_cover';
+
+export const applyCachedHomeRecentCover = (): void => {
+  try {
+    const cached = (findSP()?.window ?? window).localStorage.getItem(CACHE_KEY);
+    if (cached === 'true' || cached === 'false') setHomeRecentCover(cached === 'true', true);
+  } catch (_) { /* The backend remains authoritative when storage is unavailable. */ }
+};
 
 // Steam's recent-games wrapper passes this flag to its native carousel. It controls
 // both the first item's asset type and slot width; all other items remain native.
@@ -36,9 +44,12 @@ const descend = createReactTreePatcher(
   'PlayhubHomeRecentCover',
 );
 
-export const setHomeRecentCover = (value: boolean): void => {
+export const setHomeRecentCover = (value: boolean, mounting = false): void => {
   revision += 1;
   enabled = value === true;
+  try {
+    (findSP()?.window ?? window).localStorage.setItem(CACHE_KEY, String(enabled));
+  } catch (_) { /* A closing Steam window may no longer expose storage. */ }
   if (enabled && !routePatch) {
     routePatch = routerHook.addPatch('/library/home', (props) => {
       const child = props.children;
@@ -48,14 +59,15 @@ export const setHomeRecentCover = (value: boolean): void => {
       return props;
     });
   }
-  rerenderAfterPatchUpdate();
+  if (!mounting) rerenderAfterPatchUpdate();
 };
 
 export const refreshHomeRecentCover = async (): Promise<void> => {
+  applyCachedHomeRecentCover();
   const current = revision;
   const value = await call<[string, boolean], boolean>(
     'get_setting', HOME_RECENT_COVER_SETTING_KEY, false,
-  ).catch(() => false);
+  ).catch(() => enabled);
   if (current === revision) setHomeRecentCover(value);
 };
 

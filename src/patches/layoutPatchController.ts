@@ -7,6 +7,7 @@ import log from '../utils/log';
 import { addHomePatch, homeDiagnostics, removeHomePatch } from './homePatch';
 import { applyHomeHeroCentering } from './homeHeroPatch';
 import { addSquareLibraryPatch, removeSquareLibraryPatch } from './squareLibraryPatch';
+import { applyCachedHomeRecentCover } from './homeRecentCover';
 
 export type LibraryCoverFormat = 'portrait' | 'square';
 export type HomeRecentFormat = 'banner' | 'cover';
@@ -76,6 +77,7 @@ const writeCachedLayout = (value: CachedLayout) => {
 
 /** Puts the patches on with the remembered format, synchronously. */
 export const applyCachedLayout = (): boolean => {
+  applyCachedHomeRecentCover();
   const cached = readCachedLayout();
   if (!cached) return false;
   try {
