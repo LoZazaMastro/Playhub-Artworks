@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navigation instantanée dans la bibliothèque",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Passe directement au jeu sélectionné sans défilement fluide entre les lignes de la bibliothèque.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Désactiver l’index alphabétique",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Empêche l’index alphabétique de s’ouvrir lorsque vous maintenez Haut ou Bas dans la bibliothèque Steam.",
   "ASSET_TYPE_CAPSULE": "Couverture",
   "ASSET_TYPE_WIDECAPSULE": "Couverture large",
   "ASSET_TYPE_HERO": "Bannière",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Déplacer vers la gauche",
   "PA_MOVE_RIGHT": "Déplacer vers la droite",
   "PA_MOVE_SOURCE_UP": "Monter la source",
-  "PA_MOVE_SOURCE_DOWN": "Descendre la source"
+  "PA_MOVE_SOURCE_DOWN": "Descendre la source",
+  "PA_HOME_RECENT_COVER": "Dernier jeu joué en jaquette sur l’accueil",
+  "PA_RESTORE_DERIVED_COVER": "Restaurer la jaquette précédente",
+  "PA_DERIVED_COVER_RESTORED": "La jaquette précédente a été restaurée.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "La jaquette actuelle n'a pas pu être sauvegardée en toute sécurité et n'a donc pas été modifiée.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "La jaquette précédente n'a pas pu être restaurée. Sa sauvegarde a été conservée."
 }

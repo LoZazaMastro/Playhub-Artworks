@@ -4,69 +4,70 @@
 
 # Playhub Artworks
 
-### La tua libreria, con l'artwork che merita.
+### Your library, with the artwork it deserves.
 
-Gestisci cover, banner, sfondi, loghi e icone direttamente da Steam Big Picture, con un'interfaccia pensata per il controller.
+Manage covers, banners, backgrounds, logos and icons directly from Steam Big Picture, with an interface built for your controller.
 
 [![Playhub](https://img.shields.io/badge/GitHub-Playhub-ffffff?style=for-the-badge&logo=github&labelColor=111111)](https://github.com/LoZazaMastro/Playhub)
-[![Licenza GPL-3.0](https://img.shields.io/badge/Licenza-GPL--3.0-EA4335?style=for-the-badge&labelColor=111111)](LICENSE)
+[![GPL-3.0 License](https://img.shields.io/badge/License-GPL--3.0-EA4335?style=for-the-badge&labelColor=111111)](LICENSE)
 
 </div>
 
-## Tutto l'artwork, al posto giusto
+## Every artwork in its place
 
-Playhub Artworks porta in Gaming Mode un gestore completo per la grafica della libreria. Puoi cercare, confrontare e applicare ogni elemento senza tornare al desktop e senza sistemare file a mano.
+Find, compare and apply artwork without returning to the desktop or moving files by hand.
 
-- **Otto sorgenti in un'unica interfaccia:** SteamGridDB, PlayStation, Nintendo, Xbox, IGDB, AlphaCoders, iiDB e IGN.
-- **Ricerca coerente con la sorgente:** ogni servizio usa i propri risultati e i suggerimenti disponibili; IGDB e AlphaCoders permettono anche una ricerca esatta.
-- **Tutti i formati di Steam:** cover, banner, sfondi, loghi e icone, con filtri mostrati soltanto quando sono realmente supportati.
-- **Cover classiche o quadrate:** il formato scelto viene applicato a Home, Libreria, Informazioni sul gioco e collezioni.
-- **Perfect Hero e Perfect Banner:** sfondo e logo vengono composti in una sola immagine ad alta risoluzione, regolando posizione, scala, opacità e ombra dal gamepad.
-- **Hero di ZazaMastro:** quando crei manualmente una Perfect Hero puoi aggiungere un logo anche agli hero pubblicati con il nick SteamGridDB di LoZazaMastro.
-- **Lavori in serie:** completa gli artwork mancanti, migliora i banner assenti o a bassa risoluzione portandoli a 920 × 430, rigenera le cover e ripristina gli asset originali di Steam.
-- **Scelte persistenti:** formato, sorgenti e filtri vengono ricordati separatamente per ogni tipo di artwork.
+- **Eight sources in one place:** SteamGridDB, PlayStation, Nintendo, Xbox, IGDB, AlphaCoders, iiDB and IGN.
+- **Source-aware search:** each service uses its own results and available suggestions. IGDB and AlphaCoders also support exact searches.
+- **Every Steam artwork format:** covers, banners, backgrounds, logos and icons, with filters shown only where supported.
+- **Portrait or square covers:** apply your preferred shape across Home, Library, game details and collections.
+- **Your most recent game as a cover:** replace the wide first tile in Home's recent games with a cover that follows your selected shape.
+- **Instant library scrolling:** move between rows without the animated scroll transition. You can also disable the alphabet selector that appears when holding a direction.
+- **Perfect Hero and Perfect Banner:** combine a background and logo into one high-resolution image, adjusting position, scale, opacity and shadow with your controller.
+- **ZazaMastro heroes:** when creating a Perfect Hero manually, you can also add a logo to heroes published under LoZazaMastro's SteamGridDB nickname.
+- **Batch tools:** fill missing artwork, upgrade missing or low-resolution banners to 920 x 430, regenerate covers and restore Steam's original assets.
+- **Remembered preferences:** shape, sources and filters are saved separately for each artwork type.
 
-## Come si usa
+## Getting started
 
-Per modificare un singolo titolo, apri le opzioni del gioco e scegli **Playhub Artworks**. Le preferenze generali, la chiave SteamGridDB e i lavori sull'intera libreria si trovano nel menu rapido di Decky.
+Open a game's options and choose **Playhub Artworks** to edit its artwork. General preferences, your SteamGridDB key and library-wide tools are available in Decky's Quick Access Menu.
 
-Le operazioni in serie mostrano l'avanzamento e rispettano le esclusioni impostate. Per annullare le modifiche gestite dal plugin puoi usare gli strumenti di ripristino degli artwork di Steam.
+Batch operations show their progress and respect your exclusions. Use the Steam artwork restore tools to undo supported changes made through the plugin.
 
-## Requisiti
+## Requirements
 
-- Windows;
-- Steam in modalità Big Picture;
-- [Decky Loader](https://decky.xyz) 3.x;
-- una chiave API personale di [SteamGridDB](https://www.steamgriddb.com/profile/preferences/api) per le ricerche e le operazioni che usano SteamGridDB.
+- Windows.
+- Steam Big Picture.
+- [Decky Loader](https://decky.xyz) 3.x.
+- A personal [SteamGridDB API key](https://www.steamgriddb.com/profile/preferences/api) for searches and operations that use SteamGridDB.
 
-La chiave viene conservata localmente nella cartella dati di Decky.
+Your API key is stored locally in Decky's data folder.
 
-## Installazione
+## Installation
 
-Puoi installare e aggiornare Playhub Artworks dal Plugin Store incluso in [Playhub](https://github.com/LoZazaMastro/Playhub), oppure manualmente:
+Install and update Playhub Artworks through the Plugin Store in [Playhub](https://github.com/LoZazaMastro/Playhub), or install it manually:
 
-1. scarica lo ZIP pubblicato nel [repository di Playhub](https://github.com/LoZazaMastro/Playhub);
-2. abilita la modalità sviluppatore di Decky;
-3. apri **Decky → Impostazioni → Sviluppatore → Installa plugin da ZIP**;
-4. riavvia Decky o Steam quando richiesto.
+1. Download the installer ZIP from [Playhub Artworks releases](https://github.com/LoZazaMastro/Playhub-Artworks/releases).
+2. Enable Decky's developer mode.
+3. Open **Decky > Settings > Developer > Install plugin from ZIP** and select the ZIP.
 
-## Sviluppo
+## Development
 
 ```bash
 pnpm install
 pnpm run build
 ```
 
-Il frontend viene generato in `dist/index.js`. Il backend Python e le integrazioni con i provider si trovano in `main.py` e `provider_search.py`.
+The frontend is built into `dist/index.js`. The Python backend and provider integrations are in `main.py` and `provider_search.py`.
 
-## Licenza e riconoscimenti
+## License and credits
 
-Playhub Artworks è distribuito con licenza [GNU GPL-3.0-or-later](LICENSE). Il progetto nasce da [decky-steamgriddb](https://github.com/SteamGridDB/decky-steamgriddb) e conserva parti compatibili del suo scaffolding, alcuni helper e le traduzioni. Autori, componenti derivati e dipendenze sono documentati in [NOTICE.md](NOTICE.md).
+Playhub Artworks is licensed under [GNU GPL-3.0-or-later](LICENSE). It is based on [decky-steamgriddb](https://github.com/SteamGridDB/decky-steamgriddb) and retains compatible parts of its scaffolding, helpers and translations. Authors, derived components and dependencies are documented in [NOTICE.md](NOTICE.md).
 
-Gli artwork appartengono ai rispettivi autori e titolari. Steam e gli altri marchi citati appartengono ai rispettivi proprietari.
+Artwork belongs to its respective creators and rights holders. Steam and other mentioned trademarks belong to their respective owners.
 
 <div align="center">
 
-Creato e mantenuto da **[LoZazaMastro](https://github.com/LoZazaMastro)**.
+Created and maintained by **[LoZazaMastro](https://github.com/LoZazaMastro)**.
 
 </div>

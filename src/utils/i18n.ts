@@ -342,6 +342,8 @@ const ERROR_FALLBACKS: Record<string, string> = {
   PA_ERROR_EMPTY_IMAGE: 'The resulting image is empty.',
   PA_ERROR_OPERATION_TIMEOUT: 'The operation took too long.',
   PA_ERROR_INTERNAL_ARTWORK: 'The artwork operation could not be completed.',
+  PA_ERROR_COVER_BACKUP_FAILED: 'The current cover could not be backed up safely, so it was left unchanged.',
+  PA_ERROR_DERIVED_COVER_RESTORE_FAILED: 'The previous cover could not be restored. Its backup has been kept.',
   PA_ERROR_ARTWORK_TOO_LARGE: 'This artwork is too large to process safely. Choose a smaller image.',
   PA_ERROR_ARTWORK_FORMAT_UNKNOWN: 'The artwork format is not recognized.',
   PA_ERROR_IMAGE_CHECK_TIMEOUT: 'Checking the image took too long.',

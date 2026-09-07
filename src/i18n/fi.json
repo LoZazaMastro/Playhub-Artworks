@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Välitön kirjaston selaus",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Siirtyy suoraan valittuun peliin ilman pehmeää vieritystä kirjaston rivien välillä.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Poista aakkoshakemisto käytöstä",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Estää aakkoshakemiston avautumisen, kun pidät Ylös- tai Alas-painiketta pohjassa Steam-kirjastossa.",
   "ASSET_TYPE_CAPSULE": "Tunnistekuva",
   "ASSET_TYPE_WIDECAPSULE": "Leveä Tunnistekuva",
   "ASSET_TYPE_HERO": "Sankarikuva",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Siirrä vasemmalle",
   "PA_MOVE_RIGHT": "Siirrä oikealle",
   "PA_MOVE_SOURCE_UP": "Siirrä lähdettä ylös",
-  "PA_MOVE_SOURCE_DOWN": "Siirrä lähdettä alas"
+  "PA_MOVE_SOURCE_DOWN": "Siirrä lähdettä alas",
+  "PA_HOME_RECENT_COVER": "Viimeksi pelattu peli kansikuvana etusivulla",
+  "PA_RESTORE_DERIVED_COVER": "Palauta edellinen kansikuva",
+  "PA_DERIVED_COVER_RESTORED": "Edellinen kansikuva palautettiin.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Nykyistä kansikuvaa ei voitu varmuuskopioida turvallisesti, joten sitä ei muutettu.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Edellistä kansikuvaa ei voitu palauttaa. Sen varmuuskopio säilytettiin."
 }

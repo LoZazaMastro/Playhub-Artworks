@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Instant library navigation",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Moves directly to the focused game instead of smoothly scrolling between library rows.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Disable alphabetical index",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Prevents the alphabetical index from opening when you hold Up or Down in the Steam library.",
   "ASSET_TYPE_CAPSULE": "Capsule",
   "ASSET_TYPE_WIDECAPSULE": "Wide Capsule",
   "ASSET_TYPE_HERO": "Hero",
@@ -314,5 +318,10 @@
   "PA_MOVE_LEFT": "Move left",
   "PA_MOVE_RIGHT": "Move right",
   "PA_MOVE_SOURCE_UP": "Move source up",
-  "PA_MOVE_SOURCE_DOWN": "Move source down"
+  "PA_MOVE_SOURCE_DOWN": "Move source down",
+  "PA_HOME_RECENT_COVER": "Last played game as cover on Home",
+  "PA_RESTORE_DERIVED_COVER": "Restore previous cover",
+  "PA_DERIVED_COVER_RESTORED": "Previous cover restored.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "The current cover could not be backed up safely, so it was left unchanged.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "The previous cover could not be restored. Its backup has been kept."
 }

@@ -1,14 +1,14 @@
 import { call, fetchNoCors } from '@decky/api';
 
-import t from '../utils/i18n';
+import t, { localizeError } from '../utils/i18n';
 import { ArtworkProviderId, ASSET_TYPE, DIMENSIONS, MIMES, STYLES } from '../constants';
 import { SGDB_API_BASE } from '../hooks/useSGDB';
 
 import getAppOverview from './getAppOverview';
 import {
-  assertBase64PayloadSize,
   assertDataUrlSize,
   blobToSafeDataUrl,
+  canvasToBase64,
   fetchWithCancellation,
   loadSafeImage,
   releaseCanvas,
@@ -17,6 +17,11 @@ import {
 } from './imageSafety';
 import log from './log';
 import { normalizeArtworkPayload } from './normalizeArtworkPayload';
+import {
+  clearDerivedCoverBackup,
+  clearSteamArtworkSafely,
+  runSteamArtworkTransaction,
+} from './derivedCover';
 
 type CoverBatchKind = 'squareReplace' | 'squareMissing' | 'portraitReplace' | 'portraitMissing';
 type HeroBatchKind = 'perfectHeroReplace' | 'perfectHeroMissing';
@@ -224,9 +229,9 @@ const enabledCoverSources = async (shape: CoverShape): Promise<ArtworkProviderId
   return order.filter((_provider, index) => flags[index] !== false);
 };
 
-const phasesForKind = (kind: BatchKind): ProcessableBatchKind[] => (
+const phasesForKind = (kind: BatchKind, preferredCoverShape: 'square' | 'portrait' = 'portrait'): ProcessableBatchKind[] => (
   kind === 'fixAll'
-    ? ['portraitMissing', 'perfectHeroMissing', 'banner920', 'missingLogos', 'logoFix']
+    ? [preferredCoverShape === 'square' ? 'squareMissing' : 'portraitMissing', 'perfectHeroMissing', 'banner920', 'missingLogos', 'logoFix']
     : [kind]
 );
 
@@ -240,8 +245,7 @@ const throwIfCancelled = (signal?: AbortSignal) => {
 };
 
 const errorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message || error.name;
-  return String(error || t('PA_FAILED', 'Operation failed.'));
+  return localizeError(error, 'PA_FAILED');
 };
 
 const withTimeout = <T,>(request: Promise<T>, timeoutMs: number, message: string): Promise<T> => {
@@ -673,11 +677,23 @@ const downloadAssetPayload = async (url: string): Promise<DownloadedAssetPayload
 
 const applyDownloadedAsset = async (appId: number, assetType: SGDBAssetType, payload: { data: string; format: string; animated?: boolean }) => {
   const normalized = await normalizeArtworkPayload(payload);
-  await withTimeout(Promise.resolve(SteamClient.Apps.ClearCustomArtworkForApp(appId, ASSET_TYPE[assetType])), STEAM_ARTWORK_TIMEOUT_MS, 'Clear artwork timeout');
-  // Steam resolves ClearCustomArtworkForApp before the cache write is fully visible.
-  // Keep a short pause even with multiple writers so Clear -> Set stays reliable.
-  await delay(180);
-  await withTimeout(Promise.resolve(SteamClient.Apps.SetCustomArtworkForApp(appId, normalized.data, normalized.format, ASSET_TYPE[assetType])), STEAM_ARTWORK_TIMEOUT_MS, 'Set artwork timeout');
+  await runSteamArtworkTransaction(async (mutate) => {
+    await mutate(
+      'Clear artwork timeout',
+      () => SteamClient.Apps.ClearCustomArtworkForApp(appId, ASSET_TYPE[assetType]),
+    );
+    // Steam resolves ClearCustomArtworkForApp before the cache write is fully visible.
+    await delay(180);
+    await mutate(
+      'Set artwork timeout',
+      () => SteamClient.Apps.SetCustomArtworkForApp(
+        appId,
+        normalized.data,
+        normalized.format,
+        ASSET_TYPE[assetType],
+      ),
+    );
+  });
 };
 
 const setLogoPosition = async (appId: number, logoPosition: LogoPosition, timeoutMessage: string) => {
@@ -743,38 +759,6 @@ const installedLogoDataUrl = async (appId: number): Promise<string> => {
   }
 };
 
-/** Caps the kept-aside original so it fits through the plugin bridge. */
-const PRISTINE_MAX_WIDTH = 4096;
-
-const boundedSourceData = async (dataUrl: string): Promise<{ data: string; ext: string } | null> => {
-  let image: HTMLImageElement | null = null;
-  let canvas: HTMLCanvasElement | null = null;
-  try {
-    image = await loadSafeImage(dataUrl);
-    if (image.naturalWidth <= PRISTINE_MAX_WIDTH) {
-      const payload = dataUrl.split(',', 2)[1] ?? '';
-      assertBase64PayloadSize(payload);
-      const ext = /image\/(png|webp|jpe?g)/i.exec(dataUrl)?.[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-      return payload ? { data: payload, ext } : null;
-    }
-    const scale = PRISTINE_MAX_WIDTH / image.naturalWidth;
-    canvas = document.createElement('canvas');
-    canvas.width = PRISTINE_MAX_WIDTH;
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext('2d');
-    if (!context) return null;
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
-    assertBase64PayloadSize(data);
-    return { data, ext: 'jpg' };
-  } catch (_) {
-    return null;
-  } finally {
-    releaseImage(image);
-    releaseCanvas(canvas);
-  }
-};
-
 const composePerfectHero = async (heroSource: string, logoSource: string): Promise<{ data: string; format: 'jpg' }> => {
   return await withCompositionLock(async () => {
     let hero: HTMLImageElement | null = null;
@@ -813,9 +797,7 @@ const composePerfectHero = async (heroSource: string, logoSource: string): Promi
         }
       }
 
-      const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
-      if (!data) throw new Error(t('PA_ERROR_EMPTY_IMAGE', 'The resulting image is empty.'));
-      assertBase64PayloadSize(data);
+      const data = await canvasToBase64(canvas, 'jpg', 0.92);
       return { data, format: 'jpg' };
     } finally {
       releaseImage(hero);
@@ -905,6 +887,17 @@ const prepareAutoPerfectHero = async (
     return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'no background available' };
   }
 
+  const sourceBackup = call(
+    'preserve_perfect_source',
+    app.appid,
+    'hero',
+    [String(hero.url)],
+    false
+  ).catch((error) => {
+    log('bulk pristine hero not stored', app.appid, error);
+    return null;
+  });
+
   const heroData = await asDataUrl(String(hero.url));
   if (!heroData) {
     return { app, name: app.display_name || name, result: 'skipped', isZazaMastro: false, skipReason: 'background could not be downloaded' };
@@ -917,21 +910,8 @@ const prepareAutoPerfectHero = async (
     if (logo?.url) logoData = await asDataUrl(String(logo.url));
   }
 
-  /*
-    Keep the untouched background.
-
-    Without this the editor, opened later on a game the bulk had already done, found no
-    stored source and fell back to the INSTALLED hero - which is the composition itself.
-    Editing then drew a second logo on top of the first.
-  */
-  try {
-    const bounded = await boundedSourceData(heroData);
-    if (bounded?.data) await call('save_perfect_source', app.appid, 'hero', bounded.data, bounded.ext);
-  } catch (error) {
-    log('bulk pristine hero not stored', app.appid, error);
-  }
-
   const composed = await composePerfectHero(heroData, logoData);
+  await sourceBackup;
   return {
     app,
     name: app.display_name || name,
@@ -1042,8 +1022,10 @@ const coverMatchesShape = (local: LocalAssetInfo, shape: CoverShape): boolean =>
 const prepareBulkArtwork = async (
   kind: ProcessableBatchKind,
   rawApp: ZazaLibraryApp,
-  sources: ArtworkProviderId[]
+  sources: ArtworkProviderId[],
+  signal?: AbortSignal
 ): Promise<PreparedBulkArtwork> => {
+  throwIfCancelled(signal);
   const label = rawApp.display_name || String(rawApp.appid);
   const cover = isCoverKind(kind);
   const assetType: SGDBAssetType = cover
@@ -1114,7 +1096,12 @@ const applyPreparedBulkArtwork = async (prepared: PreparedBulkArtwork): Promise<
     throw new Error(t('PA_ERROR_INTERNAL_ARTWORK', 'The artwork operation could not be completed.'));
   }
 
-  await applyDownloadedAsset(prepared.app.appid, prepared.assetType, { data: prepared.data, format: prepared.format || 'png', animated: prepared.animated });
+  const apply = () => applyDownloadedAsset(
+    prepared.app.appid,
+    prepared.assetType as SGDBAssetType,
+    { data: prepared.data as string, format: prepared.format || 'png', animated: prepared.animated }
+  );
+  await apply();
   return 'changed';
 };
 
@@ -1141,10 +1128,17 @@ export const runZazaMastroBatch = async (
   signal?: AbortSignal
 ) => {
   throwIfCancelled(signal);
+  let preferredCoverShape: 'square' | 'portrait' = 'portrait';
+  try {
+    const storedShape = await call<[string, string], string>('get_setting', 'library_cover_format', 'portrait');
+    preferredCoverShape = storedShape === 'square' ? 'square' : 'portrait';
+  } catch (_) {
+    // The cover format defaults to portrait.
+  }
   const steamWriteConcurrency = Math.max(1, Math.min(STANDARD_PREPARE_CONCURRENCY, Math.round(requestedSteamWrites || 1)));
   const apps = await getLibraryApps();
   throwIfCancelled(signal);
-  const phases = phasesForKind(kind);
+  const phases = phasesForKind(kind, preferredCoverShape);
   const totalSteps = apps.length * phases.length;
   const counters = { changed: 0, skipped: 0, failed: 0 };
   let lastError: string | undefined;
@@ -1282,20 +1276,27 @@ export const runZazaMastroBatch = async (
         const name = app.display_name || String(app.appid);
         emit(processed, name, phase);
         let cleared = false;
+        let coverResetSucceeded = true;
         for (const assetType of types) {
           try {
             const local = await getLocalAssetInfo(app.appid, assetType);
             if (!local.exists) continue;
-            await withTimeout(
-              Promise.resolve(SteamClient.Apps.ClearCustomArtworkForApp(app.appid, ASSET_TYPE[assetType])),
-              STEAM_ARTWORK_TIMEOUT_MS,
-              'Clear artwork timeout'
-            );
+            await clearSteamArtworkSafely(app.appid, ASSET_TYPE[assetType], 0);
             cleared = true;
           } catch (error) {
+            if (assetType === 'grid_p') coverResetSucceeded = false;
             log('reset artwork failed', app.appid, assetType, error);
             counters.failed += 1;
             lastError = `${name} (${assetType}): ${errorMessage(error)}`;
+          }
+        }
+        if (coverResetSucceeded) {
+          try {
+            await clearDerivedCoverBackup(app.appid);
+          } catch (error) {
+            log('derived cover backup reset failed', app.appid, error);
+            counters.failed += 1;
+            lastError = `${name} (grid_p backup): ${errorMessage(error)}`;
           }
         }
         if (cleared) {
@@ -1331,7 +1332,7 @@ export const runZazaMastroBatch = async (
           const app = apps[prepareIndex];
           preparing.set(
             prepareIndex,
-            prepareBulkArtwork(phase, app, coverSources)
+            prepareBulkArtwork(phase, app, coverSources, signal)
               .then((prepared) => ({ prepared }))
               .catch((error) => ({ error }))
           );

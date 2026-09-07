@@ -2,6 +2,8 @@ import importlib.util
 import json
 import sys
 import threading
+import asyncio
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -110,11 +112,42 @@ class ResourceSafetyTests(unittest.TestCase):
         self.assertIn('releaseCanvas(canvas)', source)
         self.assertIn('throwIfCancelled(signal)', source)
 
+    def test_perfect_source_uses_small_rpc_chunks(self):
+        self.assertEqual(BACKEND.PERFECT_SOURCE_READ_CHUNK_BYTES % 3, 0)
+        self.assertLessEqual(BACKEND.PERFECT_SOURCE_READ_CHUNK_BYTES, 512 * 1024)
+        frontend = (ROOT / 'src' / 'utils' / 'perfectArtwork.ts').read_text(encoding='utf-8')
+        composer = (ROOT / 'src' / 'modals' / 'ArtworkComposerModal.tsx').read_text(encoding='utf-8')
+        batch = (ROOT / 'src' / 'utils' / 'zazamastroBatch.ts').read_text(encoding='utf-8')
+        self.assertIn("'read_perfect_source_chunk'", frontend)
+        self.assertIn('preservePerfectSource(', composer)
+        self.assertNotIn('savePerfectSource(', composer)
+        self.assertNotIn("call('save_perfect_source'", batch)
+
+    def test_perfect_source_is_copied_locally_without_base64_rpc(self):
+        plugin = BACKEND.Plugin()
+        plugin._download_executor = BACKEND.ThreadPoolExecutor(max_workers=1)
+        plugin._shutdown_event = threading.Event()
+        payload = png_header(920, 430, b'x' * 4096)
+        try:
+            with tempfile.TemporaryDirectory() as root:
+                root_path = Path(root)
+                userdata = root_path / 'userdata'
+                source = userdata / '123' / 'config' / 'grid' / '42.png'
+                source.parent.mkdir(parents=True)
+                source.write_bytes(payload)
+                destination = root_path / 'runtime' / 'perfect_sources'
+                with patch.object(BACKEND, 'PERFECT_SOURCE_DIR', destination), patch.object(BACKEND, 'get_steam_userdata', return_value=userdata), patch.object(BACKEND, '_librarycache_file_candidates', return_value=[]):
+                    result = asyncio.run(plugin.preserve_perfect_source(42, 'grid_l', [], True))
+                    self.assertTrue(result['saved'])
+                    self.assertEqual((destination / '42_grid_l.png').read_bytes(), payload)
+        finally:
+            plugin._download_executor.shutdown(wait=True)
+
     def test_release_metadata_is_1_1_1(self):
         package = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
         release = json.loads((ROOT / '.playhub-release.json').read_text(encoding='utf-8'))
-        self.assertEqual(package['version'], '1.1.1')
-        self.assertEqual(release['version'], '1.1.1')
+        self.assertEqual(package['version'], '1.1.2')
+        self.assertEqual(release['version'], '1.1.2')
 
 
 if __name__ == '__main__':

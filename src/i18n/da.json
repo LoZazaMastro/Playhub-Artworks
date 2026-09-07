@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Øjeblikkelig navigation i biblioteket",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Går direkte til det valgte spil uden jævn rulning mellem bibliotekets rækker.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Deaktivér alfabetisk indeks",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Forhindrer det alfabetiske indeks i at åbne, når du holder Op eller Ned nede i Steam-biblioteket.",
   "ASSET_TYPE_CAPSULE": "Kapsel",
   "ASSET_TYPE_WIDECAPSULE": "Bred Kapsel",
   "ASSET_TYPE_HERO": "Megabanner",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Flyt til venstre",
   "PA_MOVE_RIGHT": "Flyt til højre",
   "PA_MOVE_SOURCE_UP": "Flyt kilde op",
-  "PA_MOVE_SOURCE_DOWN": "Flyt kilde ned"
+  "PA_MOVE_SOURCE_DOWN": "Flyt kilde ned",
+  "PA_HOME_RECENT_COVER": "Sidst spillede spil som cover på startsiden",
+  "PA_RESTORE_DERIVED_COVER": "Gendan forrige cover",
+  "PA_DERIVED_COVER_RESTORED": "Det forrige cover er gendannet.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Det aktuelle cover kunne ikke sikkerhedskopieres forsvarligt og blev derfor ikke ændret.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige cover kunne ikke gendannes. Sikkerhedskopien er bevaret."
 }

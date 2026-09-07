@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navegação instantânea na biblioteca",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Vai direto para o jogo selecionado, sem rolagem suave entre as linhas da biblioteca.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Desativar índice alfabético",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Impede que o índice alfabético seja aberto ao manter Cima ou Baixo pressionado na biblioteca do Steam.",
   "ASSET_TYPE_CAPSULE": "cápsula",
   "ASSET_TYPE_WIDECAPSULE": "faixa",
   "ASSET_TYPE_HERO": "cabeçalho",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Mover para a esquerda",
   "PA_MOVE_RIGHT": "Mover para a direita",
   "PA_MOVE_SOURCE_UP": "Mover fonte para cima",
-  "PA_MOVE_SOURCE_DOWN": "Mover fonte para baixo"
+  "PA_MOVE_SOURCE_DOWN": "Mover fonte para baixo",
+  "PA_HOME_RECENT_COVER": "Último jogo jogado como capa na página inicial",
+  "PA_RESTORE_DERIVED_COVER": "Restaurar capa anterior",
+  "PA_DERIVED_COVER_RESTORED": "A capa anterior foi restaurada.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Não foi possível fazer um backup seguro da capa atual, por isso ela não foi alterada.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Não foi possível restaurar a capa anterior. O backup foi mantido."
 }

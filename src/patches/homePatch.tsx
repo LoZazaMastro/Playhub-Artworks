@@ -348,7 +348,11 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
     carouselProps.fnGetColumnWidth = (index: number, ...rest: any[]) => {
       // The banner keeps Steam's own width, and a separator keeps its thin slot.
       if (!squareColumns) return original.call(carouselProps, index, ...rest);
-      if (index === 0) return original.call(carouselProps, index, ...rest);
+      if (index === 0) {
+        const nativeWidth = original.call(carouselProps, index, ...rest);
+        // The first item can now be a portrait cover instead of the featured banner.
+        if (Math.abs(nativeWidth - capsuleHeight * 2 / 3) > 6) return nativeWidth;
+      }
       if (games && games[index] === 0) return original.call(carouselProps, index, ...rest);
       return capsuleHeight;
     };

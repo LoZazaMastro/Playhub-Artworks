@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "تنقّل فوري في المكتبة",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "ينتقل مباشرةً إلى اللعبة المحددة بدلًا من التمرير بسلاسة بين صفوف المكتبة.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "تعطيل الفهرس الأبجدي",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "يمنع فتح الفهرس الأبجدي عند الضغط مطولًا على أعلى أو أسفل في مكتبة Steam.",
   "ASSET_TYPE_CAPSULE": "غلاف",
   "ASSET_TYPE_WIDECAPSULE": "غلاف عريض",
   "ASSET_TYPE_HERO": "صورة Hero",
@@ -313,5 +317,10 @@
   "PA_ERROR_WRONG_ASPECT": "نسبة أبعاد الصورة غير مناسبة لعلامة التبويب هذه.",
   "PA_ERROR_IMAGE_TOO_SMALL": "الصورة أصغر من الحد الأدنى المحدد للجودة.",
   "PA_ERROR_FORMAT_FILTERED": "تنسيق الصورة مستبعد بواسطة عوامل التصفية الحالية.",
-  "PA_ERROR_GENERIC": "فشلت العملية."
+  "PA_ERROR_GENERIC": "فشلت العملية.",
+  "PA_HOME_RECENT_COVER": "آخر لعبة تم لعبها كغلاف في الصفحة الرئيسية",
+  "PA_RESTORE_DERIVED_COVER": "استعادة الغلاف السابق",
+  "PA_DERIVED_COVER_RESTORED": "تمت استعادة الغلاف السابق.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "تعذر إنشاء نسخة احتياطية آمنة من الغلاف الحالي، لذلك لم يتم تغييره.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "تعذر استعادة الغلاف السابق. تم الاحتفاظ بنسخته الاحتياطية."
 }

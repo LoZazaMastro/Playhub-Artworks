@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "라이브러리 즉시 이동",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "라이브러리 행 사이를 부드럽게 스크롤하지 않고 선택한 게임으로 즉시 이동합니다.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "알파벳 색인 비활성화",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Steam 라이브러리에서 위 또는 아래를 길게 눌러도 알파벳 색인이 열리지 않도록 합니다.",
   "ASSET_TYPE_CAPSULE": "캡슐",
   "ASSET_TYPE_WIDECAPSULE": "넓은 캡슐",
   "ASSET_TYPE_HERO": "히어로",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "왼쪽으로 이동",
   "PA_MOVE_RIGHT": "오른쪽으로 이동",
   "PA_MOVE_SOURCE_UP": "소스를 위로 이동",
-  "PA_MOVE_SOURCE_DOWN": "소스를 아래로 이동"
+  "PA_MOVE_SOURCE_DOWN": "소스를 아래로 이동",
+  "PA_HOME_RECENT_COVER": "홈에서 마지막으로 플레이한 게임을 커버로 표시",
+  "PA_RESTORE_DERIVED_COVER": "이전 커버 복원",
+  "PA_DERIVED_COVER_RESTORED": "이전 커버를 복원했습니다.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "현재 커버를 안전하게 백업하지 못해 변경하지 않았습니다.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "이전 커버를 복원하지 못했습니다. 백업은 그대로 보관됩니다."
 }

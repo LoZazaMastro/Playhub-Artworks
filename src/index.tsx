@@ -15,6 +15,18 @@ import { guardAfterRoute, startLayoutGuard, stopLayoutGuard } from './patches/la
 import log from './utils/log';
 import { steamHref, steamPath } from './utils/steamRoute';
 import { cancelBulkArtworkJob } from './utils/bulkJobStore';
+import {
+  applyCachedInstantLibraryScroll,
+  refreshInstantLibraryScroll,
+  stopInstantLibraryScroll,
+} from './patches/instantLibraryScroll';
+import {
+  applyCachedDisableLibraryLetterHold,
+  refreshDisableLibraryLetterHold,
+  stopDisableLibraryLetterHold,
+} from './patches/disableLibraryLetterHold';
+
+import { refreshHomeRecentCover, stopHomeRecentCover } from './patches/homeRecentCover';
 
 const ROUTE = '/playhub-artworks/:appid/:assetType?';
 const RUNTIME_CLEANUP = '__playhubArtworksRuntimeCleanup';
@@ -121,12 +133,33 @@ export default definePlugin(() => {
   } catch (error) {
     log('cached layout skipped', error);
   }
+  try {
+    applyCachedInstantLibraryScroll();
+  } catch (error) {
+    log('cached instant library scroll skipped', error);
+  }
+  try {
+    applyCachedDisableLibraryLetterHold();
+  } catch (error) {
+    log('cached disable library letter hold skipped', error);
+  }
 
+  void refreshHomeRecentCover();
   void (async () => {
     try {
       await refreshLayoutPatches(true);
     } catch (error) {
       log('layout patches skipped', error);
+    }
+    try {
+      await refreshInstantLibraryScroll();
+    } catch (error) {
+      log('instant library scroll skipped', error);
+    }
+    try {
+      await refreshDisableLibraryLetterHold();
+    } catch (error) {
+      log('disable library letter hold skipped', error);
     }
     /*
       Steam is still building itself for several seconds after a cold start, so the layout
@@ -147,7 +180,10 @@ export default definePlugin(() => {
     window.removeEventListener('unhandledrejection', onRejection);
     routerHook.removeRoute(ROUTE);
     try { menuPatches?.unpatch(); } catch (_) { /* already gone */ }
+    stopHomeRecentCover();
     try { stopLayoutPatches(); } catch (_) { /* already gone */ }
+    try { stopInstantLibraryScroll(); } catch (_) { /* already gone */ }
+    try { stopDisableLibraryLetterHold(); } catch (_) { /* already gone */ }
 
     removeStyles(
       'sgdb-square-capsules-library',

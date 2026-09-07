@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Okamžitý pohyb v knihovně",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Přejde rovnou na vybranou hru bez plynulého posouvání mezi řádky knihovny.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Vypnout abecední rejstřík",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Zabrání otevření abecedního rejstříku při podržení směru nahoru nebo dolů v knihovně Steamu.",
   "ASSET_TYPE_CAPSULE": "Výběr",
   "ASSET_TYPE_WIDECAPSULE": "Široký výběr",
   "ASSET_TYPE_HERO": "Hrdina",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Přesunout doleva",
   "PA_MOVE_RIGHT": "Přesunout doprava",
   "PA_MOVE_SOURCE_UP": "Přesunout zdroj nahoru",
-  "PA_MOVE_SOURCE_DOWN": "Přesunout zdroj dolů"
+  "PA_MOVE_SOURCE_DOWN": "Přesunout zdroj dolů",
+  "PA_HOME_RECENT_COVER": "Poslední hraná hra jako obal na domovské stránce",
+  "PA_RESTORE_DERIVED_COVER": "Obnovit předchozí obal",
+  "PA_DERIVED_COVER_RESTORED": "Předchozí obal byl obnoven.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Aktuální obal se nepodařilo bezpečně zálohovat, proto zůstal beze změny.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Předchozí obal se nepodařilo obnovit. Jeho záloha zůstala uložená."
 }

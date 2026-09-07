@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navigare instantanee în bibliotecă",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Trece direct la jocul selectat, fără derulare lină între rândurile bibliotecii.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Dezactivează indexul alfabetic",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Împiedică deschiderea indexului alfabetic când ții apăsat Sus sau Jos în biblioteca Steam.",
   "ASSET_TYPE_CAPSULE": "Capsulă",
   "ASSET_TYPE_WIDECAPSULE": "Capsulă lată",
   "ASSET_TYPE_HERO": "Erou",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Mută la stânga",
   "PA_MOVE_RIGHT": "Mută la dreapta",
   "PA_MOVE_SOURCE_UP": "Mută sursa în sus",
-  "PA_MOVE_SOURCE_DOWN": "Mută sursa în jos"
+  "PA_MOVE_SOURCE_DOWN": "Mută sursa în jos",
+  "PA_HOME_RECENT_COVER": "Ultimul joc jucat afișat drept copertă pe pagina principală",
+  "PA_RESTORE_DERIVED_COVER": "Restaurează coperta anterioară",
+  "PA_DERIVED_COVER_RESTORED": "Coperta anterioară a fost restaurată.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Coperta actuală nu a putut fi salvată în siguranță, așa că a rămas neschimbată.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Coperta anterioară nu a putut fi restaurată. Copia de siguranță a fost păstrată."
 }

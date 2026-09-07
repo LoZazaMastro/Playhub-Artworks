@@ -80,6 +80,41 @@ const officialArtwork = (appId: number, assetType: SGDBAssetType): string[] => {
 };
 
 /**
+ * Real landscape artwork that can be turned into a cover, in strict priority order:
+ * custom banner, Steam banner, custom hero, Steam hero.
+ */
+export const landscapeCoverSources = (app: AppStoreAppOverview): string[] => {
+  const store = window.appStore as any;
+  const details = window.appDetailsStore as any;
+  const list = (value: any): string[] => (Array.isArray(value) ? value : value ? [value] : []);
+  try {
+    const customBanners = [
+      ...list(store?.GetCustomLandscapeImageURLs?.(app)),
+      ...list(store?.GetCustomLandcapeImageURLs?.(app)),
+    ];
+    const steamBanners = [
+      ...list(store?.GetLandscapeImageURLForApp?.(app)),
+      ...list(store?.GetCachedLandscapeImageURLForApp?.(app)),
+      ...officialArtwork(app.appid, 'grid_l'),
+    ].filter((url) => !isCustomArtwork(url));
+    const customHeroes = list(store?.GetCustomHeroImageURLs?.(app));
+    const steamHeroes = [
+      ...list(details?.GetHeroImagesForAppId?.(app.appid)?.rgHeroImages),
+      ...officialArtwork(app.appid, 'hero'),
+    ].filter((url) => !isCustomArtwork(url));
+
+    return [...new Set([
+      ...customBanners,
+      ...steamBanners,
+      ...customHeroes,
+      ...steamHeroes,
+    ].filter(Boolean))];
+  } catch (_) {
+    return [];
+  }
+};
+
+/**
  * Only the artwork Steam itself would show, with every custom asset left out.
  *
  * This is the way back out of a Perfect composition: once a composed hero or banner has

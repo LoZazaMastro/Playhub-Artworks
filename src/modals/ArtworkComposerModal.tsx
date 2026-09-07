@@ -13,12 +13,9 @@ import { artworkSources, steamOwnArtworkSources, useArtworkPreview } from '../ut
 import MenuIcon from '../components/Icons/MenuIcon';
 import log from '../utils/log';
 import t, { localizeError } from '../utils/i18n';
-import { getPerfectSource, isPerfectArtwork, savePerfectSource } from '../utils/perfectArtwork';
+import { getPerfectSource, isPerfectArtwork, preservePerfectSource } from '../utils/perfectArtwork';
 import {
-  assertBase64PayloadSize,
-  assertDataUrlSize,
-  blobToSafeDataUrl,
-  fetchWithCancellation,
+  canvasToBase64,
   loadSafeImage,
   releaseCanvas,
   releaseImage,
@@ -114,79 +111,8 @@ const logoShadowFilter = (opacityPercent: number, blurPercent: number, scale: nu
   return `${one} ${one}`;
 };
 
-const toBase64 = async (source: string): Promise<{ data: string; ext: string } | null> => {
-  try {
-    const response = await fetchWithCancellation(fetch, source);
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
-    const data = (await blobToSafeDataUrl(blob)).split(',', 2)[1] ?? '';
-    return data ? { data, ext } : null;
-  } catch (_) {
-    return null;
-  }
-};
-
-/**
- * Reads a source into a `data:` URL.
- *
- * Anything drawn onto the canvas has to come from one. An image fetched straight from a
- * remote URL taints the canvas, and a tainted canvas throws on `toDataURL` - which is a
- * save that fails at the very last step, after the preview has looked perfect all along.
- */
-const asDataUrl = async (source: string): Promise<string> => {
-  if (!source) return '';
-  if (source.startsWith('data:')) {
-    assertDataUrlSize(source);
-    return source;
-  }
-  try {
-    const response = await fetchWithCancellation(fetch, source);
-    if (!response.ok) return source;
-    return await blobToSafeDataUrl(await response.blob());
-  } catch (error: any) {
-    if (String(error?.message || '').startsWith('PA_ERROR_')) throw error;
-    return source;
-  }
-};
-
-/** Same as the preview image, but guaranteed not to taint the output canvas. */
-const loadDrawableImage = async (source: string) => loadSafeImage(await asDataUrl(source));
-
-/**
- * Shrinks the kept-aside original before it is handed to the backend.
- *
- * The untouched background is stored so later edits never compose on top of an already
- * composed picture. A 6000 px wallpaper base64-encodes to something far larger than the
- * plugin bridge is meant to carry, and losing that call used to take the whole save with
- * it. It only ever has to be big enough to recompose from, so it is capped.
- */
-const PRISTINE_MAX_WIDTH = 4096;
-
-const boundedSource = async (source: string): Promise<{ data: string; ext: string } | null> => {
-  let image: HTMLImageElement | null = null;
-  let canvas: HTMLCanvasElement | null = null;
-  try {
-    image = await loadDrawableImage(source);
-    if (image.naturalWidth <= PRISTINE_MAX_WIDTH) return toBase64(await asDataUrl(source));
-
-    const scale = PRISTINE_MAX_WIDTH / image.naturalWidth;
-    canvas = document.createElement('canvas');
-    canvas.width = PRISTINE_MAX_WIDTH;
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext('2d');
-    if (!context) return toBase64(await asDataUrl(source));
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const data = canvas.toDataURL('image/jpeg', 0.92).split(',', 2)[1] ?? '';
-    assertBase64PayloadSize(data);
-    return { data, ext: 'jpg' };
-  } catch (_) {
-    return null;
-  } finally {
-    releaseImage(image);
-    releaseCanvas(canvas);
-  }
-};
+/** Preview sources are object/data URLs, so canvas reads stay local and untainted. */
+const loadDrawableImage = async (source: string) => loadSafeImage(source);
 
 /**
  * Placement of the background, in percentages of the frame.
@@ -253,7 +179,6 @@ const ArtworkComposerModal: FC<{
   const [logoShadowBlur, setLogoShadowBlur] = useState(40);
   const [frameWidth, setFrameWidth] = useState(0);
   const [backgroundSource, setBackgroundSource] = useState('');
-  const [inlineLogo, setInlineLogo] = useState('');
   const [sourceReady, setSourceReady] = useState(false);
 
   const [backgroundNatural, setBackgroundNatural] = useState({ width: 0, height: 0 });
@@ -335,7 +260,7 @@ const ArtworkComposerModal: FC<{
   }, [app, logoCandidates.length]);
 
   /* What actually gets drawn: nothing at all while the logo is switched off. */
-  const activeLogo = logoHidden ? '' : inlineLogo;
+  const activeLogo = logoHidden ? '' : logoSource;
 
   const modalRef = useRef<HTMLDivElement | null>(null);
   const dirty = useRef(false);
@@ -376,6 +301,8 @@ const ArtworkComposerModal: FC<{
     "The image is unavailable." on a game whose artwork was perfectly present. A data URL
     cannot be revoked out from under us.
   */
+  const sourceBackup = useRef<Promise<unknown> | null>(null);
+
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -395,9 +322,7 @@ const ArtworkComposerModal: FC<{
         return;
       }
       if (!steamBackground) return;
-      const inlined = await asDataUrl(steamBackground);
-      if (!active) return;
-      const adopted = inlined || steamBackground;
+      const adopted = steamBackground;
       log('composer source', {
         target,
         source: composed ? 'Steam artwork (the game already has a composition)' : 'current game artwork',
@@ -406,38 +331,23 @@ const ArtworkComposerModal: FC<{
       setBackgroundSource(adopted);
       setSourceReady(true);
 
-      /*
-        The untouched original is kept aside NOW, not after the save.
-
-        Storing it only once the composition had been written meant a failure there (a
-        tainted canvas, an oversized picture, a save that never got that far) left nothing
-        behind, and the next edit fell back to the composed artwork. The backend keeps the
-        first file it is given, so writing it here is free and idempotent.
-      */
       // Never freeze a composed picture as the original: that is the bug this prevents.
       if (composed && originalCandidates.length === 0) return;
-      try {
-        const pristine = await boundedSource(adopted);
-        if (pristine?.data) await savePerfectSource(appId, target, pristine.data, pristine.ext);
-      } catch (_) {
-        // Not fatal: the post-save attempt is still there as a backstop.
+      if (!sourceBackup.current) {
+        const candidates = composed && !zazaBackground ? originalCandidates : currentCandidates;
+        sourceBackup.current = preservePerfectSource(
+          appId,
+          target,
+          candidates,
+          !(composed && !zazaBackground)
+        ).then((result) => {
+          log('composer source preserved', { target, result });
+          return result;
+        });
       }
     })();
     return () => { active = false; };
-  }, [appId, target, steamBackground, composed, currentCandidates, originalCandidates]);
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      if (!logoSource) {
-        setInlineLogo('');
-        return;
-      }
-      const inlined = await asDataUrl(logoSource);
-      if (active) setInlineLogo(inlined || logoSource);
-    })();
-    return () => { active = false; };
-  }, [logoSource]);
+  }, [appId, target, steamBackground, composed, currentCandidates, originalCandidates, zazaBackground]);
 
   const placement = useMemo(
     () => backgroundPlacement(backgroundNatural, background, spec),
@@ -496,11 +406,7 @@ const ArtworkComposerModal: FC<{
           context.drawImage(logoImage, left, top, width, height);
         }
 
-        const data = spec.format === 'jpg'
-          ? canvas.toDataURL('image/jpeg', 0.92).replace(/^data:image\/jpeg;base64,/, '')
-          : canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
-        if (!data) throw new Error('PA_ERROR_EMPTY_IMAGE');
-        assertBase64PayloadSize(data);
+        const data = await canvasToBase64(canvas, spec.format, 0.92);
         return { data, width: canvas.width, height: canvas.height };
       } finally {
         releaseImage(backgroundImage);
@@ -547,6 +453,13 @@ const ArtworkComposerModal: FC<{
         const composition = await compose(state);
         if (!composition) throw new Error('PA_ERROR_COMPOSITION_FAILED');
 
+        if (sourceBackup.current) {
+          await Promise.race([
+            sourceBackup.current,
+            new Promise((resolve) => window.setTimeout(resolve, 500)),
+          ]);
+        }
+
         await onSave(composition.data, spec.format, Boolean(state.logoSource));
         dirty.current = false;
         log('composer saved', {
@@ -555,18 +468,6 @@ const ArtworkComposerModal: FC<{
           canvas: `${composition.width}x${composition.height}`,
         });
 
-        /*
-          Only now, and never in a way that can take the save down with it: the artwork
-          is already applied, and the kept-aside original is a convenience for the NEXT
-          edit.
-        */
-        try {
-          const pristine = await boundedSource(state.backgroundSource);
-          if (pristine?.data) await savePerfectSource(appId, target, pristine.data, pristine.ext);
-          else log('composer pristine source not stored', { target });
-        } catch (sourceError: any) {
-          log('composer pristine source failed', { target, message: sourceError?.message });
-        }
         toaster.toast({
           title: app?.display_name ?? 'Playhub Artworks',
           body: target === 'hero' ? t('PA_PERFECT_HERO_CREATED', 'Perfect Hero created.') : t('PA_PERFECT_BANNER_CREATED', 'Perfect Banner created.'),
@@ -665,7 +566,7 @@ const ArtworkComposerModal: FC<{
     dirty.current = true;
     setLogoHidden(hidden);
     if (hidden) setLayer('background');
-    else if (inlineLogo) setLayer('logo');
+    else if (logoSource) setLayer('logo');
     void call<[string, boolean], void>('set_setting', 'perfect_hide_logo', hidden).catch(() => undefined);
   };
 
@@ -765,11 +666,11 @@ const ArtworkComposerModal: FC<{
               </DialogButton>
             </Focusable>
 
-            {!inlineLogo && (
+            {!logoSource && (
               <span className="pa-editor-hint">{t('PA_NO_LOGO_COMPOSE_BG_ONLY', 'This game has no logo, so only the background will be composed.')}</span>
             )}
 
-            {Boolean(inlineLogo) && (
+            {Boolean(logoSource) && (
               <Focusable className="pa-editor-row" flow-children="horizontal">
                 <DialogButton
                   data-pa-logo-visible={logoHidden ? 'false' : 'true'}
@@ -781,7 +682,7 @@ const ArtworkComposerModal: FC<{
               </Focusable>
             )}
 
-            {logoHidden && Boolean(inlineLogo) && (
+            {logoHidden && Boolean(logoSource) && (
               <span className="pa-editor-hint">
                 {t('PA_LOGO_EXCLUDED_DESC', 'The logo is not merged into the image; Steam keeps displaying it over the background.')}
               </span>

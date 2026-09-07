@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Azonnali navigáció a könyvtárban",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Közvetlenül a kijelölt játékhoz ugrik, a könyvtár sorai közötti finom görgetés nélkül.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Betűrendes index kikapcsolása",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Megakadályozza a betűrendes index megnyitását, amikor nyomva tartod a Fel vagy Le irányt a Steam-könyvtárban.",
   "ASSET_TYPE_CAPSULE": "Kapszula",
   "ASSET_TYPE_WIDECAPSULE": "Fejléckapszula",
   "ASSET_TYPE_HERO": "Kiemelés",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Mozgatás balra",
   "PA_MOVE_RIGHT": "Mozgatás jobbra",
   "PA_MOVE_SOURCE_UP": "Forrás mozgatása fel",
-  "PA_MOVE_SOURCE_DOWN": "Forrás mozgatása le"
+  "PA_MOVE_SOURCE_DOWN": "Forrás mozgatása le",
+  "PA_HOME_RECENT_COVER": "Legutóbb játszott játék borítóként a kezdőlapon",
+  "PA_RESTORE_DERIVED_COVER": "Előző borító visszaállítása",
+  "PA_DERIVED_COVER_RESTORED": "Az előző borító visszaállt.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "A jelenlegi borítóról nem sikerült biztonságos mentést készíteni, ezért változatlan maradt.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Az előző borítót nem sikerült visszaállítani. A biztonsági mentése megmaradt."
 }

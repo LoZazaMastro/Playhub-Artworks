@@ -8,7 +8,7 @@ import {
 } from 'react';
 import {
   FaChevronDown, FaChevronUp, FaExternalLinkAlt, FaHome, FaImage, FaKey,
-  FaMagic, FaThLarge, FaTrash,
+  FaArrowsAltV, FaFont, FaMagic, FaThLarge, FaTrash,
 } from 'react-icons/fa';
 
 import MenuIcon from '../Icons/MenuIcon';
@@ -21,6 +21,9 @@ import {
 import { ArtworkProviderId, providerLabel } from '../../constants';
 import { startBulkArtworkJob, useBulkArtworkJob } from '../../utils/bulkJobStore';
 import { HomeRecentFormat, LibraryCoverFormat, refreshLayoutPatches } from '../../patches/layoutPatchController';
+import { setInstantLibraryScroll } from '../../patches/instantLibraryScroll';
+import { setDisableLibraryLetterHold } from '../../patches/disableLibraryLetterHold';
+import { HOME_RECENT_COVER_SETTING_KEY, setHomeRecentCover } from '../../patches/homeRecentCover';
 
 type BulkAction = {
   kind: ZazaBatchKind;
@@ -132,7 +135,10 @@ const QuickAccessSettings: VFC = () => {
   const [savedApiKey, setSavedApiKey] = useState('');
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [libraryCoverFormat, setLibraryCoverFormat] = useState<LibraryCoverFormat>('portrait');
+  const [homeRecentCover, setHomeRecentCoverState] = useState(false);
   const [centerHomeHero, setCenterHomeHero] = useState(false);
+  const [instantLibraryScroll, setInstantLibraryScrollState] = useState(false);
+  const [disableLibraryLetterHold, setDisableLibraryLetterHoldState] = useState(false);
   const [sourceFlags, setSourceFlags] = useState<Record<string, boolean>>({});
   const [sourceOrder, setSourceOrder] = useState<Record<CoverShape, ArtworkProviderId[]>>({
     square: COVER_SOURCES.square,
@@ -148,13 +154,19 @@ const QuickAccessSettings: VFC = () => {
       readApiKey(),
       get('library_cover_format', 'portrait'),
       get('home_hero_center', false),
+      get('instant_library_scroll', false),
+      get('disable_library_letter_hold', false),
+      get(HOME_RECENT_COVER_SETTING_KEY, false),
     ])
-      .then(([key, coverFormat, centerHero]) => {
+      .then(([key, coverFormat, centerHero, instantScroll, disableLetterHold, storedHomeRecentCover]) => {
         const storedKey = String(key ?? '');
         setApiKey(storedKey);
         setSavedApiKey(storedKey);
         setLibraryCoverFormat(coverFormat === 'square' ? 'square' : 'portrait');
         setCenterHomeHero(centerHero === true);
+        setInstantLibraryScrollState(instantScroll === true);
+        setDisableLibraryLetterHoldState(disableLetterHold === true);
+        setHomeRecentCoverState(storedHomeRecentCover === true);
       })
       .catch(() => undefined);
   }, [get]);
@@ -275,6 +287,24 @@ const QuickAccessSettings: VFC = () => {
     update(value);
     await set(key, value, true);
     await refreshLayoutPatches();
+  }, [set]);
+
+  const saveInstantScroll = useCallback(async (value: boolean) => {
+    setInstantLibraryScrollState(value);
+    setInstantLibraryScroll(value);
+    await set('instant_library_scroll', value, true);
+  }, [set]);
+
+  const saveDisableLetterHold = useCallback(async (value: boolean) => {
+    setDisableLibraryLetterHoldState(value);
+    setDisableLibraryLetterHold(value);
+    await set('disable_library_letter_hold', value, true);
+  }, [set]);
+
+  const saveHomeRecentCover = useCallback(async (value: boolean) => {
+    setHomeRecentCoverState(value);
+    setHomeRecentCover(value);
+    await set(HOME_RECENT_COVER_SETTING_KEY, value, true);
   }, [set]);
 
   return (
@@ -412,11 +442,34 @@ const QuickAccessSettings: VFC = () => {
             </Focusable>
           </div>
           <div className="pa-choice">
+            <span className="pa-choice-label"><FaImage /> {t('PA_HOME_RECENT_COVER', 'Last played game as cover')}</span>
+            <Focusable className="pa-choice-buttons" flow-children="horizontal">
+              <DialogButton className={homeRecentCover ? '' : 'active'} onClick={() => void saveHomeRecentCover(false)}>{t('PA_NO', "No")}</DialogButton>
+              <DialogButton className={homeRecentCover ? 'active' : ''} onClick={() => void saveHomeRecentCover(true)}>{t('PA_YES', "Yes")}</DialogButton>
+            </Focusable>
+          </div>
+          <div className="pa-choice">
             <span className="pa-choice-label"><FaHome /> {t('PA_CENTER_HOME_HERO', 'Centered Home hero')}</span>
             <span className="pa-help">{t('PA_CENTER_HOME_HERO_DESC', 'Useful with the Playhub theme, which aligns the hero to the top.')}</span>
             <Focusable className="pa-choice-buttons" flow-children="horizontal">
               <DialogButton className={centerHomeHero ? '' : 'active'} onClick={() => void saveLayout('home_hero_center', false, setCenterHomeHero)}>{t('PA_NO', "No")}</DialogButton>
               <DialogButton className={centerHomeHero ? 'active' : ''} onClick={() => void saveLayout('home_hero_center', true, setCenterHomeHero)}>{t('PA_YES', "Yes")}</DialogButton>
+            </Focusable>
+          </div>
+          <div className="pa-choice">
+            <span className="pa-choice-label"><FaArrowsAltV /> {t('PA_INSTANT_LIBRARY_SCROLL', 'Instant library navigation')}</span>
+            <span className="pa-help">{t('PA_INSTANT_LIBRARY_SCROLL_DESC', 'Moves directly to the focused game instead of smoothly scrolling between library rows.')}</span>
+            <Focusable className="pa-choice-buttons" flow-children="horizontal">
+              <DialogButton className={instantLibraryScroll ? '' : 'active'} onClick={() => void saveInstantScroll(false)}>{t('PA_NO', "No")}</DialogButton>
+              <DialogButton className={instantLibraryScroll ? 'active' : ''} onClick={() => void saveInstantScroll(true)}>{t('PA_YES', "Yes")}</DialogButton>
+            </Focusable>
+          </div>
+          <div className="pa-choice">
+            <span className="pa-choice-label"><FaFont /> {t('PA_DISABLE_LIBRARY_LETTER_HOLD', 'Disable alphabetical index')}</span>
+            <span className="pa-help">{t('PA_DISABLE_LIBRARY_LETTER_HOLD_DESC', 'Prevents the alphabetical index from opening when you hold Up or Down in the Steam library.')}</span>
+            <Focusable className="pa-choice-buttons" flow-children="horizontal">
+              <DialogButton className={disableLibraryLetterHold ? '' : 'active'} onClick={() => void saveDisableLetterHold(false)}>{t('PA_NO', "No")}</DialogButton>
+              <DialogButton className={disableLibraryLetterHold ? 'active' : ''} onClick={() => void saveDisableLetterHold(true)}>{t('PA_YES', "Yes")}</DialogButton>
             </Focusable>
           </div>
           <div className="pa-heading">{t('PA_RESET', "Reset")}</div>

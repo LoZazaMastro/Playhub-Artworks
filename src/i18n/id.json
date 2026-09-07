@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navigasi pustaka instan",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Langsung berpindah ke game yang dipilih tanpa gulir halus antarbaris pustaka.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Nonaktifkan indeks alfabet",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Mencegah indeks alfabet terbuka saat Anda menahan Atas atau Bawah di pustaka Steam.",
   "ASSET_TYPE_CAPSULE": "Sampul",
   "ASSET_TYPE_WIDECAPSULE": "Sampul Lebar",
   "ASSET_TYPE_HERO": "Latar Hero",
@@ -313,5 +317,10 @@
   "PA_ERROR_WRONG_ASPECT": "Proporsi gambar tidak sesuai untuk tab ini.",
   "PA_ERROR_IMAGE_TOO_SMALL": "Gambar lebih kecil daripada kualitas minimum yang dipilih.",
   "PA_ERROR_FORMAT_FILTERED": "Format gambar dikecualikan oleh filter saat ini.",
-  "PA_ERROR_GENERIC": "Operasi gagal."
+  "PA_ERROR_GENERIC": "Operasi gagal.",
+  "PA_HOME_RECENT_COVER": "Game terakhir dimainkan sebagai sampul di Beranda",
+  "PA_RESTORE_DERIVED_COVER": "Pulihkan sampul sebelumnya",
+  "PA_DERIVED_COVER_RESTORED": "Sampul sebelumnya telah dipulihkan.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Sampul saat ini tidak dapat dicadangkan dengan aman, jadi tidak diubah.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Sampul sebelumnya tidak dapat dipulihkan. Cadangannya tetap disimpan."
 }

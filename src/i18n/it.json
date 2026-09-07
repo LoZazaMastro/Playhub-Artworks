@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Scorrimento istantaneo della libreria",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Quando sposti il focus tra i giochi, passa subito alla riga selezionata senza animazione.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Disattiva l'indice alfabetico",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Impedisce l'apertura dell'indice alfabetico quando tieni premuto Su o Giù nella libreria di Steam.",
   "ASSET_TYPE_CAPSULE": "Fronte",
   "ASSET_TYPE_WIDECAPSULE": "Fronte Orizzontale",
   "ASSET_TYPE_HERO": "Banner",
@@ -314,5 +318,10 @@
   "PA_MOVE_LEFT": "Sposta a sinistra",
   "PA_MOVE_RIGHT": "Sposta a destra",
   "PA_MOVE_SOURCE_UP": "Sposta la sorgente su",
-  "PA_MOVE_SOURCE_DOWN": "Sposta la sorgente giù"
+  "PA_MOVE_SOURCE_DOWN": "Sposta la sorgente giù",
+  "PA_HOME_RECENT_COVER": "Ultimo gioco giocato come cover nella Home",
+  "PA_RESTORE_DERIVED_COVER": "Ripristina la copertina precedente",
+  "PA_DERIVED_COVER_RESTORED": "La copertina precedente è stata ripristinata.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Non è stato possibile salvare in sicurezza la copertina attuale, quindi non è stata modificata.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Non è stato possibile ripristinare la copertina precedente. Il backup è stato conservato."
 }

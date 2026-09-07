@@ -23,6 +23,7 @@ import getCustomLogoPosition from '../utils/getCustomLogoPosition';
 import { DEFAULT_LOGO_POSITION, writeLogoPosition } from '../utils/logoControl';
 import { runArtworkJob } from '../utils/artworkJobStore';
 import { ArtworkPayload, normalizeArtworkPayload } from '../utils/normalizeArtworkPayload';
+import { withSteamArtworkWriteLock } from '../utils/imageSafety';
 
 export const SGDB_API_BASE = process.env.ROLLUP_ENV === 'development' ? 'http://sgdb.test/api/v2' : 'https://www.steamgriddb.com/api/v2';
 
@@ -142,16 +143,18 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
     } else {
       await SteamClient.Apps.ClearCustomArtworkForApp(appId, assetType);
-      // ClearCustomArtworkForApp() resolves instantly instead of after clearing, so we need to wait a bit.
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Match the proven batch path: Steam needs a brief cache-settle pause, not half a second.
+      await new Promise((resolve) => setTimeout(resolve, 180));
     }
   }, [appId, appOverview]);
 
   const changeAsset: SGDBContextType['changeAsset'] = useCallback(async (data, assetType, format = 'png') => {
     assetType = getAmbiguousAssetType(assetType);
     try {
-      await clearAsset(assetType);
-      await SteamClient.Apps.SetCustomArtworkForApp(appId, data, format, assetType);
+      await withSteamArtworkWriteLock(async () => {
+        await clearAsset(assetType);
+        await SteamClient.Apps.SetCustomArtworkForApp(appId, data, format, assetType);
+      });
 
       /*
         Steam only renders the logo layer for an app that already owns a custom logo

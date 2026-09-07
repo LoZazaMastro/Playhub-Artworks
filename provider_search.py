@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, quote, unquote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.1'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.2'
 
 PROVIDERS: Dict[str, Dict[str, Any]] = {
     'google': {'label': 'URL', 'hosts': ()},

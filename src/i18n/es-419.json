@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navegación instantánea por la biblioteca",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Va directamente al juego seleccionado en vez de desplazarse suavemente entre las filas de la biblioteca.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Desactivar el índice alfabético",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Evita que se abra el índice alfabético al mantener presionado Arriba o Abajo en la biblioteca de Steam.",
   "ASSET_TYPE_CAPSULE": "Cápsula",
   "ASSET_TYPE_WIDECAPSULE": "Cápsula ancha",
   "ASSET_TYPE_HERO": "Arte principal",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Mover a la izquierda",
   "PA_MOVE_RIGHT": "Mover a la derecha",
   "PA_MOVE_SOURCE_UP": "Subir fuente",
-  "PA_MOVE_SOURCE_DOWN": "Bajar fuente"
+  "PA_MOVE_SOURCE_DOWN": "Bajar fuente",
+  "PA_HOME_RECENT_COVER": "Último juego jugado como portada en Inicio",
+  "PA_RESTORE_DERIVED_COVER": "Restaurar la carátula anterior",
+  "PA_DERIVED_COVER_RESTORED": "Se restauró la carátula anterior.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "No se pudo guardar una copia segura de la carátula actual, así que no se modificó.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "No se pudo restaurar la carátula anterior. Se conservó su copia de seguridad."
 }

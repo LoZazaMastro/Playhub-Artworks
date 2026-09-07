@@ -52,12 +52,17 @@ ARTWORK_IMAGE_MAX_DIMENSION = 6144
 ARTWORK_DOWNLOAD_CONCURRENCY = 2
 PROVIDER_SEARCH_CONCURRENCY = 3
 DOWNLOAD_CHUNK_BYTES = 128 * 1024
-PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.1'
+PERFECT_SOURCE_READ_CHUNK_BYTES = 384 * 1024
+PERFECT_SOURCE_LEGACY_RPC_MAX_BYTES = 1024 * 1024
+DERIVED_COVER_READ_CHUNK_BYTES = 252 * 1024
+DERIVED_COVER_METADATA_VERSION = 2
+PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.2'
 _diagnostic_lock = threading.Lock()
 _download_progress_lock = threading.Lock()
 _download_progress = {}
 SETTINGS_FILE = Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / 'playhub_artworks.json'
 PERFECT_SOURCE_DIR = Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / 'perfect_sources'
+DERIVED_COVER_BACKUP_DIR = Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / 'derived_cover_backups'
 SETTINGS_BACKUP_FILE = SETTINGS_FILE.with_suffix('.json.bak')
 
 def _asset_format(content, content_type='', source=''):
@@ -440,6 +445,180 @@ def _sha256_file(path):
             digest.update(chunk)
     return digest.hexdigest()
 
+def _atomic_write_bytes(path, payload):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f'.{path.name}.{os.getpid()}.{threading.get_ident()}.tmp')
+    try:
+        with open(temporary, 'wb') as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            if temporary.exists():
+                temporary.unlink()
+        except Exception:
+            pass
+
+def _atomic_write_json(path, value):
+    payload = json.dumps(value, ensure_ascii=False, indent=2).encode('utf-8')
+    _atomic_write_bytes(path, payload)
+
+def _normalized_numeric_id(value, error='PA_ERROR_GENERIC'):
+    text = str(value or '').strip()
+    if not text.isdigit() or int(text) <= 0:
+        raise ValueError(error)
+    return text
+
+def _derived_cover_directory(steam_user, appid):
+    user = _normalized_numeric_id(steam_user)
+    app = _normalized_numeric_id(appid)
+    return DERIVED_COVER_BACKUP_DIR / user / app
+
+def _derived_cover_metadata_path(steam_user, appid):
+    return _derived_cover_directory(steam_user, appid) / 'metadata.json'
+
+def _derived_cover_custom_candidates(steam_user, appid):
+    user = _normalized_numeric_id(steam_user)
+    grid_dir = get_steam_userdata() / user / 'config' / 'grid'
+    return _grid_file_candidates(grid_dir, appid, 'grid_p')
+
+def _valid_custom_cover(steam_user, appid):
+    for candidate in _derived_cover_custom_candidates(steam_user, appid):
+        try:
+            size = candidate.stat().st_size
+            if size <= 0 or size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                continue
+            payload = candidate.read_bytes()
+            asset_format, dimensions = _validate_artwork_content(payload, source=candidate)
+            return {
+                'path': candidate,
+                'payload': payload,
+                'format': asset_format,
+                'dimensions': dimensions,
+                'size': len(payload),
+                'sha256': sha256(payload).hexdigest(),
+            }
+        except Exception as error:
+            _diagnostic('derived_cover.custom.invalid', appid=appid, steam_user=steam_user, path=candidate, error=error)
+    return None
+
+def _validated_derived_cover_backup(steam_user, appid):
+    metadata_path = _derived_cover_metadata_path(steam_user, appid)
+    if not metadata_path.is_file():
+        return None, None
+    metadata = _read_json_object(metadata_path)
+    user = _normalized_numeric_id(steam_user)
+    app = int(_normalized_numeric_id(appid))
+    version = metadata.get('version')
+    if version not in {1, DERIVED_COVER_METADATA_VERSION} or metadata.get('steam_user') != user or metadata.get('appid') != app:
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    state = str(metadata.get('state') or '')
+    if state not in {'preserved', 'pending', 'derived', 'restoring'}:
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    derived_sha256 = metadata.get('derived_sha256')
+    if derived_sha256 is not None and not re.fullmatch(r'[0-9a-f]{64}', str(derived_sha256)):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    restore_sha256 = metadata.get('restore_sha256')
+    if restore_sha256 is not None and not re.fullmatch(r'[0-9a-f]{64}', str(restore_sha256)):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    if state in {'pending', 'derived', 'restoring'} and not derived_sha256:
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    if not isinstance(metadata.get('had_custom'), bool):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    if not metadata['had_custom']:
+        return metadata, None
+
+    original = metadata.get('original')
+    if not isinstance(original, dict):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    asset_format = str(original.get('format') or '').lower()
+    digest = str(original.get('sha256') or '')
+    if not re.fullmatch(r'[0-9a-f]{64}', digest):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    expected_name = (
+        f'original.{asset_format}'
+        if version == 1
+        else f'original-{digest}.{asset_format}'
+    )
+    if original.get('filename') != expected_name or asset_format not in {'png', 'jpg', 'webp'}:
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    original_path = metadata_path.parent / expected_name
+    size = original_path.stat().st_size
+    if size <= 0 or size > ARTWORK_DOWNLOAD_MAX_BYTES or size != int(original.get('size') or 0):
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    payload = original_path.read_bytes()
+    validated_format, _dimensions = _validate_artwork_content(payload, source=original_path)
+    actual_digest = sha256(payload).hexdigest()
+    if validated_format != asset_format or actual_digest != digest:
+        raise ValueError('PA_ERROR_COVER_BACKUP_FAILED')
+    return metadata, original_path
+
+def _write_derived_cover_baseline(steam_user, appid, custom):
+    """Commit a new baseline by switching metadata only after its payload is durable."""
+    directory = _derived_cover_directory(steam_user, appid)
+    metadata_path = directory / 'metadata.json'
+    original_path = None
+    metadata = {
+        'version': DERIVED_COVER_METADATA_VERSION,
+        'steam_user': _normalized_numeric_id(steam_user),
+        'appid': int(_normalized_numeric_id(appid)),
+        'had_custom': custom is not None,
+        'original': None,
+        'state': 'preserved',
+        'derived_sha256': None,
+        'restore_sha256': None,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+    }
+    if custom is not None:
+        original_name = f"original-{custom['sha256']}.{custom['format']}"
+        original_path = directory / original_name
+        _atomic_write_bytes(original_path, custom['payload'])
+        metadata['original'] = {
+            'filename': original_name,
+            'format': custom['format'],
+            'mime': 'image/png' if custom['format'] == 'png' else 'image/webp' if custom['format'] == 'webp' else 'image/jpeg',
+            'size': custom['size'],
+            'sha256': custom['sha256'],
+        }
+
+    _atomic_write_json(metadata_path, metadata)
+    _validated_derived_cover_backup(steam_user, appid)
+
+    # Metadata now points at the new durable payload. Old generations are safe to remove.
+    for child in list(directory.iterdir()):
+        if not child.is_file() or child == metadata_path or child == original_path:
+            continue
+        if child.name in {'original.png', 'original.jpg', 'original.webp'} or re.fullmatch(
+            r'original-[0-9a-f]{64}\.(?:png|jpg|webp)', child.name
+        ):
+            try:
+                child.unlink()
+            except OSError as error:
+                _diagnostic('derived_cover.backup.cleanup_failed', path=child, error=error)
+    return metadata
+
+def _remove_derived_cover_backup(steam_user, appid):
+    directory = _derived_cover_directory(steam_user, appid)
+    if not directory.exists():
+        return True
+    legacy = {'metadata.json', 'original.png', 'original.jpg', 'original.webp'}
+    for child in list(directory.iterdir()):
+        owned_generation = bool(re.fullmatch(r'original-[0-9a-f]{64}\.(?:png|jpg|webp)', child.name))
+        if not child.is_file() or (child.name not in legacy and not owned_generation and not child.name.endswith('.tmp')):
+            return False
+    for child in list(directory.iterdir()):
+        child.unlink()
+    directory.rmdir()
+    user_dir = directory.parent
+    try:
+        user_dir.rmdir()
+    except OSError:
+        pass
+    return True
+
 def _png_size(path):
     with open(path, 'rb') as f:
         header = f.read(24)
@@ -584,6 +763,7 @@ class Plugin:
         self._settings_lock = asyncio.Lock()
         self._settings_data = _read_settings_file()
         self._shutdown_event = threading.Event()
+        self._derived_cover_lock = threading.Lock()
         self._download_semaphore = asyncio.Semaphore(ARTWORK_DOWNLOAD_CONCURRENCY)
         self._download_executor = ThreadPoolExecutor(max_workers=ARTWORK_DOWNLOAD_CONCURRENCY, thread_name_prefix='artwork-download')
         self._provider_executor = ThreadPoolExecutor(max_workers=PROVIDER_SEARCH_CONCURRENCY, thread_name_prefix='artwork-provider')
@@ -811,7 +991,15 @@ class Plugin:
     # later edit still starts from the original.
 
     def _perfect_source_path(self, appid, target, ext='jpg'):
-        return PERFECT_SOURCE_DIR / f'{int(appid)}_{str(target)}.{str(ext).lstrip(".")}'
+        target = str(target)
+        if target not in {'hero', 'grid_l'}:
+            raise ValueError('PA_ERROR_INVALID_ARTWORK')
+        normalized_ext = str(ext).lower().lstrip('.')
+        if normalized_ext == 'jpeg':
+            normalized_ext = 'jpg'
+        if normalized_ext not in {'png', 'jpg', 'webp'}:
+            raise ValueError('PA_ERROR_ARTWORK_FORMAT_UNKNOWN')
+        return PERFECT_SOURCE_DIR / f'{int(appid)}_{target}.{normalized_ext}'
 
     def _find_perfect_source(self, appid, target):
         for ext in ('png', 'jpg', 'jpeg', 'webp'):
@@ -820,6 +1008,78 @@ class Plugin:
                 return candidate
         return None
 
+    def _write_perfect_source(self, appid, target, payload, asset_format):
+        _validate_artwork_content(payload, source=f'perfect-source.{asset_format}')
+        PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+        path = self._perfect_source_path(appid, target, asset_format)
+        temporary = path.with_suffix(path.suffix + '.tmp')
+        temporary.write_bytes(payload)
+        temporary.replace(path)
+        return path
+
+    async def preserve_perfect_source(self, appid=0, target='hero', candidates=None, allow_custom=True):
+        """Keep the untouched source without carrying image bytes through Decky's RPC bridge."""
+        started = asyncio.get_running_loop().time()
+
+        def preserve_sync():
+            existing = self._find_perfect_source(appid, target)
+            if existing:
+                return {'saved': True, 'existing': True, 'source': 'preserved'}
+
+            local_candidates = []
+            if allow_custom:
+                userdata = get_steam_userdata()
+                if userdata.exists():
+                    for user_dir in userdata.iterdir():
+                        local_candidates.extend(_grid_file_candidates(user_dir / 'config' / 'grid', appid, target))
+            local_candidates.extend(_librarycache_file_candidates(appid, target))
+
+            for source in local_candidates:
+                try:
+                    if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                        continue
+                    payload = source.read_bytes()
+                    asset_format, _dimensions = _validate_artwork_content(payload, source=source)
+                    self._write_perfect_source(appid, target, payload, asset_format)
+                    return {'saved': True, 'existing': False, 'source': 'local', 'bytes': len(payload)}
+                except Exception as error:
+                    _diagnostic('perfect.source.local_failed', appid=appid, target=target, path=source, error=error)
+
+            for url in list(candidates or [])[:8]:
+                try:
+                    parsed = urlparse(str(url or ''))
+                    if parsed.scheme not in {'http', 'https'}:
+                        continue
+                    payload, _content_type, asset_format, _dimensions = _download_limited(
+                        str(url), '', self._shutdown_event
+                    )
+                    self._write_perfect_source(appid, target, payload, asset_format)
+                    return {'saved': True, 'existing': False, 'source': 'remote', 'bytes': len(payload)}
+                except Exception as error:
+                    _diagnostic('perfect.source.remote_failed', appid=appid, target=target, url=url, error=error)
+
+            return {'saved': False, 'existing': False, 'source': 'unavailable'}
+
+        try:
+            result = await asyncio.get_running_loop().run_in_executor(self._download_executor, preserve_sync)
+            _diagnostic(
+                'perfect.source.preserved',
+                appid=appid,
+                target=target,
+                result=result,
+                duration_ms=round((asyncio.get_running_loop().time() - started) * 1000),
+            )
+            return result
+        except Exception as error:
+            _diagnostic(
+                'perfect.source.preserve_failed',
+                appid=appid,
+                target=target,
+                duration_ms=round((asyncio.get_running_loop().time() - started) * 1000),
+                error=error,
+            )
+            return {'saved': False, 'existing': False, 'source': 'error'}
+
     async def save_perfect_source(self, appid=0, target='hero', data='', ext='jpg'):
         def save_sync():
             try:
@@ -827,16 +1087,13 @@ class Plugin:
                 existing = self._find_perfect_source(appid, target)
                 if existing:
                     return {'saved': True, 'existing': True}
-                if _decoded_base64_size(data) > ARTWORK_DOWNLOAD_MAX_BYTES:
+                decoded_size = _decoded_base64_size(data)
+                if decoded_size > PERFECT_SOURCE_LEGACY_RPC_MAX_BYTES:
                     raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
                 payload = b64decode(str(data or ''), validate=True)
                 if not payload:
                     return {'saved': False}
-                _validate_artwork_content(payload, source=f'perfect-source.{ext}')
-                path = self._perfect_source_path(appid, target, ext)
-                temporary = path.with_suffix(path.suffix + '.tmp')
-                temporary.write_bytes(payload)
-                temporary.replace(path)
+                self._write_perfect_source(appid, target, payload, ext)
                 _diagnostic('perfect.source.saved', appid=appid, target=target, bytes=len(payload))
                 return {'saved': True, 'existing': False}
             except Exception as error:
@@ -844,6 +1101,47 @@ class Plugin:
                 return {'saved': False}
 
         return await asyncio.get_running_loop().run_in_executor(self._download_executor, save_sync)
+
+    async def get_perfect_source_info(self, appid=0, target='hero'):
+        def read_info():
+            try:
+                path = self._find_perfect_source(appid, target)
+                if not path:
+                    return {'exists': False}
+                size = path.stat().st_size
+                if size <= 0 or size > ARTWORK_DOWNLOAD_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                with open(path, 'rb') as stream:
+                    header = stream.read(min(size, 128 * 1024))
+                asset_format = _asset_format(header, source=path)
+                mime = 'image/png' if asset_format == 'png' else 'image/webp' if asset_format == 'webp' else 'image/jpeg'
+                return {
+                    'exists': True,
+                    'size': size,
+                    'mime': mime,
+                    'chunk_size': PERFECT_SOURCE_READ_CHUNK_BYTES,
+                }
+            except Exception as error:
+                _diagnostic('perfect.source.info_failed', appid=appid, target=target, error=error)
+                return {'exists': False}
+
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_info)
+
+    async def read_perfect_source_chunk(self, appid=0, target='hero', offset=0):
+        def read_chunk():
+            path = self._find_perfect_source(appid, target)
+            if not path:
+                return ''
+            size = path.stat().st_size
+            position = max(0, int(offset or 0))
+            if size <= 0 or size > ARTWORK_DOWNLOAD_MAX_BYTES or position >= size:
+                return ''
+            with open(path, 'rb') as stream:
+                stream.seek(position)
+                payload = stream.read(PERFECT_SOURCE_READ_CHUNK_BYTES)
+            return b64encode(payload).decode('ascii')
+
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_chunk)
 
     async def get_perfect_source(self, appid=0, target='hero'):
         def read_sync():
@@ -876,6 +1174,310 @@ class Plugin:
                 return False
 
         return await asyncio.get_running_loop().run_in_executor(self._download_executor, clear_sync)
+
+    # --- Covers derived from a banner or hero ---------------------------
+
+    async def preserve_derived_cover_backup(self, steam_user='', appid=0):
+        """Preserve the current cover unless a verified derived generation is still active."""
+        def preserve_sync():
+            with self._derived_cover_lock:
+                metadata_path = _derived_cover_metadata_path(steam_user, appid)
+                if metadata_path.exists():
+                    metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                    state = str(metadata.get('state') or '')
+                    if state in {'pending', 'restoring'}:
+                        # An interrupted transaction owns this baseline until recovery.
+                        return {
+                            'saved': False,
+                            'existing': True,
+                            'recoverable': True,
+                            'reason': state,
+                            'had_custom': bool(metadata.get('had_custom')),
+                        }
+
+                    current = _valid_custom_cover(steam_user, appid)
+                    expected = str(metadata.get('derived_sha256') or '')
+                    if state == 'derived' and current is not None and current.get('sha256') == expected:
+                        return {
+                            'saved': True,
+                            'existing': True,
+                            'reused': True,
+                            'had_custom': bool(metadata.get('had_custom')),
+                        }
+
+                    candidates = _derived_cover_custom_candidates(steam_user, appid)
+                    if candidates and current is None:
+                        return {'saved': False, 'existing': True, 'reason': 'invalid-custom-cover'}
+
+                    # The user changed or removed the cover after the last completed
+                    # transaction. Atomically repoint metadata at this new baseline.
+                    metadata = _write_derived_cover_baseline(steam_user, appid, current)
+                    _diagnostic(
+                        'derived_cover.backup.rebased',
+                        steam_user=steam_user,
+                        appid=appid,
+                        had_custom=current is not None,
+                        sha256=current.get('sha256') if current else None,
+                    )
+                    return {
+                        'saved': True,
+                        'existing': False,
+                        'replaced': True,
+                        'had_custom': bool(metadata.get('had_custom')),
+                    }
+
+                directory = metadata_path.parent
+                if directory.exists() and any(directory.iterdir()):
+                    # An incomplete or unknown backup is never overwritten on a guess.
+                    return {'saved': False, 'existing': True, 'reason': 'incomplete'}
+
+                candidates = _derived_cover_custom_candidates(steam_user, appid)
+                custom = _valid_custom_cover(steam_user, appid)
+                if candidates and custom is None:
+                    return {'saved': False, 'existing': False, 'reason': 'invalid-custom-cover'}
+
+                try:
+                    _write_derived_cover_baseline(steam_user, appid, custom)
+                except Exception:
+                    try:
+                        _remove_derived_cover_backup(steam_user, appid)
+                    except Exception:
+                        pass
+                    raise
+
+                _diagnostic(
+                    'derived_cover.backup.preserved',
+                    steam_user=steam_user,
+                    appid=appid,
+                    had_custom=custom is not None,
+                    sha256=custom.get('sha256') if custom else None,
+                )
+                return {'saved': True, 'existing': False, 'had_custom': custom is not None}
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, preserve_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.backup.failed', steam_user=steam_user, appid=appid, error=error)
+            return {'saved': False, 'existing': False, 'reason': 'error'}
+
+    async def begin_derived_cover_apply(self, steam_user='', appid=0, derived_sha256=''):
+        def begin_sync():
+            digest = str(derived_sha256 or '').strip().lower()
+            if not re.fullmatch(r'[0-9a-f]{64}', digest):
+                return False
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None:
+                    return False
+                state = str(metadata.get('state') or '')
+                if state not in {'preserved', 'derived'}:
+                    return False
+                if state == 'derived':
+                    current = _valid_custom_cover(steam_user, appid)
+                    expected = str(metadata.get('derived_sha256') or '')
+                    if current is None or current.get('sha256') != expected:
+                        return False
+                updated = dict(metadata)
+                updated['state'] = 'pending'
+                updated['derived_sha256'] = digest
+                updated['restore_sha256'] = None
+                _atomic_write_json(_derived_cover_metadata_path(steam_user, appid), updated)
+                return True
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, begin_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.begin.failed', steam_user=steam_user, appid=appid, error=error)
+            return False
+
+    async def finalize_derived_cover_apply(self, steam_user='', appid=0, derived_sha256=''):
+        def finalize_sync():
+            digest = str(derived_sha256 or '').strip().lower()
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None or metadata.get('state') != 'pending' or metadata.get('derived_sha256') != digest:
+                    return False
+                current = _valid_custom_cover(steam_user, appid)
+                if current is None or current.get('sha256') != digest:
+                    return False
+                updated = dict(metadata)
+                updated['state'] = 'derived'
+                updated['restore_sha256'] = None
+                updated['applied_at'] = datetime.now(timezone.utc).isoformat()
+                _atomic_write_json(_derived_cover_metadata_path(steam_user, appid), updated)
+                _diagnostic('derived_cover.applied', steam_user=steam_user, appid=appid, sha256=digest)
+                return True
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, finalize_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.finalize.failed', steam_user=steam_user, appid=appid, error=error)
+            return False
+
+    async def cancel_derived_cover_apply(self, steam_user='', appid=0, derived_sha256=''):
+        def cancel_sync():
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if (
+                    metadata is None
+                    or metadata.get('state') != 'pending'
+                    or metadata.get('derived_sha256') != str(derived_sha256 or '').strip().lower()
+                ):
+                    return False
+                updated = dict(metadata)
+                updated['state'] = 'preserved'
+                updated['derived_sha256'] = None
+                updated['restore_sha256'] = None
+                _atomic_write_json(_derived_cover_metadata_path(steam_user, appid), updated)
+                return True
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, cancel_sync)
+        except Exception:
+            return False
+
+    async def get_derived_cover_backup_info(self, steam_user='', appid=0):
+        def read_info():
+            with self._derived_cover_lock:
+                metadata, original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None:
+                    return {'exists': False, 'is_derived': False}
+                current = _valid_custom_cover(steam_user, appid)
+                expected = str(metadata.get('derived_sha256') or '')
+                state = str(metadata.get('state') or '')
+                interrupted = state in {'pending', 'restoring'}
+                source_is_derived = bool(expected and current and current.get('sha256') == expected)
+                recoverable = bool(interrupted or (state == 'derived' and source_is_derived))
+                original = metadata.get('original') or {}
+                return {
+                    'exists': True,
+                    'is_derived': recoverable,
+                    'recoverable': recoverable,
+                    'state': state,
+                    'had_custom': bool(metadata.get('had_custom')),
+                    'size': int(original.get('size') or 0) if original_path else 0,
+                    'mime': str(original.get('mime') or '') if original_path else '',
+                    'format': str(original.get('format') or '') if original_path else '',
+                    'sha256': str(original.get('sha256') or '') if original_path else '',
+                    'chunk_size': DERIVED_COVER_READ_CHUNK_BYTES,
+                }
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_info)
+        except Exception as error:
+            _diagnostic('derived_cover.info.failed', steam_user=steam_user, appid=appid, error=error)
+            return {'exists': False, 'is_derived': False}
+
+    async def begin_derived_cover_restore(self, steam_user='', appid=0, allow_pending=False):
+        def begin_restore_sync():
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None or not metadata.get('derived_sha256'):
+                    return False
+                current = _valid_custom_cover(steam_user, appid)
+                expected = str(metadata.get('derived_sha256') or '')
+                state = str(metadata.get('state') or '')
+                interrupted = state in {'pending', 'restoring'}
+                if interrupted and not allow_pending:
+                    return False
+                if not interrupted and (state != 'derived' or current is None or current.get('sha256') != expected):
+                    return False
+                updated = dict(metadata)
+                updated['state'] = 'restoring'
+                updated['restore_sha256'] = None
+                _atomic_write_json(_derived_cover_metadata_path(steam_user, appid), updated)
+                return True
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, begin_restore_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.restore.begin_failed', steam_user=steam_user, appid=appid, error=error)
+            return False
+
+    async def read_derived_cover_backup_chunk(self, steam_user='', appid=0, offset=0):
+        def read_chunk():
+            with self._derived_cover_lock:
+                metadata, original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None or original_path is None:
+                    return ''
+                current = _valid_custom_cover(steam_user, appid)
+                expected = str(metadata.get('derived_sha256') or '')
+                source_is_derived = bool(expected and current and current.get('sha256') == expected)
+                if not expected or (metadata.get('state') != 'restoring' and not source_is_derived):
+                    return ''
+                size = original_path.stat().st_size
+                position = max(0, int(offset or 0))
+                if position >= size:
+                    return ''
+                with open(original_path, 'rb') as stream:
+                    stream.seek(position)
+                    payload = stream.read(DERIVED_COVER_READ_CHUNK_BYTES)
+                return b64encode(payload).decode('ascii')
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_chunk)
+        except Exception as error:
+            _diagnostic('derived_cover.chunk.failed', steam_user=steam_user, appid=appid, error=error)
+            return ''
+
+    async def prepare_derived_cover_restore(self, steam_user='', appid=0, restored_sha256=''):
+        def prepare_sync():
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None or metadata.get('state') != 'restoring':
+                    return False
+                digest = str(restored_sha256 or '').strip().lower()
+                if metadata.get('had_custom'):
+                    if not re.fullmatch(r'[0-9a-f]{64}', digest):
+                        return False
+                elif digest:
+                    return False
+                updated = dict(metadata)
+                updated['restore_sha256'] = digest or None
+                _atomic_write_json(_derived_cover_metadata_path(steam_user, appid), updated)
+                return True
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, prepare_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.restore.prepare_failed', steam_user=steam_user, appid=appid, error=error)
+            return False
+
+    async def complete_derived_cover_restore(self, steam_user='', appid=0):
+        def complete_sync():
+            with self._derived_cover_lock:
+                metadata, _original_path = _validated_derived_cover_backup(steam_user, appid)
+                if metadata is None or not metadata.get('derived_sha256') or metadata.get('state') != 'restoring':
+                    return False
+                current = _valid_custom_cover(steam_user, appid)
+                if metadata.get('had_custom'):
+                    restored_sha256 = str(metadata.get('restore_sha256') or '')
+                    restored = bool(restored_sha256 and current and current.get('sha256') == restored_sha256)
+                else:
+                    restored = metadata.get('restore_sha256') is None and len(_derived_cover_custom_candidates(steam_user, appid)) == 0
+                if not restored:
+                    return False
+                removed = _remove_derived_cover_backup(steam_user, appid)
+                if removed:
+                    _diagnostic('derived_cover.restored', steam_user=steam_user, appid=appid)
+                return removed
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, complete_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.restore.failed', steam_user=steam_user, appid=appid, error=error)
+            return False
+
+    async def clear_derived_cover_backup(self, steam_user='', appid=0):
+        def clear_sync():
+            with self._derived_cover_lock:
+                return _remove_derived_cover_backup(steam_user, appid)
+
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._download_executor, clear_sync)
+        except Exception as error:
+            _diagnostic('derived_cover.clear.failed', steam_user=steam_user, appid=appid, error=error)
+            return False
 
     async def get_steamgriddb_api_key(self):
         return str(self._settings_data.get('steamgriddb_api_key', '') or '')

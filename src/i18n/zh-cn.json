@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "即时浏览库",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "直接跳到已选中的游戏，不再在游戏库各行之间平滑滚动。",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "禁用字母索引",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "在 Steam 库中长按向上或向下时，不再打开字母索引。",
   "ASSET_TYPE_CAPSULE": "封面",
   "ASSET_TYPE_WIDECAPSULE": "大宣传图",
   "ASSET_TYPE_HERO": "库主页图",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "左移",
   "PA_MOVE_RIGHT": "右移",
   "PA_MOVE_SOURCE_UP": "上移来源",
-  "PA_MOVE_SOURCE_DOWN": "下移来源"
+  "PA_MOVE_SOURCE_DOWN": "下移来源",
+  "PA_HOME_RECENT_COVER": "在主页将最近玩过的游戏显示为封面",
+  "PA_RESTORE_DERIVED_COVER": "恢复之前的封面",
+  "PA_DERIVED_COVER_RESTORED": "已恢复之前的封面。",
+  "PA_ERROR_COVER_BACKUP_FAILED": "无法安全备份当前封面，因此未对其进行更改。",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "无法恢复之前的封面。备份已保留。"
 }

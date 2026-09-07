@@ -2,6 +2,7 @@ import t from './i18n';
 import {
   assertBase64PayloadSize,
   assertBlobSize,
+  canvasToBase64,
   loadSafeImage,
   releaseCanvas,
   releaseImage,
@@ -39,8 +40,7 @@ export const normalizeArtworkPayload = async (payload: ArtworkPayload): Promise<
       const context = canvas.getContext('2d');
       if (!context || !canvas.width || !canvas.height) throw new Error(t('PA_ERROR_INVALID_ARTWORK', 'The artwork is invalid.'));
       context.drawImage(image, 0, 0);
-      const data = canvas.toDataURL('image/png').split(',', 2)[1] ?? '';
-      assertBase64PayloadSize(data);
+      const data = await canvasToBase64(canvas, 'png');
       return { data, format: 'png' };
     } finally {
       releaseImage(image);

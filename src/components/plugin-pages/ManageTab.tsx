@@ -1,14 +1,22 @@
-import t from '../../utils/i18n';
+import t, { localizeError } from '../../utils/i18n';
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
-import { call } from '@decky/api';
+import { call, toaster } from '@decky/api';
 import { DialogButton, Focusable } from '@decky/ui';
-import { HiFolderOpen, HiTrash } from 'react-icons/hi2';
+import { HiArrowUturnLeft, HiFolderOpen, HiTrash } from 'react-icons/hi2';
 
+import { ASSET_TYPE } from '../../constants';
 import useSGDB from '../../hooks/useSGDB';
+import MenuIcon from '../Icons/MenuIcon';
 import getAppOverview from '../../utils/getAppOverview';
 import { clearPerfectArtwork } from '../../utils/perfectArtwork';
 import openFilePicker from '../../utils/openFilePicker';
 import { artworkSources, useArtworkPreview } from '../../utils/artworkSources';
+import {
+  clearDerivedCoverBackup,
+  clearSteamArtworkSafely,
+  getDerivedCoverBackupInfo,
+  restoreDerivedCover,
+} from '../../utils/derivedCover';
 
 const SLOTS: Array<{ assetType: SGDBAssetType; title: string; hint: string }> = [
   { assetType: 'grid_p', title: t('PA_COVER', 'Cover'), hint: t('PA_COVER_HINT', 'Portrait or square, used in the library') },
@@ -33,16 +41,33 @@ const AssetSlot: FC<{
   const [overview, setOverview] = useState<AppStoreAppOverview>(app);
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [derivedCover, setDerivedCover] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const preview = useArtworkPreview(artworkSources(overview, assetType), reloadKey);
 
   const refresh = useCallback(async () => {
     await new Promise((resolve) => setTimeout(resolve, 400));
-    const next = await getAppOverview(app.appid);
+    const [next, backup] = await Promise.all([
+      getAppOverview(app.appid),
+      assetType === 'grid_p' ? getDerivedCoverBackupInfo(app.appid) : Promise.resolve(null),
+    ]);
     if (next) setOverview(next);
+    setDerivedCover(Boolean(backup?.recoverable ?? backup?.is_derived));
     setReloadKey((value) => value + 1);
-  }, [app.appid]);
+  }, [app.appid, assetType]);
+
+  useEffect(() => {
+    let active = true;
+    if (assetType !== 'grid_p') {
+      setDerivedCover(false);
+      return () => { active = false; };
+    }
+    void getDerivedCoverBackupInfo(app.appid).then((backup) => {
+      if (active) setDerivedCover(Boolean(backup.recoverable ?? backup.is_derived));
+    });
+    return () => { active = false; };
+  }, [app.appid, assetType]);
 
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -64,6 +89,23 @@ const AssetSlot: FC<{
       await clearPerfectArtwork(app.appid, assetType);
     }
     await changeAssetFromUrl(path.path as string, assetType, true);
+  });
+
+  const restorePreviousCover = () => run(async () => {
+    try {
+      await restoreDerivedCover(app.appid);
+      toaster.toast({
+        title: 'Playhub Artworks',
+        body: t('PA_DERIVED_COVER_RESTORED', 'Previous cover restored.'),
+        icon: <MenuIcon />,
+      });
+    } catch (error) {
+      toaster.toast({
+        title: t('PA_RESTORE_DERIVED_COVER', 'Restore previous cover'),
+        body: localizeError(error, 'PA_ERROR_DERIVED_COVER_RESTORE_FAILED'),
+        icon: <MenuIcon fill="#ff5d5d" />,
+      });
+    }
   });
 
   const leave = () => {
@@ -118,12 +160,26 @@ const AssetSlot: FC<{
               if (assetType === 'hero' || assetType === 'grid_l') {
                 await clearPerfectArtwork(app.appid, assetType);
               }
-              await clearAsset(assetType);
+              if (assetType === 'icon') {
+                await clearAsset(assetType);
+              } else {
+                await clearSteamArtworkSafely(app.appid, ASSET_TYPE[assetType]);
+              }
+              if (assetType === 'grid_p') await clearDerivedCoverBackup(app.appid);
             })}
             onOKActionDescription={t('PA_RESTORE_STEAM_ART', 'Restore Steam artwork')}
           >
             <HiTrash /><span>{t('PA_DELETE', "Delete")}</span>
           </DialogButton>
+          {assetType === 'grid_p' && derivedCover && (
+            <DialogButton
+              disabled={busy}
+              onClick={restorePreviousCover}
+              onOKActionDescription={t('PA_RESTORE_DERIVED_COVER', 'Restore previous cover')}
+            >
+              <HiArrowUturnLeft /><span>{t('PA_RESTORE_DERIVED_COVER', 'Restore previous cover')}</span>
+            </DialogButton>
+          )}
         </Focusable>
       )}
 

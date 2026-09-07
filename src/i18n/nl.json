@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Direct navigeren in de bibliotheek",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Springt direct naar het geselecteerde spel zonder vloeiend tussen bibliotheekrijen te scrollen.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Alfabetische index uitschakelen",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Voorkomt dat de alfabetische index wordt geopend wanneer je Omhoog of Omlaag ingedrukt houdt in de Steam-bibliotheek.",
   "ASSET_TYPE_CAPSULE": "Capsule",
   "ASSET_TYPE_WIDECAPSULE": "Wijde capsule",
   "ASSET_TYPE_HERO": "Hoofdbanner",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Naar links verplaatsen",
   "PA_MOVE_RIGHT": "Naar rechts verplaatsen",
   "PA_MOVE_SOURCE_UP": "Bron omhoog verplaatsen",
-  "PA_MOVE_SOURCE_DOWN": "Bron omlaag verplaatsen"
+  "PA_MOVE_SOURCE_DOWN": "Bron omlaag verplaatsen",
+  "PA_HOME_RECENT_COVER": "Laatst gespeelde game als cover op de startpagina",
+  "PA_RESTORE_DERIVED_COVER": "Vorige cover herstellen",
+  "PA_DERIVED_COVER_RESTORED": "De vorige cover is hersteld.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Er kon geen veilige back-up van de huidige cover worden gemaakt, dus deze is niet gewijzigd.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "De vorige cover kon niet worden hersteld. De back-up is bewaard."
 }

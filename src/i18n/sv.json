@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Omedelbar biblioteksnavigering",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Går direkt till det valda spelet utan mjuk rullning mellan bibliotekets rader.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Inaktivera alfabetiskt index",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Förhindrar att det alfabetiska indexet öppnas när du håller Upp eller Ned intryckt i Steam-biblioteket.",
   "ASSET_TYPE_CAPSULE": "Omslag",
   "ASSET_TYPE_WIDECAPSULE": "Brett omslag",
   "ASSET_TYPE_HERO": "Banderoll",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Flytta åt vänster",
   "PA_MOVE_RIGHT": "Flytta åt höger",
   "PA_MOVE_SOURCE_UP": "Flytta källa upp",
-  "PA_MOVE_SOURCE_DOWN": "Flytta källa ned"
+  "PA_MOVE_SOURCE_DOWN": "Flytta källa ned",
+  "PA_HOME_RECENT_COVER": "Senast spelade spelet som omslag på startsidan",
+  "PA_RESTORE_DERIVED_COVER": "Återställ föregående omslag",
+  "PA_DERIVED_COVER_RESTORED": "Det föregående omslaget har återställts.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Det aktuella omslaget kunde inte säkerhetskopieras på ett säkert sätt och ändrades därför inte.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det föregående omslaget kunde inte återställas. Säkerhetskopian har behållits."
 }

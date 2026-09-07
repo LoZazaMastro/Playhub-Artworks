@@ -28,15 +28,83 @@ const safeCall = async <T>(fallback: T, method: string, ...args: any[]): Promise
   }
 };
 
+type PerfectSourceInfo = {
+  exists?: boolean;
+  size?: number;
+  mime?: string;
+  chunk_size?: number;
+};
+
+type PerfectSourceSave = {
+  saved?: boolean;
+  existing?: boolean;
+  source?: string;
+};
+
+const sourceReads = new Map<string, Promise<string>>();
+const sourceWrites = new Map<string, Promise<PerfectSourceSave>>();
+
 /**
  * The untouched artwork a Perfect composition was built from.
  * Kept once, so re-editing never composes on top of an already composed picture.
  */
-export const getPerfectSource = async (appId: number, target: PerfectTarget): Promise<string> =>
-  String(await safeCall('', 'get_perfect_source', appId, target) ?? '');
+export const getPerfectSource = async (appId: number, target: PerfectTarget): Promise<string> => {
+  const id = key(appId, target);
+  const pending = sourceReads.get(id);
+  if (pending) return pending;
+
+  const read = (async () => {
+    const info = await safeCall<PerfectSourceInfo>({ exists: false }, 'get_perfect_source_info', appId, target);
+    if (!info.exists || !info.size) return '';
+    const chunkSize = Math.max(3, Number(info.chunk_size || 384 * 1024));
+    const parts: string[] = [];
+    for (let offset = 0; offset < Number(info.size); offset += chunkSize) {
+      const part = await safeCall('', 'read_perfect_source_chunk', appId, target, offset);
+      if (!part) return '';
+      parts.push(String(part));
+    }
+    return `data:${info.mime || 'image/jpeg'};base64,${parts.join('')}`;
+  })();
+
+  sourceReads.set(id, read);
+  try {
+    return await read;
+  } finally {
+    if (sourceReads.get(id) === read) sourceReads.delete(id);
+  }
+};
 
 export const savePerfectSource = async (appId: number, target: PerfectTarget, data: string, ext: string) =>
   safeCall({ saved: false }, 'save_perfect_source', appId, target, data, ext);
+
+export const preservePerfectSource = async (
+  appId: number,
+  target: PerfectTarget,
+  candidates: string[],
+  allowCustom: boolean
+): Promise<PerfectSourceSave> => {
+  const id = key(appId, target);
+  const pending = sourceWrites.get(id);
+  if (pending) return pending;
+
+  const write = withTimeout(
+    call<[number, PerfectTarget, string[], boolean], PerfectSourceSave>(
+      'preserve_perfect_source',
+      appId,
+      target,
+      candidates,
+      allowCustom
+    ),
+    25_000
+  ).catch(() => ({ saved: false }));
+
+  sourceWrites.set(id, write);
+  try {
+    return await write;
+  } finally {
+    if (sourceWrites.get(id) === write) sourceWrites.delete(id);
+  }
+};
 
 export const isPerfectArtwork = async (appId: number, target: PerfectTarget): Promise<boolean> =>
   Boolean(await safeCall(false, 'get_setting', key(appId, target), false));
@@ -58,6 +126,8 @@ export const markPerfectArtwork = async (appId: number, target: PerfectTarget, w
 
 /** Back to Steam's own artwork plus the separate logo. */
 export const clearPerfectArtwork = async (appId: number, target: PerfectTarget) => {
+  sourceReads.delete(key(appId, target));
+  sourceWrites.delete(key(appId, target));
   await safeCall(false, 'delete_setting', key(appId, target));
   await safeCall(false, 'clear_perfect_source', appId, target);
   if (target === 'hero') await showLogo(appId);

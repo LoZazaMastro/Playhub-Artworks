@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Незабавна навигация в библиотеката",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Преминава директно към избраната игра, без плавно превъртане между редовете в библиотеката.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Изключване на азбучния индекс",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Не позволява на азбучния индекс да се отваря при задържане на нагоре или надолу в Steam библиотеката.",
   "ASSET_TYPE_CAPSULE": "Обложка",
   "ASSET_TYPE_WIDECAPSULE": "Широка обложка",
   "ASSET_TYPE_HERO": "Фон",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Премести наляво",
   "PA_MOVE_RIGHT": "Премести надясно",
   "PA_MOVE_SOURCE_UP": "Премести източника нагоре",
-  "PA_MOVE_SOURCE_DOWN": "Премести източника надолу"
+  "PA_MOVE_SOURCE_DOWN": "Премести източника надолу",
+  "PA_HOME_RECENT_COVER": "Последната игра като корица в началния екран",
+  "PA_RESTORE_DERIVED_COVER": "Възстановяване на предишната обложка",
+  "PA_DERIVED_COVER_RESTORED": "Предишната обложка е възстановена.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Текущата обложка не можа да бъде архивирана безопасно, затова остана непроменена.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Предишната обложка не можа да бъде възстановена. Архивното ѝ копие е запазено."
 }

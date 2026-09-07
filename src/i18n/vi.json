@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Điều hướng thư viện tức thì",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Chuyển thẳng đến trò chơi đang chọn thay vì cuộn mượt giữa các hàng trong thư viện.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Tắt chỉ mục chữ cái",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Ngăn chỉ mục chữ cái mở ra khi bạn nhấn giữ Lên hoặc Xuống trong thư viện Steam.",
   "ASSET_TYPE_CAPSULE": "Ảnh bìa",
   "ASSET_TYPE_WIDECAPSULE": "Ảnh bìa ngang",
   "ASSET_TYPE_HERO": "Ảnh nền",
@@ -313,5 +317,10 @@
   "PA_ERROR_WRONG_ASPECT": "Tỷ lệ ảnh không phù hợp với thẻ này.",
   "PA_ERROR_IMAGE_TOO_SMALL": "Ảnh nhỏ hơn chất lượng tối thiểu đã chọn.",
   "PA_ERROR_FORMAT_FILTERED": "Định dạng ảnh bị loại bởi bộ lọc hiện tại.",
-  "PA_ERROR_GENERIC": "Thao tác thất bại."
+  "PA_ERROR_GENERIC": "Thao tác thất bại.",
+  "PA_HOME_RECENT_COVER": "Hiển thị trò chơi chơi gần nhất dưới dạng ảnh bìa trên Trang chủ",
+  "PA_RESTORE_DERIVED_COVER": "Khôi phục ảnh bìa trước",
+  "PA_DERIVED_COVER_RESTORED": "Đã khôi phục ảnh bìa trước.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Không thể sao lưu an toàn ảnh bìa hiện tại nên ảnh không bị thay đổi.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Không thể khôi phục ảnh bìa trước. Bản sao lưu vẫn được giữ lại."
 }

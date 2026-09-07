@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Мгновенная навигация по библиотеке",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Сразу переходит к выбранной игре без плавной прокрутки между рядами библиотеки.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Отключить алфавитный указатель",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Не позволяет открывать алфавитный указатель при удержании кнопки вверх или вниз в библиотеке Steam.",
   "ASSET_TYPE_CAPSULE": "Обложка",
   "ASSET_TYPE_WIDECAPSULE": "Широкая обложка",
   "ASSET_TYPE_HERO": "Баннер",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Переместить влево",
   "PA_MOVE_RIGHT": "Переместить вправо",
   "PA_MOVE_SOURCE_UP": "Переместить источник вверх",
-  "PA_MOVE_SOURCE_DOWN": "Переместить источник вниз"
+  "PA_MOVE_SOURCE_DOWN": "Переместить источник вниз",
+  "PA_HOME_RECENT_COVER": "Последняя сыгранная игра как обложка на главной",
+  "PA_RESTORE_DERIVED_COVER": "Восстановить предыдущую обложку",
+  "PA_DERIVED_COVER_RESTORED": "Предыдущая обложка восстановлена.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Не удалось безопасно сохранить текущую обложку, поэтому она осталась без изменений.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Не удалось восстановить предыдущую обложку. Её резервная копия сохранена."
 }

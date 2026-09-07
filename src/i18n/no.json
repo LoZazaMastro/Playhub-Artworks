@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Umiddelbar navigering i biblioteket",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Går rett til det valgte spillet uten jevn rulling mellom radene i biblioteket.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Deaktiver alfabetisk indeks",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Hindrer at den alfabetiske indeksen åpnes når du holder Opp eller Ned inne i Steam-biblioteket.",
   "ASSET_TYPE_CAPSULE": "Kapsel",
   "ASSET_TYPE_WIDECAPSULE": "Bred kapsel",
   "ASSET_TYPE_HERO": "Banner",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Flytt til venstre",
   "PA_MOVE_RIGHT": "Flytt til høyre",
   "PA_MOVE_SOURCE_UP": "Flytt kilde opp",
-  "PA_MOVE_SOURCE_DOWN": "Flytt kilde ned"
+  "PA_MOVE_SOURCE_DOWN": "Flytt kilde ned",
+  "PA_HOME_RECENT_COVER": "Sist spilte spill som omslag på startsiden",
+  "PA_RESTORE_DERIVED_COVER": "Gjenopprett forrige omslag",
+  "PA_DERIVED_COVER_RESTORED": "Det forrige omslaget er gjenopprettet.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Det gjeldende omslaget kunne ikke sikkerhetskopieres på en trygg måte og ble derfor ikke endret.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige omslaget kunne ikke gjenopprettes. Sikkerhetskopien er beholdt."
 }

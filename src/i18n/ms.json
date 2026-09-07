@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Navigasi pustaka serta-merta",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Terus beralih ke permainan yang dipilih tanpa menatal lancar antara baris pustaka.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Lumpuhkan indeks abjad",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Menghalang indeks abjad daripada dibuka apabila anda menekan lama Atas atau Bawah dalam pustaka Steam.",
   "ASSET_TYPE_CAPSULE": "Kapsul",
   "ASSET_TYPE_WIDECAPSULE": "Kapsul lebar",
   "ASSET_TYPE_HERO": "Imej Hero",
@@ -313,5 +317,10 @@
   "PA_ERROR_WRONG_ASPECT": "Nisbah imej tidak sesuai untuk tab ini.",
   "PA_ERROR_IMAGE_TOO_SMALL": "Imej lebih kecil daripada kualiti minimum yang dipilih.",
   "PA_ERROR_FORMAT_FILTERED": "Format imej dikecualikan oleh penapis semasa.",
-  "PA_ERROR_GENERIC": "Operasi gagal."
+  "PA_ERROR_GENERIC": "Operasi gagal.",
+  "PA_HOME_RECENT_COVER": "Permainan terakhir dimainkan sebagai kulit di Laman Utama",
+  "PA_RESTORE_DERIVED_COVER": "Pulihkan kulit sebelumnya",
+  "PA_DERIVED_COVER_RESTORED": "Kulit sebelumnya telah dipulihkan.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Kulit semasa tidak dapat disandarkan dengan selamat, jadi ia tidak diubah.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Kulit sebelumnya tidak dapat dipulihkan. Sandarannya telah dikekalkan."
 }

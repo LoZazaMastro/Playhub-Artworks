@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "即時瀏覽收藏庫",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "直接跳到所選遊戲，不再於收藏庫各列之間平滑捲動。",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "停用字母索引",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "在 Steam 收藏庫中長按向上或向下時，不再開啟字母索引。",
   "ASSET_TYPE_CAPSULE": "宣傳圖",
   "ASSET_TYPE_WIDECAPSULE": "大宣傳圖",
   "ASSET_TYPE_HERO": "主頁橫幅",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "向左移動",
   "PA_MOVE_RIGHT": "向右移動",
   "PA_MOVE_SOURCE_UP": "向上移動來源",
-  "PA_MOVE_SOURCE_DOWN": "向下移動來源"
+  "PA_MOVE_SOURCE_DOWN": "向下移動來源",
+  "PA_HOME_RECENT_COVER": "在首頁將最近玩過的遊戲顯示為封面",
+  "PA_RESTORE_DERIVED_COVER": "還原先前的封面",
+  "PA_DERIVED_COVER_RESTORED": "已還原先前的封面。",
+  "PA_ERROR_COVER_BACKUP_FAILED": "無法安全備份目前的封面，因此未進行任何變更。",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "無法還原先前的封面。備份已保留。"
 }

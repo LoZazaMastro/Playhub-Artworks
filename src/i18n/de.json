@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Sofortige Bibliotheksnavigation",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Springt direkt zum ausgewählten Spiel, statt weich zwischen den Bibliothekszeilen zu scrollen.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Alphabetischen Index deaktivieren",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Verhindert, dass sich der alphabetische Index öffnet, wenn du in der Steam-Bibliothek Hoch oder Runter gedrückt hältst.",
   "ASSET_TYPE_CAPSULE": "Kapsel",
   "ASSET_TYPE_WIDECAPSULE": "Breite Kapsel",
   "ASSET_TYPE_HERO": "Heldenbild",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Nach links verschieben",
   "PA_MOVE_RIGHT": "Nach rechts verschieben",
   "PA_MOVE_SOURCE_UP": "Quelle nach oben verschieben",
-  "PA_MOVE_SOURCE_DOWN": "Quelle nach unten verschieben"
+  "PA_MOVE_SOURCE_DOWN": "Quelle nach unten verschieben",
+  "PA_HOME_RECENT_COVER": "Zuletzt gespieltes Spiel als Cover auf der Startseite",
+  "PA_RESTORE_DERIVED_COVER": "Vorheriges Cover wiederherstellen",
+  "PA_DERIVED_COVER_RESTORED": "Das vorherige Cover wurde wiederhergestellt.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Das aktuelle Cover konnte nicht sicher gesichert werden und blieb daher unverändert.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Das vorherige Cover konnte nicht wiederhergestellt werden. Die Sicherung wurde beibehalten."
 }

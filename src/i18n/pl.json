@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Natychmiastowa nawigacja po bibliotece",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Przechodzi od razu do wybranej gry bez płynnego przewijania między rzędami biblioteki.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Wyłącz indeks alfabetyczny",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Zapobiega otwieraniu indeksu alfabetycznego po przytrzymaniu kierunku w górę lub w dół w bibliotece Steam.",
   "ASSET_TYPE_CAPSULE": "Okładka",
   "ASSET_TYPE_WIDECAPSULE": "Szeroka okładka",
   "ASSET_TYPE_HERO": "Baner",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Przenieś w lewo",
   "PA_MOVE_RIGHT": "Przenieś w prawo",
   "PA_MOVE_SOURCE_UP": "Przenieś źródło w górę",
-  "PA_MOVE_SOURCE_DOWN": "Przenieś źródło w dół"
+  "PA_MOVE_SOURCE_DOWN": "Przenieś źródło w dół",
+  "PA_HOME_RECENT_COVER": "Ostatnia grana gra jako okładka na stronie głównej",
+  "PA_RESTORE_DERIVED_COVER": "Przywróć poprzednią okładkę",
+  "PA_DERIVED_COVER_RESTORED": "Poprzednia okładka została przywrócona.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Nie udało się bezpiecznie utworzyć kopii bieżącej okładki, dlatego nie została zmieniona.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Nie udało się przywrócić poprzedniej okładki. Jej kopia zapasowa została zachowana."
 }

@@ -117,6 +117,26 @@ export const blobToSafeDataUrl = async (blob: Blob): Promise<string> => {
   });
 };
 
+export const canvasToBase64 = async (
+  canvas: HTMLCanvasElement,
+  format: 'png' | 'jpg',
+  quality = 0.92
+): Promise<string> => {
+  const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) => result ? resolve(result) : reject(new Error('PA_ERROR_EMPTY_IMAGE')),
+      mime,
+      format === 'jpg' ? quality : undefined
+    );
+  });
+  assertBlobSize(blob);
+  const data = (await blobToSafeDataUrl(blob)).split(',', 2)[1] ?? '';
+  if (!data) throw new Error('PA_ERROR_EMPTY_IMAGE');
+  assertBase64PayloadSize(data);
+  return data;
+};
+
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export const fetchWithCancellation = async (
@@ -143,11 +163,24 @@ export const fetchWithCancellation = async (
 };
 
 let compositionTail: Promise<void> = Promise.resolve();
+let steamArtworkWriteTail: Promise<void> = Promise.resolve();
 
 export const withCompositionLock = async <T>(operation: () => Promise<T>): Promise<T> => {
   const previous = compositionTail;
   let release!: () => void;
   compositionTail = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+};
+
+export const withSteamArtworkWriteLock = async <T>(operation: () => Promise<T>): Promise<T> => {
+  const previous = steamArtworkWriteTail;
+  let release!: () => void;
+  steamArtworkWriteTail = new Promise<void>((resolve) => { release = resolve; });
   await previous;
   try {
     return await operation();

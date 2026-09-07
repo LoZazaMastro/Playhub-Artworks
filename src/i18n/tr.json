@@ -1,4 +1,8 @@
 {
+  "PA_INSTANT_LIBRARY_SCROLL": "Anında kütüphane gezintisi",
+  "PA_INSTANT_LIBRARY_SCROLL_DESC": "Kütüphane satırları arasında yumuşakça kaydırmak yerine doğrudan seçili oyuna geçer.",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD": "Alfabetik dizini devre dışı bırak",
+  "PA_DISABLE_LIBRARY_LETTER_HOLD_DESC": "Steam kütüphanesinde Yukarı veya Aşağı yönünü basılı tuttuğunuzda alfabetik dizinin açılmasını engeller.",
   "ASSET_TYPE_CAPSULE": "Kapak",
   "ASSET_TYPE_WIDECAPSULE": "Geniş Kapak",
   "ASSET_TYPE_HERO": "Arkaplan",
@@ -313,5 +317,10 @@
   "PA_MOVE_LEFT": "Sola taşı",
   "PA_MOVE_RIGHT": "Sağa taşı",
   "PA_MOVE_SOURCE_UP": "Kaynağı yukarı taşı",
-  "PA_MOVE_SOURCE_DOWN": "Kaynağı aşağı taşı"
+  "PA_MOVE_SOURCE_DOWN": "Kaynağı aşağı taşı",
+  "PA_HOME_RECENT_COVER": "Ana sayfada son oynanan oyunu kapak olarak göster",
+  "PA_RESTORE_DERIVED_COVER": "Önceki kapağı geri yükle",
+  "PA_DERIVED_COVER_RESTORED": "Önceki kapak geri yüklendi.",
+  "PA_ERROR_COVER_BACKUP_FAILED": "Geçerli kapak güvenli bir şekilde yedeklenemediği için değiştirilmedi.",
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Önceki kapak geri yüklenemedi. Yedeği saklandı."
 }

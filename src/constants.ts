@@ -80,7 +80,7 @@ const STYLE_LABELS: Record<string, [string, string]> = {
 
 /** Localized display label for style metadata returned by artwork providers. */
 export const styleLabel = (style: unknown): string => {
-  const normalized = String(style ?? '').trim().toLowerCase().replaceAll(' ', '_');
+  const normalized = String(style ?? '').trim().toLowerCase().replace(/ /g, '_');
   const known = STYLE_LABELS[normalized];
   return known ? t(known[0], known[1]) : t('PA_STYLE_OTHER', 'Other');
 };
