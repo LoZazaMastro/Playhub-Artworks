@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Úsporné zobrazení obrázků",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Zobrazuje obaly a bannery v rozlišení sníženém o 30 %. Původní soubory a animované obrázky zůstávají beze změny.",
   "PA_INSTANT_LIBRARY_SCROLL": "Okamžitý pohyb v knihovně",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Přejde rovnou na vybranou hru bez plynulého posouvání mezi řádky knihovny.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Vypnout abecední rejstřík",

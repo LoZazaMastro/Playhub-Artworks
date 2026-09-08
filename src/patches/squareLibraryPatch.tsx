@@ -6,6 +6,7 @@ import { addStyle, removeStyle } from '../utils/styleInjector';
 import { markWork } from '../utils/work';
 import log from '../utils/log';
 import { isSquareLibraryRoute, steamPath } from '../utils/steamRoute';
+import { libraryGridScope } from './libraryGridScope';
 
 const STYLE_ID = 'sgdb-square-capsules-library';
 const GAME_INFO_STYLE_ID = 'playhub-artworks-square-game-info';
@@ -259,7 +260,7 @@ const patchPrototype = (prototype: GridPrototype): boolean => {
         free as possible: one boolean, one cached route check, two property reads.
       */
       const portraitCell = this.props.childHeight > this.props.childWidth;
-      if (squareEnabled && portraitCell) {
+      if (squareEnabled && portraitCell && libraryGridScope(this, false) === 'gamepad') {
         const inLibrary = routeIsLibrary();
         /*
           One line per change of answer, not per read: this getter runs on every layout
@@ -440,7 +441,7 @@ export const remeasureGrids = () => {
     */
     const started = performance.now();
     markWork('grid remeasurement');
-    const grids = mountedGrids(view);
+    const grids = mountedGrids(view).filter((grid) => libraryGridScope(grid) === 'gamepad');
     grids.forEach((grid) => {
       try {
         grid.ComputeLayout?.();

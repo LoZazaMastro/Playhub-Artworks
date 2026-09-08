@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "แสดงภาพแบบประหยัดทรัพยากร",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "แสดงภาพปกและแบนเนอร์ด้วยความละเอียดลดลง 30% โดยไม่เปลี่ยนไฟล์ต้นฉบับหรือภาพเคลื่อนไหว",
   "PA_INSTANT_LIBRARY_SCROLL": "เลื่อนดูคลังทันที",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "ย้ายไปยังเกมที่เลือกทันที โดยไม่เลื่อนแบบนุ่มนวลระหว่างแถวในคลัง",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "ปิดดัชนีตัวอักษร",

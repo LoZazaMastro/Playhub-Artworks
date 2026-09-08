@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "عرض أخف للصور",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "يعرض الأغلفة واللافتات بدقة أقل بنسبة 30٪. تبقى الملفات الأصلية والصور المتحركة دون تغيير.",
   "PA_INSTANT_LIBRARY_SCROLL": "تنقّل فوري في المكتبة",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "ينتقل مباشرةً إلى اللعبة المحددة بدلًا من التمرير بسلاسة بين صفوف المكتبة.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "تعطيل الفهرس الأبجدي",

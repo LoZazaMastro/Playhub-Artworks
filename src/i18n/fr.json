@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Affichage allégé",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Affiche les jaquettes et bannières avec une résolution réduite de 30 %. Les fichiers d’origine et les images animées restent inchangés.",
   "PA_INSTANT_LIBRARY_SCROLL": "Navigation instantanée dans la bibliothèque",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Passe directement au jeu sélectionné sans défilement fluide entre les lignes de la bibliothèque.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Désactiver l’index alphabétique",

@@ -2,6 +2,7 @@ import { findSP } from '@decky/ui';
 
 import { homeCarouselClasses, sel } from '../static-classes';
 import log from '../utils/log';
+import { isHomeRoute } from '../utils/steamRoute';
 
 /*
   Square slots for EVERY cover carousel, not just the recents row.
@@ -139,7 +140,7 @@ const takeOver = (prototype: any) => {
 
 /** The square-slot rule, shared by the prototype patch and the instance sweep. */
 const squareWidth = (instance: any, width: number, cell: any): number => {
-  if (!squareColumns) return width;
+  if (!squareColumns || !isHomeCoverCarousel(instance)) return width;
   try {
     const props = instance?.props ?? {};
     const margin = Number(props.nItemMarginX) || 0;
@@ -162,6 +163,15 @@ const squareWidth = (instance: any, width: number, cell: any): number => {
     // Anything unexpected: Steam's own width, unchanged.
   }
   return width;
+};
+
+const isHomeCoverCarousel = (instance: any): boolean => {
+  const className = homeCarouselClasses.BasicGameCarousel;
+  if (!className || !String(instance?.props?.className ?? '').split(/\s+/).includes(className)) return false;
+  try {
+    const doc = instance.m_refContainer?.current?.ownerDocument;
+    return !!doc && doc === findSP()?.window?.document && isHomeRoute();
+  } catch { return false; }
 };
 
 /*
@@ -226,7 +236,7 @@ const install = (prototype: any): boolean => {
         const wrapped = (offset: number) => {
           const focusedNavigation = this.m_activeScrollTo !== null
             && this.m_activeScrollTo !== undefined;
-          if (!squareColumns || focusedNavigation) bound.call(this, offset);
+          if (!squareColumns || !isHomeCoverCarousel(this) || focusedNavigation) bound.call(this, offset);
         };
         (wrapped as any).__playhubScrollWrapped = true;
         try {
@@ -285,7 +295,7 @@ const patchMountedInstances = () => {
             const wrappedScroll: any = (offset: number) => {
               const focusedNavigation = instance.m_activeScrollTo !== null
                 && instance.m_activeScrollTo !== undefined;
-              if (!squareColumns || focusedNavigation) originalScroll.call(instance, offset);
+              if (!squareColumns || !isHomeCoverCarousel(instance) || focusedNavigation) originalScroll.call(instance, offset);
             };
             wrappedScroll.__playhubScrollWrapped = true;
             Object.defineProperty(instance, 'SendScrollNotification', {
@@ -310,7 +320,7 @@ const patchMountedInstances = () => {
             const source = currentWidth;
             const wrapped: any = (index: number, ...rest: any[]) => {
               const width = source.call(props, index, ...rest);
-              if (!squareColumns) return width;
+              if (!squareColumns || !isHomeCoverCarousel(instance)) return width;
               const itemHeight = Number(instance.props?.nItemHeight) || 0;
               for (const height of [itemHeight - labelHeight(), itemHeight]) {
                 if (height > 40 && Math.abs(width - height * PORTRAIT_RATIO) <= TOLERANCE) return height;
@@ -406,7 +416,10 @@ export const addCarouselWidthPatch = (square: boolean): boolean => {
  * patch is still missing, and nothing at all once it is in place.
  */
 export const ensureCarouselWidthPatch = (): boolean => {
-  if (patchedPrototype) return true;
+  if (patchedPrototype) {
+    if (squareColumns) patchMountedInstances();
+    return true;
+  }
   if (!squareColumns) return false;
   const prototype = findCarouselPrototype();
   return prototype ? install(prototype) : false;

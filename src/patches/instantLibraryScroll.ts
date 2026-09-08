@@ -17,6 +17,7 @@ let pendingFrame: number | undefined;
 let pendingView: Window | null = null;
 let rebindTimer: number | undefined;
 let lastFocusedGame: HTMLElement | null = null;
+let bottomAlignedGame: HTMLElement | null = null;
 const extendedScrollers = new Map<HTMLElement, { value: string; priority: string }>();
 
 const currentView = (): Window | null => {
@@ -88,10 +89,24 @@ const visibleBottomEdge = (
   const viewportBottom = viewportTop + viewportHeight;
   let bottom = Math.min(scrollRect.bottom, viewportBottom) - VIEWPORT_MARGIN_PX;
 
+  // Native Footer is authoritative: themes can change its positioning and width,
+  // so it must not pass the generic overlay heuristics below.
+  const nativeFooters = doc.querySelectorAll<HTMLElement>('#Footer, [class*="BasicFooter"]');
+  let nativeFooterFound = false;
+  nativeFooters.forEach((footer) => {
+    const style = view.getComputedStyle(footer);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+    const rect = footer.getBoundingClientRect();
+    if (rect.height <= 0 || rect.top < viewportTop + viewportHeight * 0.5 || rect.top >= viewportBottom) return;
+    bottom = Math.min(bottom, rect.top - VIEWPORT_MARGIN_PX);
+    nativeFooterFound = true;
+  });
+  if (nativeFooterFound) return bottom;
+
   // Steam publishes the measured footer height on BasicUiRoot, including when
   // the footer is rendered in an overlay unavailable to this document's hit test.
   const footerHeight = parseFloat(view.getComputedStyle(game)
-    .getPropertyValue('--gamepadui-current-footer-height'));
+    .getPropertyValue('--gamepadui-current-footer-height')) || 40;
   if (Number.isFinite(footerHeight) && footerHeight > 0 && footerHeight < viewportHeight * 0.3) {
     bottom = Math.min(bottom, viewportBottom - footerHeight - VIEWPORT_MARGIN_PX);
   }
@@ -171,12 +186,19 @@ const settleFocusedGame = (game: HTMLElement) => {
       const gameRect = game.getBoundingClientRect();
       const scrollRect = scroller.getBoundingClientRect();
       const style = view.getComputedStyle(scroller);
-      const topEdge = scrollRect.top + (parseFloat(style.scrollPaddingTop) || 0);
-      const bottomEdge = visibleBottomEdge(scroller, game, scrollRect) -
-        (parseFloat(style.scrollPaddingBottom) || 0);
+      const scaleY = scroller.offsetHeight > 0 ? scrollRect.height / scroller.offsetHeight : 1;
+      if (!Number.isFinite(scaleY) || scaleY <= 0) return;
+      const topEdge = scrollRect.top + (parseFloat(style.scrollPaddingTop) || 0) * scaleY;
+      // Keep one cover-height of breathing room above the footer. Use an
+      // absolute viewport edge, not an accumulated row step or native padding.
+      const bottomEdge = Math.max(topEdge + gameRect.height,
+        visibleBottomEdge(scroller, game, scrollRect) - gameRect.height);
       let top = scroller.scrollTop;
-      if (gameRect.top < topEdge) top += gameRect.top - topEdge;
-      else if (gameRect.bottom > bottomEdge) top += gameRect.bottom - bottomEdge;
+      if (gameRect.top < topEdge) top += (gameRect.top - topEdge) / scaleY;
+      else if (gameRect.bottom > bottomEdge || bottomAlignedGame === game) {
+        bottomAlignedGame = game;
+        top += (gameRect.bottom - bottomEdge) / scaleY;
+      }
 
       // The last row needs actual scroll range, not just scroll-padding.
       const missingRange = top - (scroller.scrollHeight - scroller.clientHeight);
@@ -188,6 +210,7 @@ const settleFocusedGame = (game: HTMLElement) => {
         scroller.style.setProperty('padding-bottom', `${(parseFloat(style.paddingBottom) || 0) + Math.ceil(missingRange)}px`, 'important');
       }
 
+      if (Math.abs(top - scroller.scrollTop) < 0.5) return;
       scroller.scrollTo({
         top,
         left: scroller.scrollLeft,
@@ -204,6 +227,7 @@ const onFocusIn = (event: FocusEvent) => {
   pendingFrame = undefined;
   pendingView = null;
   const game = gameFromFocus(event.target);
+  if (game !== lastFocusedGame) bottomAlignedGame = null;
   lastFocusedGame = game;
   if (!game) return;
   const view = game.ownerDocument.defaultView;
@@ -226,6 +250,17 @@ const onFocusIn = (event: FocusEvent) => {
   pendingFrame = view.requestAnimationFrame(settle);
 };
 
+// Native scrolling can finish after the focus animation, particularly in themed
+// libraries. Recheck its final position without polling an idle library.
+const onLibraryScroll = (event: Event) => {
+  if (pendingFrame !== undefined) return;
+  const doc = boundDocument;
+  const game = gameFromFocus(doc?.activeElement ?? null);
+  const scroller = event.target as HTMLElement | null;
+  if (!game || !scroller?.contains?.(game)) return;
+  onFocusIn({ target: game } as unknown as FocusEvent);
+};
+
 const unbindDocument = () => {
   if (pendingFrame !== undefined) pendingView?.cancelAnimationFrame(pendingFrame);
   pendingFrame = undefined;
@@ -236,8 +271,10 @@ const unbindDocument = () => {
   }
   extendedScrollers.clear();
   boundDocument?.removeEventListener('focusin', onFocusIn, true);
+  boundDocument?.removeEventListener('scroll', onLibraryScroll, true);
   boundDocument = null;
   lastFocusedGame = null;
+  bottomAlignedGame = null;
 };
 
 const bindCurrentDocument = () => {
@@ -246,6 +283,7 @@ const bindCurrentDocument = () => {
   unbindDocument();
   if (!enabled || !doc) return;
   doc.addEventListener('focusin', onFocusIn, true);
+  doc.addEventListener('scroll', onLibraryScroll, true);
   boundDocument = doc;
 };
 

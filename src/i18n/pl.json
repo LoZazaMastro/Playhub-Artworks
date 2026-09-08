@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Lżejsze wyświetlanie grafik",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Wyświetla okładki i banery w rozdzielczości niższej o 30%. Oryginalne pliki i animowane grafiki pozostają bez zmian.",
   "PA_INSTANT_LIBRARY_SCROLL": "Natychmiastowa nawigacja po bibliotece",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Przechodzi od razu do wybranej gry bez płynnego przewijania między rzędami biblioteki.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Wyłącz indeks alfabetyczny",

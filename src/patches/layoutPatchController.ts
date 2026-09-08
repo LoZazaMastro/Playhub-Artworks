@@ -8,6 +8,7 @@ import { addHomePatch, homeDiagnostics, removeHomePatch } from './homePatch';
 import { applyHomeHeroCentering } from './homeHeroPatch';
 import { addSquareLibraryPatch, removeSquareLibraryPatch } from './squareLibraryPatch';
 import { applyCachedHomeRecentCover } from './homeRecentCover';
+import { setDesktopLibrarySquare, stopDesktopLibraryCovers } from './desktopLibraryCovers';
 
 export type LibraryCoverFormat = 'portrait' | 'square';
 export type HomeRecentFormat = 'banner' | 'cover';
@@ -83,6 +84,7 @@ export const applyCachedLayout = (): boolean => {
   try {
     lastSettings = { square: cached.square, coverRecents: cached.recents === 'cover' };
     lastHeroSetting = cached.hero;
+    setDesktopLibrarySquare(cached.square);
     removeHomePatch(true, true);
     if (!cached.square) removeSquareLibraryPatch(true);
     const squareApplied = cached.square ? addSquareLibraryPatch(true) : true;
@@ -112,6 +114,7 @@ export const refreshLayoutPatches = async (mounting = false) => {
   ]);
 
   const square = libraryCoverFormat === 'square';
+  setDesktopLibrarySquare(square);
   const coverRecents = homeRecentFormat === 'cover';
   const hero = Boolean(centerHomeHero);
   const cachedLayoutMatches = cachedBootstrapPending
@@ -197,6 +200,7 @@ export const refreshLayoutPatches = async (mounting = false) => {
 };
 
 export const stopLayoutPatches = () => {
+  stopDesktopLibraryCovers();
   cachedBootstrapPending = false;
   if (retryTimer) {
     window.clearTimeout(retryTimer);

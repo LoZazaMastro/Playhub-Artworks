@@ -252,13 +252,18 @@ const watchCarouselMount = (view: Window | null) => {
 
   const installWhenReady = () => {
     if (!view.document.querySelector(selector) || !ensureCarouselWidthPatch()) return false;
-    carouselObserver?.disconnect();
-    carouselObserver = undefined;
     return true;
   };
 
-  if (installWhenReady()) return;
-  const observer = new Observer(() => { installWhenReady(); });
+  installWhenReady();
+  // Recommended shelves mount after recents. Keep watching new carousel roots,
+  // not image/card mutations, and repair their cached widths before the next paint.
+  const observer = new Observer((records) => {
+    if (!currentLayoutSettings().square || !isHomeRoute()) return;
+    const addedCarousel = records.some((record) => Array.from(record.addedNodes).some((node) =>
+      node.nodeType === 1 && ((node as Element).matches(selector) || !!(node as Element).querySelector(selector))));
+    if (addedCarousel) installWhenReady();
+  });
   carouselObserver = observer;
   observer.observe(view.document.documentElement, { childList: true, subtree: true });
 };

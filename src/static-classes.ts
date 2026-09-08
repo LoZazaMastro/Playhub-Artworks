@@ -48,6 +48,10 @@ const lazyModule = (finder: () => any): ClassMap => {
 
 export const libraryAssetImageClasses = lazyModule(() => findModule((mod: any) => typeof mod === 'object' && mod?.PortraitImage && mod?.Container && mod?.LandscapeImage));
 export const gamepadLibraryClasses = lazyModule(() => findModule((mod: any) => typeof mod === 'object' && mod?.GamepadLibrary));
+export const collectionGridClasses = lazyModule(() => findModule((mod: any) =>
+  typeof mod === 'object' && mod?.YourCollection && mod?.CollectionOptions));
+export const showcaseGridClasses = lazyModule(() => findModule((mod: any) =>
+  typeof mod === 'object' && mod?.ShowcaseGrid && mod?.Showcase));
 /*
   The Home hero image, plus the containers around it.
 

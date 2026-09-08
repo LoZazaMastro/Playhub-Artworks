@@ -26,7 +26,8 @@ import {
   stopDisableLibraryLetterHold,
 } from './patches/disableLibraryLetterHold';
 
-import { refreshHomeRecentCover, stopHomeRecentCover } from './patches/homeRecentCover';
+import { applyCachedHomeRecentCover, refreshHomeRecentCover, stopHomeRecentCover } from './patches/homeRecentCover';
+import { startLibraryPreload, stopLibraryPreload } from './patches/libraryPreload';
 
 const ROUTE = '/playhub-artworks/:appid/:assetType?';
 const RUNTIME_CLEANUP = '__playhubArtworksRuntimeCleanup';
@@ -38,6 +39,8 @@ export default definePlugin(() => {
     // The previous Steam view is already gone.
   }
 
+  // Register the cached asset choice before unrelated UI and backend setup.
+  applyCachedHomeRecentCover();
   log('plugin mounted', { href: steamHref(), language: navigator.language });
 
   routerHook.addRoute(ROUTE, () => (
@@ -145,6 +148,8 @@ export default definePlugin(() => {
   }
 
   void refreshHomeRecentCover();
+  startLibraryPreload();
+  startLayoutGuard();
   void (async () => {
     try {
       await refreshLayoutPatches(true);
@@ -181,6 +186,7 @@ export default definePlugin(() => {
     routerHook.removeRoute(ROUTE);
     try { menuPatches?.unpatch(); } catch (_) { /* already gone */ }
     stopHomeRecentCover();
+    stopLibraryPreload();
     try { stopLayoutPatches(); } catch (_) { /* already gone */ }
     try { stopInstantLibraryScroll(); } catch (_) { /* already gone */ }
     try { stopDisableLibraryLetterHold(); } catch (_) { /* already gone */ }

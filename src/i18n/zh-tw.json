@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "輕量顯示",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "以降低 30% 的解析度顯示封面和橫幅，不修改原始檔案或動態圖片。",
   "PA_INSTANT_LIBRARY_SCROLL": "即時瀏覽收藏庫",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "直接跳到所選遊戲，不再於收藏庫各列之間平滑捲動。",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "停用字母索引",

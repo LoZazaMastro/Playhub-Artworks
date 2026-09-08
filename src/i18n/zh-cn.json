@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "轻量显示",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "以降低 30% 的分辨率显示封面和横幅，不修改原始文件或动态图片。",
   "PA_INSTANT_LIBRARY_SCROLL": "即时浏览库",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "直接跳到已选中的游戏，不再在游戏库各行之间平滑滚动。",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "禁用字母索引",

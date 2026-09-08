@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Lighter artwork display",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Displays covers and banners at 30% lower resolution. Original files stay untouched. Animated artwork is unchanged.",
   "PA_INSTANT_LIBRARY_SCROLL": "Instant library navigation",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Moves directly to the focused game instead of smoothly scrolling between library rows.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Disable alphabetical index",

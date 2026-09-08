@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Hiển thị hình ảnh nhẹ hơn",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Hiển thị ảnh bìa và biểu ngữ với độ phân giải giảm 30%. Tệp gốc và ảnh động không bị thay đổi.",
   "PA_INSTANT_LIBRARY_SCROLL": "Điều hướng thư viện tức thì",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Chuyển thẳng đến trò chơi đang chọn thay vì cuộn mượt giữa các hàng trong thư viện.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Tắt chỉ mục chữ cái",

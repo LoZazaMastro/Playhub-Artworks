@@ -92,13 +92,18 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
   }, [assetType, setAsset]);
 
   useEffect(() => {
-    (async () => {
+    let active = true;
+    void (async () => {
       setTabLoading(true);
-      const filters = await get(`filters_${assetType}`, null);
-      await searchAndSetAssets(assetType, 0, filters, () => {
-        setTabLoading(false);
-      });
+      try {
+        const filters = await get(`filters_${assetType}`, null);
+        // Search loading is owned by the provider; an obsolete request must not pin this tab.
+        if (active) void searchAndSetAssets(assetType, 0, filters);
+      } finally {
+        if (active) setTabLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, [searchAndSetAssets, assetType, get]);
 
   useEffect(() => {

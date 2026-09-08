@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Lettere bildevisning",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Viser omslag og bannere med 30 % lavere oppløsning. Originalfiler og animerte bilder forblir uendret.",
   "PA_INSTANT_LIBRARY_SCROLL": "Umiddelbar navigering i biblioteket",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Går rett til det valgte spillet uten jevn rulling mellom radene i biblioteket.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Deaktiver alfabetisk indeks",

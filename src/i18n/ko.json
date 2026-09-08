@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "이미지 경량 표시",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "표지와 배너의 표시 해상도를 30% 낮춥니다. 원본 파일과 애니메이션 이미지는 변경하지 않습니다.",
   "PA_INSTANT_LIBRARY_SCROLL": "라이브러리 즉시 이동",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "라이브러리 행 사이를 부드럽게 스크롤하지 않고 선택한 게임으로 즉시 이동합니다.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "알파벳 색인 비활성화",

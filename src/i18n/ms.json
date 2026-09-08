@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Paparan imej ringan",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Memaparkan kulit dan sepanduk pada resolusi 30% lebih rendah. Fail asal dan imej animasi tidak diubah.",
   "PA_INSTANT_LIBRARY_SCROLL": "Navigasi pustaka serta-merta",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Terus beralih ke permainan yang dipilih tanpa menatal lancar antara baris pustaka.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Lumpuhkan indeks abjad",

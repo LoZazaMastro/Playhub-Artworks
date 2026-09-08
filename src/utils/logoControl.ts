@@ -74,6 +74,18 @@ export const writeLogoPosition = async (appId: number, position: LogoPosition): 
   const apps = (window as any).SteamClient?.Apps;
   const direct = apps?.SetCustomLogoPositionForApp;
 
+  // Steam's store updates both the file and the observable cache used by the header.
+  try {
+    const app = await withTimeout(getAppOverview(appId));
+    const store = (window as any).appDetailsStore;
+    if (app && typeof store?.SaveCustomLogoPosition === 'function') {
+      await withTimeout(store.SaveCustomLogoPosition(app, value));
+      return true;
+    }
+  } catch (error) {
+    log('Steam store logo position write failed', error);
+  }
+
   if (typeof direct === 'function') {
     try {
       await withTimeout(direct.call(
@@ -85,17 +97,6 @@ export const writeLogoPosition = async (appId: number, position: LogoPosition): 
     } catch (error) {
       log('direct logo position write failed', error);
     }
-  }
-
-  try {
-    const app = await withTimeout(getAppOverview(appId));
-    const save = (window as any).appDetailsStore?.SaveCustomLogoPosition;
-    if (app && typeof save === 'function') {
-      await withTimeout(save.call((window as any).appDetailsStore, app, value));
-      return true;
-    }
-  } catch (error) {
-    log('fallback logo position write failed', error);
   }
 
   return false;

@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Afișare mai ușoară",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Afișează coperțile și bannerele la o rezoluție cu 30% mai mică. Fișierele originale și imaginile animate rămân neschimbate.",
   "PA_INSTANT_LIBRARY_SCROLL": "Navigare instantanee în bibliotecă",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Trece direct la jocul selectat, fără derulare lină între rândurile bibliotecii.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Dezactivează indexul alfabetic",

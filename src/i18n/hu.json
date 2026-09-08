@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Kímélő képmegjelenítés",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "A borítókat és bannereket 30%-kal kisebb felbontásban jeleníti meg. Az eredeti fájlok és az animált képek nem változnak.",
   "PA_INSTANT_LIBRARY_SCROLL": "Azonnali navigáció a könyvtárban",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Közvetlenül a kijelölt játékhoz ugrik, a könyvtár sorai közötti finom görgetés nélkül.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Betűrendes index kikapcsolása",

@@ -12,10 +12,15 @@ const rootPatches = new Map<object, { unpatch: () => void }>();
 const CACHE_KEY = 'playhub_artworks_home_recent_cover';
 
 export const applyCachedHomeRecentCover = (): void => {
+  // The shared context exists before the Big Picture document on cold starts.
+  let cached: string | null = null;
+  try { cached = window.localStorage.getItem(CACHE_KEY); } catch { /* Storage unavailable. */ }
+  if (cached !== 'true' && cached !== 'false') {
+    try { cached = findSP()?.window?.localStorage.getItem(CACHE_KEY) ?? null; } catch { /* Window not ready. */ }
+  }
   try {
-    const cached = (findSP()?.window ?? window).localStorage.getItem(CACHE_KEY);
     if (cached === 'true' || cached === 'false') setHomeRecentCover(cached === 'true', true);
-  } catch (_) { /* The backend remains authoritative when storage is unavailable. */ }
+  } catch { /* The backend refresh retries when Decky's router is ready. */ }
 };
 
 // Steam's recent-games wrapper passes this flag to its native carousel. It controls
@@ -45,11 +50,11 @@ const descend = createReactTreePatcher(
 );
 
 export const setHomeRecentCover = (value: boolean, mounting = false): void => {
+  const changed = enabled !== (value === true);
   revision += 1;
   enabled = value === true;
-  try {
-    (findSP()?.window ?? window).localStorage.setItem(CACHE_KEY, String(enabled));
-  } catch (_) { /* A closing Steam window may no longer expose storage. */ }
+  try { window.localStorage.setItem(CACHE_KEY, String(enabled)); } catch { /* Storage unavailable. */ }
+  try { findSP()?.window?.localStorage.setItem(CACHE_KEY, String(enabled)); } catch { /* Window not ready. */ }
   if (enabled && !routePatch) {
     routePatch = routerHook.addPatch('/library/home', (props) => {
       const child = props.children;
@@ -59,7 +64,7 @@ export const setHomeRecentCover = (value: boolean, mounting = false): void => {
       return props;
     });
   }
-  if (!mounting) rerenderAfterPatchUpdate();
+  if (!mounting && changed) rerenderAfterPatchUpdate();
 };
 
 export const refreshHomeRecentCover = async (): Promise<void> => {

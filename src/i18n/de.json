@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Ressourcenschonende Anzeige",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Zeigt Cover und Banner mit 30 % geringerer Auflösung an. Originaldateien und animierte Artworks bleiben unverändert.",
   "PA_INSTANT_LIBRARY_SCROLL": "Sofortige Bibliotheksnavigation",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Springt direkt zum ausgewählten Spiel, statt weich zwischen den Bibliothekszeilen zu scrollen.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Alphabetischen Index deaktivieren",

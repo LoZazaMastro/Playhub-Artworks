@@ -76,6 +76,9 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
   const loadMoreAbort = useRef<AbortController | null>(null);
   const moreLoadingRef = useRef(false);
   const shortcutResolve = useRef<Promise<any> | null>(null);
+  const lifecycle = useRef(0);
+  const lastSearch = useRef<{ assetType: SGDBAssetType; filters: any } | null>(null);
+  const retrySelectedGame = useRef<(game: any) => void>(() => {});
 
   const searchSgdbGames = useCallback(async (term: string) =>
     (await searchGames(term)).map((game: any) => ({ ...game, provider: 'steamgriddb' })), [searchGames]);
@@ -88,6 +91,8 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    lifecycle.current += 1;
+    lastSearch.current = null;
     requestToken.current += 1;
     searchAbort.current?.abort();
     loadMoreAbort.current?.abort();
@@ -98,12 +103,14 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     providerGames.current = {};
     setSelectedGame(undefined);
     setAssets([]);
+    setLoading(false);
     setMoreLoading(false);
     setEndReached(false);
     setPage(0);
   }, [appId]);
 
   useEffect(() => () => {
+    lifecycle.current += 1;
     requestToken.current += 1;
     searchAbort.current?.abort();
     loadMoreAbort.current?.abort();
@@ -124,7 +131,9 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       <GameSelectionModal
         defaultTerm={title}
         searchGames={searchSgdbGames}
-        onSelect={(game: any) => rememberSgdbGame(game)}
+        onSelect={(game: any) => {
+          retrySelectedGame.current(rememberSgdbGame(game));
+        }}
       />,
       window
     );
@@ -135,10 +144,12 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     const title = appOverview?.display_name?.trim();
     if (!title) return null;
     if (shortcutResolve.current) return shortcutResolve.current;
+    const epoch = lifecycle.current;
 
     const pending = (async () => {
       try {
         const matches = await searchSgdbGames(title);
+        if (epoch !== lifecycle.current) return null;
         const match = matches?.[0];
         if (!match) return null;
         log('resolved SteamGridDB game', { title, id: match.id, name: match.name });
@@ -148,7 +159,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
         log('SteamGridDB title lookup failed', { title, error });
         return null;
       } finally {
-        shortcutResolve.current = null;
+        if (epoch === lifecycle.current) shortcutResolve.current = null;
       }
     })();
 
@@ -171,6 +182,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
   ) => {
     const filters = withoutTransientGame(rawFilters);
     const provider = providerFromFilters(filters);
+    lastSearch.current = { assetType, filters };
     const token = ++requestToken.current;
     activeAssetType.current = assetType;
 
@@ -183,6 +195,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     const controller = new AbortController();
     searchAbort.current = controller;
 
+    setLoading(true);
     setCurrentFilters(filters);
     setAssets([]);
     setEndReached(false);
@@ -199,10 +212,6 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       if (gameOverride !== undefined) {
         if (searchGame) providerGames.current[provider] = searchGame;
         else delete providerGames.current[provider];
-      }
-
-      if (!searchGame && provider === 'steamgriddb') {
-        searchGame = selectedGame?.provider === 'steamgriddb' ? selectedGame : undefined;
       }
 
       if (provider === 'steamgriddb' && appOverview.BIsModOrShortcut() && !searchGame) {
@@ -270,9 +279,19 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       }
     } finally {
       if (searchAbort.current === controller) searchAbort.current = null;
-      if (token === requestToken.current) onSuccess?.();
+      if (token === requestToken.current) {
+        setLoading(false);
+        onSuccess?.();
+      }
     }
-  }, [appId, appOverview, resolveSgdbGameByTitle, searchAssets, selectedGame, showGameSelection, withoutTransientGame]);
+  }, [appId, appOverview, resolveSgdbGameByTitle, searchAssets, showGameSelection, withoutTransientGame]);
+
+  retrySelectedGame.current = (game) => {
+    const last = lastSearch.current;
+    if (last && providerFromFilters(last.filters) === 'steamgriddb') {
+      void searchAndSetAssets(last.assetType, 0, last.filters, undefined, game);
+    }
+  };
 
   const loadMore = useCallback<AssetSearchContextType['loadMore']>(async (assetType, onSuccess) => {
     if (
@@ -361,8 +380,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     if (filtersChanged || gameChanged) {
-      setLoading(true);
-      await searchAndSetAssets(assetType, 0, filters, () => setLoading(false), normalizedGame);
+      await searchAndSetAssets(assetType, 0, filters, undefined, normalizedGame);
       setMoreLoading(false);
     }
 
@@ -417,7 +435,6 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
     if (!appOverview || !appId) return;
     let active = true;
     void (async () => {
-      setLoading(true);
       try {
         const saved = await get(`nonsteam_${appId}`, false);
         if (!active) return;
@@ -425,16 +442,14 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
         /* Purge legacy values accidentally saved by a different provider. */
         if (saved && saved.provider && saved.provider !== 'steamgriddb') {
           await set(`nonsteam_${appId}`, false);
-        } else if (saved) {
-          rememberSgdbGame(saved, false);
-        } else if (appOverview.BIsModOrShortcut()) {
+        } else if (saved && !providerGames.current.steamgriddb) {
+          retrySelectedGame.current(rememberSgdbGame(saved, false));
+        } else if (!saved && appOverview.BIsModOrShortcut()) {
           const resolved = await resolveSgdbGameByTitle();
           if (active && !resolved) showGameSelection();
         }
       } catch (error) {
         log('saved game restore failed', error);
-      } finally {
-        if (active) setLoading(false);
       }
     })();
     return () => { active = false; };

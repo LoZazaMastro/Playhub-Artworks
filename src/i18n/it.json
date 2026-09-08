@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Visualizzazione alleggerita",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Mostra cover e banner con una risoluzione ridotta del 30%. I file originali e gli artwork animati restano invariati.",
   "PA_INSTANT_LIBRARY_SCROLL": "Scorrimento istantaneo della libreria",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Quando sposti il focus tra i giochi, passa subito alla riga selezionata senza animazione.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Disattiva l'indice alfabetico",

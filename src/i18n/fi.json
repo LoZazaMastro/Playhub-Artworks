@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Kevyempi kuvien näyttö",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Näyttää kansikuvat ja bannerit 30 % pienemmällä resoluutiolla. Alkuperäiset tiedostot ja animoidut kuvat säilyvät ennallaan.",
   "PA_INSTANT_LIBRARY_SCROLL": "Välitön kirjaston selaus",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Siirtyy suoraan valittuun peliin ilman pehmeää vieritystä kirjaston rivien välillä.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Poista aakkoshakemisto käytöstä",

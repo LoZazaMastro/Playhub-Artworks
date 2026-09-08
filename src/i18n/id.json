@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Tampilan gambar ringan",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Menampilkan sampul dan banner dengan resolusi 30% lebih rendah. File asli dan gambar animasi tidak diubah.",
   "PA_INSTANT_LIBRARY_SCROLL": "Navigasi pustaka instan",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Langsung berpindah ke game yang dipilih tanpa gulir halus antarbaris pustaka.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Nonaktifkan indeks alfabet",

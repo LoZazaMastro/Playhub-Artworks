@@ -1,4 +1,6 @@
 {
+  "PA_LIGHTWEIGHT_DISPLAY": "Visualização mais leve",
+  "PA_LIGHTWEIGHT_DISPLAY_DESC": "Exibe capas e banners com resolução 30% menor. Os arquivos originais e as imagens animadas não são alterados.",
   "PA_INSTANT_LIBRARY_SCROLL": "Navegação instantânea na biblioteca",
   "PA_INSTANT_LIBRARY_SCROLL_DESC": "Vai direto para o jogo selecionado, sem rolagem suave entre as linhas da biblioteca.",
   "PA_DISABLE_LIBRARY_LETTER_HOLD": "Desativar índice alfabético",
