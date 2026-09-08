@@ -1,14 +1,62 @@
+import { afterPatch } from '@decky/ui';
+import { cloneElement, isValidElement } from 'react';
 import { appportraitClasses, libraryAssetImageClasses, sel } from '../static-classes';
-import { desktopLibraryDocument, libraryGridScope, mountedLibraryGrids } from './libraryGridScope';
+import { desktopLibraryDocument, desktopRecentGamesClasses, libraryGridScope, mountedDesktopRecentCarousels, mountedLibraryGrids } from './libraryGridScope';
 
 const STYLE_ID = 'playhub-artworks-desktop-library';
 const ATTRIBUTE = 'data-playhub-artworks-square';
 const patches = new Map<any, { element: Element; restore: () => void }>();
+const recentPatches = new Map<any, { element: Element; unpatch: () => void }>();
 let timer: ReturnType<typeof setInterval> | undefined;
 let documentInUse: Document | undefined;
 let observer: MutationObserver | undefined;
 let frame: number | undefined;
 let enabled = false;
+
+function squareRecentCarousel(rendered: any): any {
+  if (!enabled || !isValidElement<any>(rendered)) return rendered;
+  const list = rendered.props.children;
+  if (!isValidElement<any>(list) || !Array.isArray(list.props.children)) return rendered;
+  const cards = list.props.children;
+  let changed = false;
+  const children = cards.map((card: any) => {
+    if (!isValidElement<any>(card) || !card.props.app || card.props.bFeatured !== false) return card;
+    const width = Number(card.props.nWidth);
+    const height = Number(card.props.nHeight);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= width) return card;
+    // Keep Steam's row height and featured banner; only widen ordinary portrait slots.
+    changed = true;
+    return cloneElement(card, { nWidth: height });
+  });
+  if (!changed) return rendered;
+  return cloneElement(rendered, {
+    [ATTRIBUTE]: '',
+  }, cloneElement(list, {}, children));
+}
+
+function restoreRecentCarousels() {
+  recentPatches.forEach((patch, instance) => {
+    patch.unpatch();
+    if (patch.element.isConnected) instance.forceUpdate();
+  });
+  recentPatches.clear();
+}
+
+function scanRecentCarousels() {
+  const mounted = mountedDesktopRecentCarousels();
+  recentPatches.forEach((patch, instance) => {
+    if (mounted.get(instance) !== patch.element) {
+      patch.unpatch(); recentPatches.delete(instance);
+      if (patch.element.isConnected) instance.forceUpdate();
+    }
+  });
+  mounted.forEach((element, instance) => {
+    if (recentPatches.has(instance)) return;
+    const patch = afterPatch(instance, 'render', (_args: any[], result: any) => squareRecentCarousel(result));
+    recentPatches.set(instance, { element, unpatch: () => patch.unpatch() });
+    instance.forceUpdate();
+  });
+}
 
 function remeasure(grid: any) {
   try { if (grid.m_elGrid?.current?.isConnected) { grid.ComputeLayout(); grid.forceUpdate(); } }
@@ -19,6 +67,7 @@ function scan() {
   if (!enabled) return;
   const doc = desktopLibraryDocument();
   if (doc !== documentInUse) {
+    restoreRecentCarousels();
     observer?.disconnect();
     observer = undefined;
     patches.forEach((patch) => patch.restore());
@@ -29,8 +78,10 @@ function scan() {
   if (!observer && doc?.body) {
     observer = new MutationObserver((records) => {
       // Image loads and ordinary card updates do not require a full grid scan.
+      const recent = desktopRecentGamesClasses().RecentGames;
+      const selector = `.CSSGrid_Measure${recent ? `,.${recent}` : ''}`;
       const hasMarker = (node: Node) => node.nodeType === 1 &&
-        ((node as Element).matches('.CSSGrid_Measure') || !!(node as Element).querySelector('.CSSGrid_Measure'));
+        ((node as Element).matches(selector) || !!(node as Element).querySelector(selector));
       if (frame === undefined && records.some((r) => [...r.addedNodes, ...r.removedNodes].some(hasMarker))) {
         frame = window.requestAnimationFrame(() => { frame = undefined; safelyScan(); });
       }
@@ -49,6 +100,7 @@ function scan() {
       `${cover} img{object-fit:cover!important;object-position:center center!important}`;
     doc.head.append(style);
   }
+  scanRecentCarousels();
   const grids = new Set(mountedLibraryGrids().filter((grid) => libraryGridScope(grid) === 'desktop'
     && grid.props.childHeight > grid.props.childWidth && grid.props.childWidth > 0));
   patches.forEach((patch, grid) => {
@@ -96,6 +148,7 @@ export function setDesktopLibrarySquare(square: boolean) {
 
 export function stopDesktopLibraryCovers() {
   enabled = false;
+  restoreRecentCarousels();
   if (timer) clearInterval(timer);
   timer = undefined;
   observer?.disconnect(); observer = undefined;
