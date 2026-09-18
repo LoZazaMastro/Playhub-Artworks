@@ -1,0 +1,1651 @@
+@keyframes pa-artwork-download {
+  from {
+    transform: translateX(-115%);
+  }
+  to {
+    transform: translateX(265%);
+  }
+}
+.sgdb-modal-gameselect .gamelabel {
+  display: flex;
+  width: 100%;
+  gap: 0.2em;
+  font-weight: bold;
+}
+.sgdb-modal-gameselect .gamelabel .release-date {
+  font-weight: normal;
+  opacity: 0.5;
+}
+.sgdb-modal-gameselect .gamelabel .platform-types {
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  margin-left: auto;
+}
+.sgdb-modal-gameselect .spinner {
+  width: 2em;
+  margin: 0 auto;
+  margin-top: 2em;
+}
+
+.sgdb-modal-official-assets .official-steam-asset {
+  margin: 0 auto;
+}
+.sgdb-modal-official-assets .official-steam-asset.grid_l {
+  max-width: 60%;
+}
+.MediumWindow .sgdb-modal-official-assets .official-steam-asset.grid_p {
+  max-width: 39%;
+}
+
+.WideWindow .sgdb-modal-official-assets .official-steam-asset.grid_p {
+  max-width: 55%;
+}
+
+.sgdb-modal-official-assets .official-steam-asset.hero, .sgdb-modal-official-assets .official-steam-asset.logo {
+  max-width: 100%;
+}
+.sgdb-modal-official-assets .asset-box-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  position: relative;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap {
+  background: url("/images/defaultappimage.png") center center;
+  background-size: cover;
+  position: relative;
+  width: 100%;
+  margin-top: auto;
+  outline-style: solid;
+  outline-color: transparent;
+  outline-width: 2px;
+  transition: outline-color ease-in-out 200ms;
+  /* aspect-ratio: 2/3; CEF version doesn't support this, gotta do it the painful way */
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus, .sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover {
+  z-index: 10005;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo {
+  padding-bottom: 0 !important;
+  height: 185px;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb {
+  padding: 0.5em;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-hero > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-hero > .thumb video.blur-bg {
+  transform: scale(1);
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb, .sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-icon > .thumb {
+  background: url("/images/defaultappimage.png") center center;
+  background-size: cover;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb img,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb video, .sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-icon > .thumb img,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-icon > .thumb video {
+  position: static;
+  width: auto;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-logo > .thumb video.blur-bg, .sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-icon > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.type-icon > .thumb video.blur-bg {
+  display: none;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap .preload-spinner {
+  position: absolute;
+  height: 2em;
+  opacity: 1;
+  transition: opacity 200ms linear;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap .preload-spinner[data-loaded=true] {
+  opacity: 0;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb img,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb video {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  max-height: 100%;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb img[data-loaded=true],
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb video[data-loaded=true] {
+  opacity: 1;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap > .thumb video.blur-bg {
+  filter: saturate(2) blur(20px);
+  transform: scale(1.25);
+  opacity: 0;
+  z-index: -2;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-download-progress {
+  width: 100%;
+  height: 5px;
+  margin-top: 0.35em;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-download-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #f6b928;
+  transition: width 180ms linear, background-color 180ms ease;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-download-progress.success > div {
+  background: #45c978;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-download-progress.error > div {
+  background: #ff5d5d;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-download-progress.indeterminate > div {
+  width: 38%;
+  animation: pa-artwork-download 1.05s ease-in-out infinite;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-facts {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65em;
+  padding-top: 0.38em;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.64em;
+  line-height: 1.2;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-facts > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-facts > span:first-child {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.sgdb-modal-official-assets .asset-box-wrap .asset-facts > span:last-child {
+  text-align: right;
+}
+.sgdb-modal-official-assets .asset-box-wrap .author {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.65em;
+  padding-top: 0.15em;
+  margin-top: auto;
+  overflow: hidden;
+  z-index: 10006;
+  text-shadow: 0px 1px 1px #000;
+}
+.sgdb-modal-official-assets .asset-box-wrap .author > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sgdb-modal-official-assets .asset-box-wrap .author img {
+  width: 1em;
+  height: 1em;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 0.5em;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: -1;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chip-color);
+  color: var(--chip-text-color);
+  padding: 0.3em 0.8em;
+  min-height: 2em;
+  gap: 0.3em;
+  border-radius: 0 5px 5px 0;
+  transition: transform cubic-bezier(0.33, 1, 0.68, 1) 300ms;
+  will-change: transform;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip:nth-child(1n) {
+  transition-delay: 120ms;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip:nth-child(2n) {
+  transition-delay: 240ms;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip:nth-child(3n) {
+  transition-delay: 360ms;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip:nth-child(4n) {
+  transition-delay: 480ms;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips .chip:nth-child(5n) {
+  transition-delay: 600ms;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips.chips-left {
+  right: auto;
+  left: 0;
+}
+.sgdb-modal-official-assets .asset-box-wrap .chips.chips-left .chip {
+  border-radius: 5px 0 0 5px;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover {
+  cursor: pointer;
+  outline-color: rgba(255, 255, 255, 0.5);
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus.type-hero > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus.type-hero > .thumb video.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover.type-hero > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover.type-hero > .thumb video.blur-bg {
+  opacity: 0.65;
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus .chips > .chip,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover .chips > .chip {
+  transform: translateX(calc(100% - 1px));
+  box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.25);
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus .chips.chips-left > .chip,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover .chips.chips-left > .chip {
+  transform: translateX(calc(-100% + 1px));
+  box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.25);
+}
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap.gpfocus > .thumb video.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover > .thumb img.blur-bg,
+.sgdb-modal-official-assets .asset-box-wrap .image-wrap:hover > .thumb video.blur-bg {
+  opacity: 0.4;
+}
+
+/* Shared shell for the Perfect Hero / Perfect Banner composer and the logo positioner. */
+.pa-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--basicui-header-height, 40px) + 14px) 22px calc(var(--gamepadui-current-footer-height, 40px) + 14px);
+  box-sizing: border-box;
+  color: #fff;
+}
+
+/* Opaque, blurred backdrop so nothing behind competes with the preview. */
+.pa-editor-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 13, 0.95);
+  backdrop-filter: blur(22px);
+}
+
+.pa-editor-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(20, 23, 27, 0.92);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pa-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.pa-editor-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pa-editor-head strong {
+  font-size: 21px;
+}
+.pa-editor-head span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pa-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 26vw, 340px);
+  gap: 18px;
+  min-height: 0;
+  align-items: start;
+}
+
+.pa-editor-preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pa-editor-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #05060a;
+}
+
+.pa-editor-bg {
+  position: absolute;
+  display: block;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: fill;
+}
+
+.pa-editor-bg-cover {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.pa-editor-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Mirrors Steam's own logo box: anchored region plus contain inside it. */
+.pa-editor-logo-box {
+  position: absolute;
+}
+.pa-editor-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pa-editor-logo {
+  position: absolute;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
+
+/* Steam's model: anchored inside the capsule, contained within width/height caps. */
+.pa-editor-logo-anchored {
+  position: static;
+  transform: none;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 3%;
+}
+
+/* The header capsule Steam actually draws is 1920 x 620. */
+.pa-editor-frame-hero {
+  aspect-ratio: 1920/620;
+}
+
+.pa-editor-frame-edge {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.pa-editor-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.pa-editor-size {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.pa-editor-controls {
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pa-editor-controls::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.pa-editor-label {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pa-editor-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pa-editor-row {
+  display: flex !important;
+  gap: 6px;
+}
+.pa-editor-row-center {
+  justify-content: center;
+}
+.pa-editor-row button {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px !important;
+}
+.pa-editor-row button svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+.pa-editor-row button.active {
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+.pa-editor-row button:focus, .pa-editor-row button.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+.pa-editor-row-center button {
+  flex: 0 0 96px !important;
+}
+
+.pa-editor-wide {
+  width: 100% !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px !important;
+}
+.pa-editor-wide.active {
+  background: rgba(242, 181, 38, 0.22) !important;
+}
+.pa-editor-wide:focus, .pa-editor-wide.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+/* ------------------------------------------------------------------ *
+ * Logo positioner: the artwork, full size, and nothing else.
+ * ------------------------------------------------------------------ */
+.pa-logo-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--basicui-header-height, 40px) + 20px) 40px calc(var(--gamepadui-current-footer-height, 40px) + 20px);
+  box-sizing: border-box;
+  color: #fff;
+}
+
+.pa-logo-stage {
+  position: relative;
+  z-index: 1;
+  width: min(1280px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pa-logo-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1920/620;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #05060a;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+}
+
+.pa-logo-hero {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* The five anchor points Steam supports. */
+/* Anchor guides, in the plugin's own yellow. */
+.pa-logo-guide {
+  position: absolute;
+  inset: 16px 26px;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.pa-logo-spot {
+  align-self: center;
+  justify-self: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  border: 3px solid #f6b928;
+  opacity: 0.65;
+  transition: opacity 200ms linear, box-shadow 200ms linear;
+}
+.pa-logo-spot.on {
+  opacity: 1;
+  background: rgba(246, 185, 40, 0.28);
+  box-shadow: 0 0 0 6px rgba(246, 185, 40, 0.18);
+}
+
+.pa-logo-slot {
+  position: absolute;
+  inset: 16px 26px;
+  display: flex;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pa-logo-image {
+  object-fit: contain;
+  display: block;
+  transition: width 100ms ease, height 100ms ease, object-position 250ms ease;
+}
+.pa-logo-image.outlined {
+  outline: 3px solid #f6b928;
+}
+
+.pa-logo-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.pa-logo-readout strong {
+  font-size: 17px;
+  color: #fff;
+}
+.pa-logo-readout span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.pa-logo-hint {
+  margin-left: auto;
+}
+
+/*
+  The logo editor lives inside a ModalRoot now, which brings Steam's dialog chrome with it.
+  The chrome is stripped back so the artwork is the whole window, and the stage - a real
+  focusable button, which is what makes the d-pad work at all - keeps none of the button
+  look.
+*/
+.pa-logo-modal {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+}
+.pa-logo-modal > div {
+  padding: 0 !important;
+}
+.pa-logo-modal .pa-logo-frame.DialogButton,
+.pa-logo-modal .pa-logo-frame {
+  display: block;
+  padding: 0 !important;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-align: initial;
+}
+.pa-logo-modal .pa-logo-frame.DialogButton:focus, .pa-logo-modal .pa-logo-frame.DialogButton.gpfocus,
+.pa-logo-modal .pa-logo-frame:focus,
+.pa-logo-modal .pa-logo-frame.gpfocus {
+  /* A visible focus ring, so it is obvious the artwork itself is what has the focus. */
+  outline: 2px solid rgba(246, 185, 40, 0.9) !important;
+  outline-offset: 2px;
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Filters share the editor's shell language so the whole plugin reads as one screen. */
+.pa-filters {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--basicui-header-height, 40px) + 14px) 22px calc(var(--gamepadui-current-footer-height, 40px) + 14px);
+  box-sizing: border-box;
+  color: #fff;
+}
+
+.pa-filters-shell {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(20, 23, 27, 0.94);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pa-filters-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pa-filters-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.pa-filter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pa-filter-block-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pa-filter-block-head strong {
+  font-size: 14px;
+}
+.pa-filter-block-head span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.35;
+}
+
+/* Always-visible checks, never a dropdown. */
+.pa-filter-checks,
+.pa-filter-choices {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pa-check {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 13px 0 9px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px !important;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pa-check .pa-check-box {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.34);
+  border-radius: 5px;
+}
+.pa-check .pa-check-box svg {
+  width: 13px;
+  height: 13px;
+}
+.pa-check.on .pa-check-box {
+  background: #f2b526;
+  border-color: #f2b526;
+  color: #171717;
+}
+.pa-check:focus, .pa-check.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+.pa-choice-pill {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 15px !important;
+  display: flex !important;
+  align-items: center;
+  border-radius: 20px !important;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pa-choice-pill.on {
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+.pa-choice-pill:focus, .pa-choice-pill.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+.pa-filter-size {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.pa-filter-size > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pa-filter-size .pa-filter-size-x {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+}
+
+.pa-filter-game {
+  display: flex !important;
+  gap: 8px;
+}
+.pa-filter-game-value {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+}
+.pa-filter-game-clear {
+  flex: 0 0 auto !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px !important;
+}
+
+.pa-filters-footer {
+  flex: 0 0 auto;
+  display: flex !important;
+  gap: 8px;
+}
+.pa-filters-footer button {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 46px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px !important;
+}
+.pa-filters-footer button:focus, .pa-filters-footer button.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+.pa-filters-footer .pa-filters-apply {
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+
+/*
+  The plugin page is pinned to the viewport instead of growing with its content.
+  A tall page made Steam scroll the whole route, dragging the top bar and the
+  footer along with it. Everything now scrolls inside `.pa-results-scroll`.
+*/
+#sgdb-wrap {
+  position: fixed;
+  top: var(--basicui-header-height, 40px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  background: #101214;
+  color: #fff;
+}
+
+.pa-page-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.pa-page-state img {
+  width: 42px;
+  height: 42px;
+}
+.pa-page-state strong {
+  font-size: 22px;
+}
+.pa-page-state span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 15px;
+}
+
+.pa-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 18px clamp(20px, 3.2vw, 56px) 0;
+  box-sizing: border-box;
+}
+
+.pa-ws-head {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+}
+
+.pa-ws-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pa-ws-identity .pa-ws-kicker {
+  color: #f2b526;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pa-ws-identity strong {
+  max-width: 78vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 27px;
+  line-height: 1.1;
+}
+.pa-ws-identity .pa-ws-status {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.pa-ws-tabs {
+  flex: 0 0 auto;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+.pa-ws-tabs button {
+  min-width: 0 !important;
+  height: 44px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+.pa-ws-tabs button svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+.pa-ws-tabs button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pa-ws-tabs button.active {
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+.pa-ws-tabs button:focus, .pa-ws-tabs button.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+  color: #fff !important;
+}
+.pa-ws-tabs button.active:focus, .pa-ws-tabs button.active.gpfocus {
+  color: #171717 !important;
+}
+
+.pa-ws-actions {
+  flex: 0 0 auto;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.pa-ws-actions .pa-action {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 14px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px !important;
+  white-space: nowrap;
+}
+.pa-ws-actions .pa-action svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+.pa-ws-actions .pa-action.pa-toggle.active {
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+.pa-ws-actions .pa-action:focus, .pa-ws-actions .pa-action.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+.pa-ws-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------- *
+ * Results
+ * ---------------------------------------------------------------- */
+.pa-results {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.pa-results-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--gamepadui-current-footer-height, 40px) + 18px);
+  /* Steam is a gamepad UI: the OS scrollbar has no business being here. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pa-results-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.pa-inline-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 0;
+  color: rgba(255, 255, 255, 0.66);
+}
+.pa-inline-state img {
+  width: 36px;
+  height: 36px;
+}
+
+.pa-empty {
+  grid-column: 1/-1;
+  justify-self: center;
+  padding: 40px 0;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pa-grid {
+  --asset-size: 150px;
+  display: grid;
+  grid-auto-flow: dense;
+  row-gap: 14px;
+  column-gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--asset-size), 100%), 1fr));
+}
+.pa-grid.type-grid_p {
+  --asset-size: 150px;
+}
+.pa-grid.type-icon {
+  --asset-size: 110px;
+}
+.pa-grid.type-grid_l {
+  --asset-size: 260px;
+}
+.pa-grid.type-hero {
+  --asset-size: 330px;
+}
+.pa-grid.type-logo {
+  --asset-size: 240px;
+}
+.pa-grid .asset-box-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  position: relative;
+}
+.pa-grid .asset-box-wrap .image-wrap {
+  background: url("/images/defaultappimage.png") center center;
+  background-size: cover;
+  position: relative;
+  width: 100%;
+  margin-top: auto;
+  outline-style: solid;
+  outline-color: transparent;
+  outline-width: 2px;
+  transition: outline-color ease-in-out 200ms;
+  /* aspect-ratio: 2/3; CEF version doesn't support this, gotta do it the painful way */
+}
+.pa-grid .asset-box-wrap .image-wrap.gpfocus, .pa-grid .asset-box-wrap .image-wrap:hover {
+  z-index: 10005;
+}
+.pa-grid .asset-box-wrap .image-wrap.type-logo {
+  padding-bottom: 0 !important;
+  height: 185px;
+}
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb {
+  padding: 0.5em;
+}
+.pa-grid .asset-box-wrap .image-wrap.type-hero > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap.type-hero > .thumb video.blur-bg {
+  transform: scale(1);
+}
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb, .pa-grid .asset-box-wrap .image-wrap.type-icon > .thumb {
+  background: url("/images/defaultappimage.png") center center;
+  background-size: cover;
+}
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb img,
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb video, .pa-grid .asset-box-wrap .image-wrap.type-icon > .thumb img,
+.pa-grid .asset-box-wrap .image-wrap.type-icon > .thumb video {
+  position: static;
+  width: auto;
+}
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap.type-logo > .thumb video.blur-bg, .pa-grid .asset-box-wrap .image-wrap.type-icon > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap.type-icon > .thumb video.blur-bg {
+  display: none;
+}
+.pa-grid .asset-box-wrap .image-wrap .preload-spinner {
+  position: absolute;
+  height: 2em;
+  opacity: 1;
+  transition: opacity 200ms linear;
+}
+.pa-grid .asset-box-wrap .image-wrap .preload-spinner[data-loaded=true] {
+  opacity: 0;
+}
+.pa-grid .asset-box-wrap .image-wrap > .thumb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+.pa-grid .asset-box-wrap .image-wrap > .thumb img,
+.pa-grid .asset-box-wrap .image-wrap > .thumb video {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  max-height: 100%;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.pa-grid .asset-box-wrap .image-wrap > .thumb img[data-loaded=true],
+.pa-grid .asset-box-wrap .image-wrap > .thumb video[data-loaded=true] {
+  opacity: 1;
+}
+.pa-grid .asset-box-wrap .image-wrap > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap > .thumb video.blur-bg {
+  filter: saturate(2) blur(20px);
+  transform: scale(1.25);
+  opacity: 0;
+  z-index: -2;
+}
+.pa-grid .asset-box-wrap .asset-download-progress {
+  width: 100%;
+  height: 5px;
+  margin-top: 0.35em;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.pa-grid .asset-box-wrap .asset-download-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #f6b928;
+  transition: width 180ms linear, background-color 180ms ease;
+}
+.pa-grid .asset-box-wrap .asset-download-progress.success > div {
+  background: #45c978;
+}
+.pa-grid .asset-box-wrap .asset-download-progress.error > div {
+  background: #ff5d5d;
+}
+.pa-grid .asset-box-wrap .asset-download-progress.indeterminate > div {
+  width: 38%;
+  animation: pa-artwork-download 1.05s ease-in-out infinite;
+}
+.pa-grid .asset-box-wrap .asset-facts {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65em;
+  padding-top: 0.38em;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.64em;
+  line-height: 1.2;
+}
+.pa-grid .asset-box-wrap .asset-facts > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pa-grid .asset-box-wrap .asset-facts > span:first-child {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.pa-grid .asset-box-wrap .asset-facts > span:last-child {
+  text-align: right;
+}
+.pa-grid .asset-box-wrap .author {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.65em;
+  padding-top: 0.15em;
+  margin-top: auto;
+  overflow: hidden;
+  z-index: 10006;
+  text-shadow: 0px 1px 1px #000;
+}
+.pa-grid .asset-box-wrap .author > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pa-grid .asset-box-wrap .author img {
+  width: 1em;
+  height: 1em;
+}
+.pa-grid .asset-box-wrap .chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 0.5em;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: -1;
+}
+.pa-grid .asset-box-wrap .chips .chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chip-color);
+  color: var(--chip-text-color);
+  padding: 0.3em 0.8em;
+  min-height: 2em;
+  gap: 0.3em;
+  border-radius: 0 5px 5px 0;
+  transition: transform cubic-bezier(0.33, 1, 0.68, 1) 300ms;
+  will-change: transform;
+}
+.pa-grid .asset-box-wrap .chips .chip:nth-child(1n) {
+  transition-delay: 120ms;
+}
+.pa-grid .asset-box-wrap .chips .chip:nth-child(2n) {
+  transition-delay: 240ms;
+}
+.pa-grid .asset-box-wrap .chips .chip:nth-child(3n) {
+  transition-delay: 360ms;
+}
+.pa-grid .asset-box-wrap .chips .chip:nth-child(4n) {
+  transition-delay: 480ms;
+}
+.pa-grid .asset-box-wrap .chips .chip:nth-child(5n) {
+  transition-delay: 600ms;
+}
+.pa-grid .asset-box-wrap .chips.chips-left {
+  right: auto;
+  left: 0;
+}
+.pa-grid .asset-box-wrap .chips.chips-left .chip {
+  border-radius: 5px 0 0 5px;
+}
+.pa-grid .asset-box-wrap .image-wrap:hover {
+  cursor: pointer;
+  outline-color: rgba(255, 255, 255, 0.5);
+}
+.pa-grid .asset-box-wrap .image-wrap.gpfocus.type-hero > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap.gpfocus.type-hero > .thumb video.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap:hover.type-hero > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap:hover.type-hero > .thumb video.blur-bg {
+  opacity: 0.65;
+}
+.pa-grid .asset-box-wrap .image-wrap.gpfocus .chips > .chip,
+.pa-grid .asset-box-wrap .image-wrap:hover .chips > .chip {
+  transform: translateX(calc(100% - 1px));
+  box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.25);
+}
+.pa-grid .asset-box-wrap .image-wrap.gpfocus .chips.chips-left > .chip,
+.pa-grid .asset-box-wrap .image-wrap:hover .chips.chips-left > .chip {
+  transform: translateX(calc(-100% + 1px));
+  box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.25);
+}
+.pa-grid .asset-box-wrap .image-wrap.gpfocus > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap.gpfocus > .thumb video.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap:hover > .thumb img.blur-bg,
+.pa-grid .asset-box-wrap .image-wrap:hover > .thumb video.blur-bg {
+  opacity: 0.4;
+}
+
+/* ---------------------------------------------------------------- *
+ * Details overlay
+ *
+ * Runs as a modal above the whole page: the grid behind it is blurred and
+ * cannot be navigated, and B slides it back out.
+ * ---------------------------------------------------------------- */
+.pa-details {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  justify-content: flex-end;
+  color: #fff;
+}
+
+.pa-details-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 13, 0.72);
+  backdrop-filter: blur(16px);
+  animation: pa-fade-in 160ms ease-out;
+}
+
+.pa-details-panel {
+  position: relative;
+  z-index: 1;
+  width: clamp(340px, 33vw, 520px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: calc(var(--basicui-header-height, 40px) + 18px) 20px calc(var(--gamepadui-current-footer-height, 40px) + 18px);
+  box-sizing: border-box;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(18, 21, 25, 0.97);
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.5);
+  animation: pa-slide-in 180ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.pa-details.is-closing .pa-details-backdrop {
+  animation: pa-fade-out 160ms ease-in forwards;
+}
+.pa-details.is-closing .pa-details-panel {
+  animation: pa-slide-out 170ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.pa-details-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pa-details-head strong {
+  font-size: 19px;
+}
+
+.pa-details-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pa-details-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/*
+  Capped at a third of the panel: whatever the artwork shape, the metadata and the
+  notes below it still fit without scrolling.
+*/
+.pa-details-preview {
+  flex: 0 0 auto;
+  height: 30vh;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+.pa-details-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+.pa-details-preview.type-logo, .pa-details-preview.type-icon {
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.06) 75%), linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.06) 75%);
+  background-size: 18px 18px;
+  background-position: 0 0, 9px 9px;
+}
+
+.pa-details-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+}
+.pa-details-meta > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+}
+.pa-details-meta dt {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.55);
+}
+.pa-details-meta dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.pa-details-langs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pa-details-langs .pa-details-langs-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pa-details-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.74);
+  overflow-wrap: anywhere;
+}
+.pa-details-notes p {
+  margin: 0;
+}
+
+.pa-details-notes-label {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pa-details-apply {
+  flex: 0 0 auto;
+  width: 100% !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 8px !important;
+  background: #f2b526 !important;
+  color: #171717 !important;
+}
+.pa-details-apply:focus, .pa-details-apply.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+@keyframes pa-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pa-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes pa-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes pa-slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+/* ---------------------------------------------------------------- *
+ * Manage tab
+ *
+ * The card is the thing you navigate; its buttons only appear once the card
+ * is chosen. With every button focusable at once Steam kept scrolling the list
+ * sideways and parking artwork behind the top bar or the footer.
+ * ---------------------------------------------------------------- */
+.pa-results-scroll-slots {
+  /* Leaves room so a focused card is never scrolled under Steam's chrome. */
+  scroll-padding-top: 24px;
+  scroll-padding-bottom: calc(var(--gamepadui-current-footer-height, 40px) + 40px);
+}
+
+.pa-slots {
+  display: flex !important;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: calc(var(--gamepadui-current-footer-height, 40px) + 24px);
+}
+
+.pa-slot {
+  display: grid;
+  grid-template-columns: minmax(0, clamp(300px, 30vw, 460px)) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  scroll-margin: 28px 0 calc(var(--gamepadui-current-footer-height, 40px) + 40px);
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+.pa-slot.is-focused, .pa-slot:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+.pa-slot.is-active {
+  background: rgba(242, 181, 38, 0.1);
+  box-shadow: inset 0 0 0 2px #f2b526;
+}
+.pa-slot .pa-slot-art {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.34);
+  box-sizing: border-box;
+}
+.pa-slot {
+  /* Contain, always: an artwork is shown whole or not at all. */
+}
+.pa-slot .pa-slot-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.pa-slot .pa-slot-missing {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 13px;
+}
+.pa-slot .pa-slot-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pa-slot .pa-slot-copy strong {
+  font-size: 20px;
+}
+.pa-slot .pa-slot-copy span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.pa-slot .pa-slot-copy .pa-slot-locked {
+  color: rgba(255, 255, 255, 0.38);
+  font-style: italic;
+}
+.pa-slot .pa-slot-cta {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pa-slot.is-focused .pa-slot-cta {
+  color: rgba(255, 255, 255, 0.7);
+}
+.pa-slot .pa-slot-actions {
+  display: flex !important;
+  gap: 8px;
+}
+.pa-slot .pa-slot-actions button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 46px !important;
+  padding: 0 18px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px !important;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.pa-slot .pa-slot-actions button svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+.pa-slot .pa-slot-actions button:focus, .pa-slot .pa-slot-actions button.gpfocus {
+  box-shadow: inset 0 0 0 2px #fff !important;
+}
+
+@keyframes sgdb-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "release": "1.1.4",
+  "build": "1.1.4-hotfix.2",
+  "date": "2026-09-18",
+  "python": {
+    "passed": 31,
+    "failed": 0
+  },
+  "javascript_default": {
+    "passed": 47,
+    "failed": 0,
+    "skipped": 1,
+    "note": "Historical original.call reproduction needs the external first 1.1.4 project."
+  },
+  "javascript_with_steam_react_and_previous_project": {
+    "passed": 48,
+    "failed": 0,
+    "skipped": 0,
+    "reactVersion": "19.1.1"
+  },
+  "browser_component_rendering": {
+    "passed": 12,
+    "failed": 0,
+    "renderer": "Steam ReactDOM 19.1.1 in Chromium 144.0.7559.96",
+    "uncaughtBrowserErrors": 0,
+    "hotfix1React130Reproduced": true,
+    "hotfix1NoNotesControlPassed": true,
+    "report": "browser-render-results.json",
+    "scope": "Actual compiled component tree and actual ReactDOM. Decky and selected Steam dependencies are adapters, not a complete Steam client."
+  },
+  "static_steam_contracts": {
+    "passed": 18,
+    "javascriptFilesScanned": 367
+  },
+  "typescript": "5.8.3",
+  "node": "22.16.0",
+  "builder": "offline-typescript",
+  "sourceAndBundleHashesVerified": true,
+  "semverAndManifestsPreserved": true,
+  "backendUnchanged": true,
+  "unchangedLocaleJsonFiles": 31,
+  "steamClientWindowsLiveTest": false,
+  "standardRollupBuild": false,
+  "fullDependencySemanticTypecheck": false,
+  "lint": false,
+  "actualReactDOMComponentTest": true,
+  "steamSourceRedistributed": false,
+  "personalLogsRedistributed": false,
+  "commands": [
+    "npm run test:offline",
+    "STEAM_REACT_BUNDLE=<Steam libraries bundle> ARTWORKS_PREVIOUS_PROJECT=<first 1.1.4 project> node tools/test-frontend.cjs",
+    "python tools/test-browser.py --steam-dir <Steam input> --previous-zip <Hotfix1 Installer> --report tests/reports/browser-render-results.json",
+    "node tools/check-steam-contracts.cjs <Steam input>",
+    "node --check dist/index.js"
+  ],
+  "changedOrAddedFiles": [
+    "CHANGELOG.md",
+    "HOTFIX1_1.1.4.md",
+    "HOTFIX_1.1.4.md",
+    "README.md",
+    "TESTING_1.1.4.md",
+    "dist/build-info.json",
+    "dist/index.js",
+    "src/components/FooterGlyph.tsx",
+    "src/utils/build.ts",
+    "tests/footerGlyph114.test.cjs",
+    "tests/reports/browser-render-results.json",
+    "tests/reports/test-results.json",
+    "tests/steam-renderer-bootstrap.js",
+    "tools/build-offline.cjs",
+    "tools/prepare-browser-fixture.cjs",
+    "tools/test-browser.py"
+  ]
+}

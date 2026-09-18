@@ -1,4 +1,5 @@
-import { findSP } from '@decky/ui';
+import { findSteamUI as findSP } from '../utils/steamWindow';
+
 
 import { homeCarouselClasses, sel } from '../static-classes';
 import log from '../utils/log';

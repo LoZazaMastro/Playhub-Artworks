@@ -1,0 +1,81 @@
+{
+  "build": "1.1.4-hotfix.2",
+  "renderer": "Steam React/ReactDOM 19.1.1 in Chromium",
+  "chromiumVersion": "144.0.7559.96",
+  "passed": 12,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Hotfix1: actual ReactDOM reproduces React #130 inside Chip/Asset when notes are present",
+      "passed": true,
+      "error": "Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "componentStackContains": [
+        "Chip",
+        "Asset"
+      ],
+      "reactVersion": "19.1.1"
+    },
+    {
+      "name": "Hotfix1 control: the same artwork without notes does not crash",
+      "passed": true
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (native glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": true
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (missing glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": false
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (throw glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": false
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (invalid glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": false
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (memo glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": true
+    },
+    {
+      "name": "Hotfix2: artwork with notes renders and activates (forwardRef glyph lookup)",
+      "passed": true,
+      "reactVersion": "19.1.1",
+      "nativeGlyph": true
+    },
+    {
+      "name": "Hotfix2: absent notes do not trigger any glyph lookup",
+      "passed": true
+    },
+    {
+      "name": "Hotfix2: mixed asset types, content badges and progress preserve the grid",
+      "passed": true
+    },
+    {
+      "name": "Hotfix2: one lookup per grid; a late Steam glyph recovers and is cached",
+      "passed": true
+    },
+    {
+      "name": "Hotfix2: repeated close/reopen and unmount use the actual ReactDOM lifecycle",
+      "passed": true
+    }
+  ],
+  "uncaughtBrowserErrors": [],
+  "inputSha256": {
+    "libraries~00299a408.js": "2e12d4d2f83b98069e20747eb6250b8f54ddc902e9c586dd688769f146a03467",
+    "chunk~2dcc5aaf7.js": "af34036df7a4b0b73888f0069f9968c14a3afdb4dccfb2d679ba1136a7fa878d"
+  },
+  "scope": "Actual compiled Asset, Chips, FooterGlyph and plugin error boundary, actual Steam ReactDOM and native footer factory. Decky Focusable/API, button enums and localization are test adapters. No network and no live Steam client."
+}

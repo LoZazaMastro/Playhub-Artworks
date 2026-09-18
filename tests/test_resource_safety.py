@@ -143,11 +143,11 @@ class ResourceSafetyTests(unittest.TestCase):
         finally:
             plugin._download_executor.shutdown(wait=True)
 
-    def test_release_metadata_is_1_1_1(self):
+    def test_release_metadata_is_1_1_4(self):
         package = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
         release = json.loads((ROOT / '.playhub-release.json').read_text(encoding='utf-8'))
-        self.assertEqual(package['version'], '1.1.2')
-        self.assertEqual(release['version'], '1.1.2')
+        self.assertEqual(package['version'], '1.1.4')
+        self.assertEqual(release['version'], '1.1.4')
 
 
 if __name__ == '__main__':

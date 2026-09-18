@@ -10,6 +10,8 @@ import {
   useRef,
 } from 'react';
 import { showModal } from '@decky/ui';
+import { toaster } from '@decky/api';
+import { localizeError } from '../utils/i18n';
 import isEqual from 'react-fast-compare';
 
 import useSettings from '../hooks/useSettings';
@@ -17,6 +19,7 @@ import { useSGDB } from '../hooks/useSGDB';
 import FiltersModal from '../modals/FiltersModal';
 import GameSelectionModal from '../modals/GameSelectionModal';
 import log from '../utils/log';
+import { exactTitleMatch, uniqueAssets } from '../utils/searchResults';
 import compareFilterWithDefaults from '../utils/compareFilterWithDefaults';
 
 export type AssetSearchContextType = {
@@ -150,7 +153,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const matches = await searchSgdbGames(title);
         if (epoch !== lifecycle.current) return null;
-        const match = matches?.[0];
+        const match = exactTitleMatch(title, Array.isArray(matches) ? matches : []);
         if (!match) return null;
         log('resolved SteamGridDB game', { title, id: match.id, name: match.name });
         const persist = Boolean(appOverview?.BIsModOrShortcut());
@@ -269,13 +272,16 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
       if (controller.signal.aborted || token !== requestToken.current || activeAssetType.current !== assetType) return;
       log('search resp', assetType, response);
       setAssets(response);
-      setEndReached(false);
+      setEndReached(response.length === 0 || provider !== 'steamgriddb');
       setPage(requestedPage + 1);
     } catch (error: any) {
       if (error?.name === 'AbortError') {
         log('Search Aborted');
       } else {
         log('search failed', { assetType, provider, message: error?.message, stack: error?.stack });
+        if (token === requestToken.current && !controller.signal.aborted) {
+          toaster.toast({ title: 'Playhub Artworks', body: localizeError(error, 'PA_TRY_AGAIN') });
+        }
       }
     } finally {
       if (searchAbort.current === controller) searchAbort.current = null;
@@ -340,7 +346,7 @@ export const AssetSearchContext: FC<{ children: ReactNode }> = ({ children }) =>
 
       log('search load more resp', response);
       if (response.length > 0) {
-        setAssets((current) => [...current, ...response]);
+        setAssets((current) => uniqueAssets([...current, ...response]));
         setPage((current) => current + 1);
       } else {
         setEndReached(true);

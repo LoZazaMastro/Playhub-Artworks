@@ -1,102 +1,58 @@
-import { findSP } from '@decky/ui';
+import { findSteamUI } from './steamWindow';
 
-/*
-  Every helper here is defensive on purpose.
+const injected = new Map<string, string>();
+const documents = new Set<Document>();
+const uiDocument = (): Document | null => findSteamUI()?.window.document ?? null;
 
-  `findSP()` throws while Steam is still building its UI, which is exactly when the plugin
-  mounts on a cold start. The throw propagated out of `addSquareLibraryPatch`, aborted
-  `refreshLayoutPatches` before it could schedule its retry, and the library cover format
-  was silently never applied for the rest of the session. Now a failure is reported to the
-  caller, which retries, instead of taking the whole layout setup down with it.
-*/
-const uiDocument = (): Document | null => {
+const upsert = (doc: Document | null | undefined, id: string, css: string): boolean => {
+  if (!doc?.head) return false;
   try {
-    return findSP()?.window?.document ?? null;
-  } catch (_) {
-    return null;
-  }
+    documents.add(doc);
+    let element = doc.getElementById(id);
+    if (!element) {
+      element = doc.createElement('style');
+      element.id = id;
+      element.textContent = css;
+      doc.head.append(element);
+    } else if (element.textContent !== css) {
+      element.textContent = css;
+    }
+    return true;
+  } catch { return false; }
 };
 
-/*
-  What was injected, kept so it can be put back.
+/** Retain desired CSS even when Steam has not constructed its document yet. */
+export const addStyle = (id: string, css: string): boolean => {
+  injected.set(id, css);
+  return upsert(uiDocument(), id, css);
+};
+export const updateStyle = addStyle;
 
-  Closing Big Picture and opening it again REBUILDS Steam's interface: the plugin's
-  javascript keeps running with all its patches alive, but the document it wrote its
-  `<style>` into is gone. The result is the worst possible half-state - the carousel is
-  still being told to use square column widths while the CSS that squares the capsule no
-  longer exists, so every cover is drawn portrait at square width: "portrait and taller
-  than normal". Remembering the css here is what makes putting it back possible.
-*/
-const injected = new Map<string, string>();
-
-/**
- * Puts back any style that is no longer in the current document.
- *
- * @returns the ids that had to be re-injected - empty when nothing was missing.
- */
 export const restoreStylesTo = (doc: Document | null | undefined): string[] => {
   if (!doc?.head) return [];
   const restored: string[] = [];
   injected.forEach((css, id) => {
     try {
-      if (doc.getElementById(id)) return;
-      const styleEl = doc.createElement('style');
-      styleEl.id = id;
-      styleEl.textContent = css;
-      doc.head.append(styleEl);
-      restored.push(id);
-    } catch (_) {
-      // Steam UI mid-rebuild; the next beat tries again.
-    }
+      if (doc.getElementById(id)?.textContent === css) return;
+      if (upsert(doc, id, css)) restored.push(id);
+    } catch { /* Retry on the next layout beat. */ }
   });
   return restored;
 };
-
 export const restoreStyles = (): string[] => restoreStylesTo(uiDocument());
-
-/** True when the style is in place. */
-export const addStyle = (id: string, css: string): boolean => {
-  const doc = uiDocument();
-  if (!doc?.head) return false;
-  try {
-    injected.set(id, css);
-    if (doc.getElementById(id)) return true;
-    const styleEl = doc.createElement('style');
-    styleEl.id = id;
-    styleEl.textContent = css;
-    doc.head.append(styleEl);
-    return true;
-  } catch (_) {
-    return false;
-  }
-};
 
 export const removeStyle = (id: string) => {
   injected.delete(id);
+  const current = uiDocument();
+  if (current) documents.add(current);
   try {
-    uiDocument()?.getElementById(id)?.remove();
-  } catch (_) {
-    // Steam UI already gone.
-  }
-};
-
-/** Updates the style if it exists, creates it if not. Returns true when it is in place. */
-export const updateStyle = (id: string, css: string): boolean => {
-  const doc = uiDocument();
-  if (!doc?.head) return false;
-  try {
-    injected.set(id, css);
-    const existing = doc.getElementById(id);
-    if (existing) {
-      existing.textContent = css;
-      return true;
+    for (const entry of (window as any).SteamUIStore?.WindowStore?.SteamUIWindows ?? []) {
+      try { if (entry.BrowserWindow?.document) documents.add(entry.BrowserWindow.document); } catch { /* Closed. */ }
     }
-  } catch (_) {
-    return false;
+  } catch { /* Steam is shutting down. */ }
+  for (const doc of documents) {
+    try { doc.getElementById(id)?.remove(); } catch { /* Closed. */ }
   }
-  return addStyle(id, css);
+  if (!injected.size) documents.clear();
 };
-
-export const removeStyles = (...ids: string[]) => {
-  ids.forEach(removeStyle);
-};
+export const removeStyles = (...ids: string[]) => ids.forEach(removeStyle);

@@ -1,8 +1,14 @@
-export const steamView = (): Window => window;
+import { findSteamUI } from './steamWindow';
 
-export const steamPath = (): string => window.location.pathname;
+export const steamView = (): Window => findSteamUI()?.window ?? window;
 
-export const steamHref = (): string => window.location.href;
+export const steamPath = (): string => {
+  try { return findSteamUI()?.path ?? steamView().location?.pathname ?? ''; } catch { return ''; }
+};
+
+export const steamHref = (): string => {
+  try { return steamView().location?.href ?? ''; } catch { return ''; }
+};
 
 export const isHomeRoute = (path = steamPath()): boolean =>
   /\/library\/home(?:\/|$)/i.test(path);

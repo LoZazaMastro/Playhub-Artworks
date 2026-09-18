@@ -1,6 +1,8 @@
+import { findSteamUI as findSP } from '../utils/steamWindow';
 import { cloneElement, isValidElement } from 'react';
 import { call, routerHook, RoutePatch } from '@decky/api';
-import { afterPatch, createReactTreePatcher, findInReactTree, findSP } from '@decky/ui';
+import { createOutputPatch } from '../utils/reactOutputPatch';
+import log from '../utils/log';
 
 import { rerenderAfterPatchUpdate } from './patchUtils';
 
@@ -8,7 +10,7 @@ export const HOME_RECENT_COVER_SETTING_KEY = 'home_recent_cover';
 let enabled = false;
 let revision = 0;
 let routePatch: RoutePatch | undefined;
-const rootPatches = new Map<object, { unpatch: () => void }>();
+let outputPatch: ReturnType<typeof createOutputPatch> | undefined;
 const CACHE_KEY = 'playhub_artworks_home_recent_cover';
 
 export const applyCachedHomeRecentCover = (): void => {
@@ -39,16 +41,6 @@ const presentRecentCover = (tree: any): any => {
   return cloneElement(tree, {}, presentRecentCover(props.children));
 };
 
-const descend = createReactTreePatcher(
-  [
-    (tree: any) => tree,
-    (tree: any) => findInReactTree(tree, (node: any) =>
-      node?.props && 'autoFocus' in node.props && 'showBackground' in node.props),
-  ],
-  (_args: any, tree: any) => enabled ? presentRecentCover(tree) : tree,
-  'PlayhubHomeRecentCover',
-);
-
 export const setHomeRecentCover = (value: boolean, mounting = false): void => {
   const changed = enabled !== (value === true);
   revision += 1;
@@ -56,12 +48,15 @@ export const setHomeRecentCover = (value: boolean, mounting = false): void => {
   try { window.localStorage.setItem(CACHE_KEY, String(enabled)); } catch { /* Storage unavailable. */ }
   try { findSP()?.window?.localStorage.setItem(CACHE_KEY, String(enabled)); } catch { /* Window not ready. */ }
   if (enabled && !routePatch) {
+    outputPatch = createOutputPatch([
+      () => true,
+      () => true,
+      (node: any) => node?.props && 'autoFocus' in node.props && 'showBackground' in node.props,
+    ], (tree) => enabled ? presentRecentCover(tree) : tree,
+    (error) => log('recent cover output transform skipped', error));
     routePatch = routerHook.addPatch('/library/home', (props) => {
-      const child = props.children;
-      if (child && !rootPatches.has(child)) {
-        rootPatches.set(child, afterPatch(child, 'type', descend));
-      }
-      return props;
+      const children = outputPatch?.apply(props.children) ?? props.children;
+      return children === props.children ? props : { ...props, children };
     });
   }
   if (!mounting && changed) rerenderAfterPatchUpdate();
@@ -81,7 +76,8 @@ export const stopHomeRecentCover = (): void => {
   enabled = false;
   if (routePatch) routerHook.removePatch('/library/home', routePatch);
   routePatch = undefined;
-  for (const patch of rootPatches.values()) patch.unpatch();
-  rootPatches.clear();
-  rerenderAfterPatchUpdate();
+  outputPatch?.stop();
+  outputPatch = undefined;
+  // Never navigate while Decky is unmounting/replacing this plugin.
+
 };

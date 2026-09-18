@@ -1,3 +1,6 @@
+import PluginErrorBoundary from './components/PluginErrorBoundary';
+import { createFrontendDiagnostics } from './utils/frontendDiagnostics';
+import { ARTWORKS_BUILD } from './utils/build';
 import { definePlugin, quickAccessMenuClasses } from '@decky/ui';
 import { routerHook } from '@decky/api';
 
@@ -6,13 +9,14 @@ import MenuIcon from './components/Icons/MenuIcon';
 import { SGDBProvider } from './hooks/useSGDB';
 import { SettingsProvider } from './hooks/useSettings';
 import SGDBPage from './components/plugin-pages/SGDBPage';
-import contextMenuPatch, { LibraryContextMenu } from './patches/contextMenuPatch';
+import contextMenuPatch from './patches/contextMenuPatch';
 import { removeStyles } from './utils/styleInjector';
 import { applyCachedLayout, refreshLayoutPatches, stopLayoutPatches } from './patches/layoutPatchController';
 import { updateSquareLibraryRoute } from './patches/squareLibraryPatch';
 import { attachHomeCarousel, homeUsesRouteScope, updateHomeRoute } from './patches/homePatch';
 import { guardAfterRoute, startLayoutGuard, stopLayoutGuard } from './patches/layoutGuard';
-import log from './utils/log';
+import log, { startLogging, stopLogging } from './utils/log';
+import { startRuntime, stopRuntime } from './utils/runtimeLifecycle';
 import { steamHref, steamPath } from './utils/steamRoute';
 import { cancelBulkArtworkJob } from './utils/bulkJobStore';
 import {
@@ -33,22 +37,28 @@ const ROUTE = '/playhub-artworks/:appid/:assetType?';
 const RUNTIME_CLEANUP = '__playhubArtworksRuntimeCleanup';
 
 export default definePlugin(() => {
+  let cleaned = false;
+  const routeTimers = new Set<number>();
   try {
     (window as any)[RUNTIME_CLEANUP]?.();
   } catch (_) {
     // The previous Steam view is already gone.
   }
 
+  startRuntime();
+  startLogging();
+  const diagnostics = createFrontendDiagnostics();
+
   // Register the cached asset choice before unrelated UI and backend setup.
   applyCachedHomeRecentCover();
-  log('plugin mounted', { href: steamHref(), language: navigator.language });
+  log('plugin mounted', { build: ARTWORKS_BUILD, href: steamHref(), path: steamPath(), language: navigator.language });
 
   routerHook.addRoute(ROUTE, () => (
-    <SettingsProvider>
-      <SGDBProvider>
-        <SGDBPage />
-      </SGDBProvider>
-    </SettingsProvider>
+    <PluginErrorBoundary area="artwork-page">
+      <SettingsProvider>
+        <SGDBProvider><SGDBPage /></SGDBProvider>
+      </SettingsProvider>
+    </PluginErrorBoundary>
   ), {
     exact: true,
   });
@@ -56,37 +66,20 @@ export default definePlugin(() => {
   let menuPatches: ReturnType<typeof contextMenuPatch> | undefined;
 
   try {
-    menuPatches = contextMenuPatch(LibraryContextMenu);
+    menuPatches = contextMenuPatch();
   } catch (error) {
     log('context menu patch failed', error);
   }
 
-  /*
-    Anything this plugin throws is written to the diagnostic log with its stack.
-    Without this a runtime error only ever showed up as a bare
-    "Cannot read properties of undefined" with no way to tell where it came from.
-  */
-  const isOurs = (stack?: string) => Boolean(stack && /playhub-artworks/i.test(stack));
-  const onError = (event: ErrorEvent) => {
-    if (!isOurs(event.error?.stack) && !isOurs(event.filename)) return;
-    log('uncaught error', {
-      message: event.message,
-      source: event.filename,
-      line: event.lineno,
-      column: event.colno,
-      stack: event.error?.stack,
-    });
-  };
-  const onRejection = (event: PromiseRejectionEvent) => {
-    const reason: any = event.reason;
-    if (!isOurs(reason?.stack)) return;
-    log('unhandled rejection', { message: reason?.message ?? String(reason), stack: reason?.stack });
-  };
-  window.addEventListener('error', onError);
-  window.addEventListener('unhandledrejection', onRejection);
-
   let lastRoute = steamPath();
+  let nextMenuCheck = 0;
   const routeWatcher = window.setInterval(() => {
+    if (cleaned) return;
+    diagnostics.sync();
+    if (Date.now() >= nextMenuCheck) {
+      nextMenuCheck = Date.now() + 3000;
+      try { menuPatches?.ensure(); } catch { /* Lazy library chunk not ready. */ }
+    }
     const currentRoute = steamPath();
     if (currentRoute !== lastRoute) {
       lastRoute = currentRoute;
@@ -106,8 +99,13 @@ export default definePlugin(() => {
       const path = currentRoute;
       if (path.includes('/library/home')) {
         // The recents row is built a moment after the route changes.
-        window.setTimeout(attachHomeCarousel, 500);
-        window.setTimeout(attachHomeCarousel, 1400);
+        for (const delay of [500, 1400]) {
+          const timer = window.setTimeout(() => {
+            routeTimers.delete(timer);
+            if (!cleaned) attachHomeCarousel();
+          }, delay);
+          routeTimers.add(timer);
+        }
       }
       if (path.includes('/library/home') || /\/routes\/library\/?$/.test(path) || path === '/library') {
         /*
@@ -156,16 +154,19 @@ export default definePlugin(() => {
     } catch (error) {
       log('layout patches skipped', error);
     }
+    if (cleaned) return;
     try {
       await refreshInstantLibraryScroll();
     } catch (error) {
       log('instant library scroll skipped', error);
     }
+    if (cleaned) return;
     try {
       await refreshDisableLibraryLetterHold();
     } catch (error) {
       log('disable library letter hold skipped', error);
     }
+    if (cleaned) return;
     /*
       Steam is still building itself for several seconds after a cold start, so the layout
       is verified again and again over the first minute rather than trusted once.
@@ -173,37 +174,40 @@ export default definePlugin(() => {
     startLayoutGuard();
   })();
 
-  let cleaned = false;
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
     log('plugin dismounted');
-    cancelBulkArtworkJob();
+    stopRuntime();
+    try { cancelBulkArtworkJob(); } catch (_) { /* Continue independent teardown. */ }
     window.clearInterval(routeWatcher);
-    stopLayoutGuard();
-    window.removeEventListener('error', onError);
-    window.removeEventListener('unhandledrejection', onRejection);
-    routerHook.removeRoute(ROUTE);
+    routeTimers.forEach(timer => window.clearTimeout(timer));
+    routeTimers.clear();
+    try { stopLayoutGuard(); } catch (_) { /* Continue independent teardown. */ }
+    try { diagnostics.stop(); } catch { /* A Steam window may already be closed. */ }
+    try { routerHook.removeRoute(ROUTE); } catch (_) { /* Route may already be removed. */ }
     try { menuPatches?.unpatch(); } catch (_) { /* already gone */ }
-    stopHomeRecentCover();
-    stopLibraryPreload();
+    try { stopHomeRecentCover(); } catch (_) { /* Continue independent teardown. */ }
+    try { stopLibraryPreload(); } catch (_) { /* Continue independent teardown. */ }
     try { stopLayoutPatches(); } catch (_) { /* already gone */ }
     try { stopInstantLibraryScroll(); } catch (_) { /* already gone */ }
     try { stopDisableLibraryLetterHold(); } catch (_) { /* already gone */ }
 
+    stopLogging();
     removeStyles(
       'sgdb-square-capsules-library',
       'playhub-artworks-square-game-info',
       'sgdb-square-capsules-home',
       'sgdb-carousel-logo',
-      'playhub-artworks-home-fit'
+      'playhub-artworks-home-fit',
+      'playhub-artworks-home-hero-center'
     );
   };
   (window as any)[RUNTIME_CLEANUP] = cleanup;
 
   return {
-    title: <div className={quickAccessMenuClasses.Title}>Playhub Artworks</div>,
-    content: <SettingsProvider><QuickAccessSettings /></SettingsProvider>,
+    title: <div className={quickAccessMenuClasses?.Title}>Playhub Artworks</div>,
+    content: <PluginErrorBoundary area="quick-access"><SettingsProvider><QuickAccessSettings /></SettingsProvider></PluginErrorBoundary>,
     icon: <MenuIcon />,
     onDismount() {
       cleanup();

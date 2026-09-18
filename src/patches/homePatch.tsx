@@ -1,4 +1,3 @@
-import { afterPatch, createReactTreePatcher, findInReactTree } from '@decky/ui';
 import { RoutePatch, routerHook } from '@decky/api';
 
 import { libraryAssetImageClasses, appportraitClasses, homeCarouselClasses, sel } from '../static-classes';
@@ -11,28 +10,9 @@ import { rerenderAfterPatchUpdate } from './patchUtils';
 
 let patch: RoutePatch | undefined;
 
-/*
-  Why this is built on `createReactTreePatcher`.
-
-  Descending Steam's Home by hand went wrong three separate ways, and each fix caused the
-  next problem:
-
-    - patching on every render stacked one wrapper per render until the chain broke with
-      `TypeError: patch.original.call is not a function` and the library died;
-    - caching the RENDERED OUTPUT stopped the stacking, but froze the subtree: the
-      Novita / Amici / Consigliati tabs then only changed after leaving the page and
-      coming back;
-    - dropping those caches freed the tabs and brought back the black flash, because
-      `wrapReactType` mints a new component type on every render and React answers a new
-      type identity by unmounting and remounting the whole subtree.
-
-  Decky already ships the correct primitive. `createReactTreePatcher` caches the WRAPPER
-  keyed by the original component type, so the identity React sees is stable (no remount,
-  no flash), the tree returned is always the live one (tabs keep working), and it picks
-  the right patch strategy for function, class, memo and forwardRef components (so it
-  never stores an `undefined` original). The cache lives in the patcher, so it is created
-  once here and reused by every render.
-*/
+/* Square geometry uses the native carousel methods, not React element.type.
+ * Route callbacks must never turn memo/forwardRef objects into callable functions.
+ */
 
 const HOME_FIT_STYLE_ID = 'playhub-artworks-home-fit';
 const HOME_SQUARE_STYLE_ID = 'sgdb-square-capsules-home';
@@ -213,8 +193,7 @@ const releaseCarouselPatches = () => {
   becoming a limitation instead of an addition.
 */
 export const addHomePatch = (mounting = false, square = false): boolean => {
-  /* Whatever a previous bundle installed goes down first, always. */
-  releaseCarouselPatches();
+  if (!patch) releaseCarouselPatches();
 
   const container = sel(libraryAssetImageClasses, 'Container');
   const portrait = sel(libraryAssetImageClasses, 'PortraitImage');
@@ -297,121 +276,19 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
 
   applyHomeFitStyle(squareCells, inRecents);
 
-  /*
-    The column width, patched exactly once - the original kept ON the props object.
-
-    The history matters, because it is what tells us the patch itself was never the problem.
-
-    Steam lays the recents out as a virtualised row: each item is placed absolutely inside a
-    slot of `fnGetColumnWidth(index)` pixels, so a square cover that fills the row height
-    needs a wider slot and CSS alone made the covers overlap. Patching that function looked
-    like it destroyed the row - twenty capsules to none - and it did, twice. But the run
-    after removing the patch entirely measured the row at 232x232 with an 11px gap and no
-    remounting: the ONLY thing on it was the layer left behind by the previous bundle. One
-    layer works. Two layers, an old bundle's and a new one's, take the row down.
-
-    Steam's props object outlives the plugin bundle, so the original function is stashed on
-    the object itself. Any bundle, at any time, can put it back before installing its own -
-    which makes a second layer impossible by construction.
-
-    The descent uses Decky's tree patcher, which caches the wrapper by ORIGINAL component
-    type. Walking down by hand calls `wrapReactType` on every render, minting a new type
-    each time; React reads that as a different component and remounts the subtree, and that
-    is the black flash every few seconds and the reason focus stopped reaching the lower
-    half of the Home.
-  */
-  const sizeCarousel = (tree: any) => {
-    const carouselProps = findInReactTree(
-      tree,
-      (node: any) => node?.nItemHeight && node?.fnItemRenderer && node?.fnGetColumnWidth
-    );
-    if (!carouselProps) {
-      (window as any).__playhubHomeDiag = { installed: false, reason: 'carousel not found' };
-      return;
-    }
-
-    const store = registry();
-    if (carouselProps.__playhubGeneration === store.generation) return;
-    carouselProps.__playhubGeneration = store.generation;
-
-    /* Whatever any bundle put here before, the original goes back first. */
-    const original = carouselProps[ORIGINAL_WIDTH_KEY] ?? carouselProps.fnGetColumnWidth;
-    carouselProps[ORIGINAL_WIDTH_KEY] = original;
-    registry().lastProps = carouselProps;
-    carouselProps.fnGetColumnWidth = original;
-
-    const rowProps = findInReactTree(tree, (node: any) => Array.isArray(node?.props?.games)) as any;
-    const games: any[] | undefined = rowProps?.props?.games;
-    const capsuleHeight = carouselProps.nItemHeight
-      - parseInt(String(homeCarouselClasses?.LabelHeight ?? '0'), 10);
-
-    carouselProps.fnGetColumnWidth = (index: number, ...rest: any[]) => {
-      // The banner keeps Steam's own width, and a separator keeps its thin slot.
-      if (!squareColumns) return original.call(carouselProps, index, ...rest);
-      if (index === 0) {
-        const nativeWidth = original.call(carouselProps, index, ...rest);
-        // The first item can now be a portrait cover instead of the featured banner.
-        if (Math.abs(nativeWidth - capsuleHeight * 2 / 3) > 6) return nativeWidth;
-      }
-      if (games && games[index] === 0) return original.call(carouselProps, index, ...rest);
-      return capsuleHeight;
-    };
-
-    (window as any).__playhubHomeDiag = {
-      installed: true,
-      columnWidth: capsuleHeight,
-      generazione: store.generation,
-    };
-  };
-
-  const descend = createReactTreePatcher(
-    [
-      (tree: any) => tree,
-      (tree: any) => findInReactTree(tree, (node: any) =>
-        node?.props && ('autoFocus' in node.props) && ('showBackground' in node.props)),
-      (tree: any) => findInReactTree(tree, (node: any) => node?.props?.games && node?.props?.onItemFocus),
-      (tree: any) => tree,
-    ],
-    (_args: any, tree: any) => {
-      sizeCarousel(tree);
-      return tree;
-    },
-    'PlayhubHomeRecents'
-  );
-
-  /* The switch, read by the override on every layout pass. */
+  const wasSquare = squareColumns;
   squareColumns = squareCells;
-
-  /*
-    And the same treatment for every OTHER cover carousel on the Home.
-
-    "Play a title from your library" in the Consigliati tab is built from the same
-    component as the recents row, so its covers were square inside portrait slots and ended
-    up crammed together. This patches the method all carousels share and picks its targets
-    by shape, so the shelves get square slots without a second tree descent.
-  */
   if (squareCells) addCarouselWidthPatch(true);
   else setCarouselWidthSquare(false);
 
-  /*
-    Registered in BOTH modes, on purpose.
-
-    Only registering it for square covers meant that switching to portrait left the previous
-    bundle's override alive on Steam's props - with its own closure, still answering "square"
-    - and nothing in the new bundle could reach it. Measured: portrait covers drawn 232 wide
-    in a 155 slot, running past the bottom of the row. Registering always means every mount
-    installs the CURRENT override, which reads the switch and hands back Steam's own width
-    when square covers are off.
-  */
-  {
-    patch = routerHook.addPatch('/library/home', (props) => {
-      try {
-        afterPatch(props.children, 'type', descend);
-      } catch (error: any) {
-        (window as any).__playhubHomeDiag = { installed: false, reason: String(error?.message ?? error) };
-      }
-      return props;
-    });
+  if (!patch) {
+    // Keep route bookkeeping but return the original tree untouched. Native
+    // carousel methods already supply square widths; a second tree patch both
+    // duplicated that work and could call a memo object as a function.
+    patch = routerHook.addPatch('/library/home', (props) => props);
+  } else {
+    if (!mounting && wasSquare !== squareCells) rerenderAfterPatchUpdate();
+    return square ? squareCells : true;
   }
 
   if (!mounting) rerenderAfterPatchUpdate();

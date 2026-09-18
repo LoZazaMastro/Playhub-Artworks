@@ -1,5 +1,6 @@
+import { findSteamUI as findSP } from '../utils/steamWindow';
 import { call } from '@decky/api';
-import { findSP } from '@decky/ui';
+
 
 import { appportraitClasses, gamepadLibraryClasses, sel } from '../static-classes';
 import log from '../utils/log';
@@ -310,7 +311,9 @@ export const applyCachedInstantLibraryScroll = (): boolean => {
   return true;
 };
 
+let refreshGeneration = 0;
 export const refreshInstantLibraryScroll = async () => {
+  const generation = refreshGeneration;
   let stored = false;
   try {
     stored = Boolean(await call<[string, boolean], boolean>('get_setting', SETTING_KEY, false));
@@ -319,10 +322,11 @@ export const refreshInstantLibraryScroll = async () => {
     const cached = readCachedSetting();
     if (cached !== null) stored = cached;
   }
-  setInstantLibraryScroll(stored);
+  if (generation === refreshGeneration) setInstantLibraryScroll(stored);
 };
 
 export const stopInstantLibraryScroll = () => {
+  refreshGeneration += 1;
   enabled = false;
   unbindDocument();
   if (pendingFrame !== undefined) {

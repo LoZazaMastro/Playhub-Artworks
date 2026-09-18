@@ -1,6 +1,8 @@
 export const MAX_ARTWORK_BYTES = 16 * 1024 * 1024;
 export const MAX_ARTWORK_PIXELS = 16_000_000;
 export const MAX_ARTWORK_DIMENSION = 6144;
+export const MAX_SOURCE_PIXELS = 36_000_000;
+export const MAX_SOURCE_DIMENSION = 16384;
 export const IMAGE_FETCH_TIMEOUT_MS = 20_000;
 export const IMAGE_DECODE_TIMEOUT_MS = 15_000;
 
@@ -28,18 +30,27 @@ export const assertBlobSize = (blob: Blob) => {
   if (blob.size > MAX_ARTWORK_BYTES) throw tooLarge();
 };
 
-export const assertImageDimensions = (image: HTMLImageElement) => {
+export const assertImageDimensions = (image: HTMLImageElement, source = false) => {
   const width = Number(image.naturalWidth || 0);
   const height = Number(image.naturalHeight || 0);
   if (
     width <= 0
     || height <= 0
-    || width > MAX_ARTWORK_DIMENSION
-    || height > MAX_ARTWORK_DIMENSION
-    || width * height > MAX_ARTWORK_PIXELS
+    || width > (source ? MAX_SOURCE_DIMENSION : MAX_ARTWORK_DIMENSION)
+    || height > (source ? MAX_SOURCE_DIMENSION : MAX_ARTWORK_DIMENSION)
+    || width * height > (source ? MAX_SOURCE_PIXELS : MAX_ARTWORK_PIXELS)
   ) {
-    throw tooLarge();
+    const error = tooLarge();
+    Object.assign(error, { width, height, source, maxPixels: source ? MAX_SOURCE_PIXELS : MAX_ARTWORK_PIXELS });
+    throw error;
   }
+};
+
+export const boundedArtworkSize = (width: number, height: number): [number, number] => {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) throw new Error('PA_ERROR_INVALID_ARTWORK');
+  const scale = Math.min(1, MAX_ARTWORK_DIMENSION / width, MAX_ARTWORK_DIMENSION / height,
+    Math.sqrt(MAX_ARTWORK_PIXELS / (width * height)));
+  return [Math.max(1, Math.floor(width * scale)), Math.max(1, Math.floor(height * scale))];
 };
 
 export const loadSafeImage = (source: string, signal?: AbortSignal) => new Promise<HTMLImageElement>((resolve, reject) => {
@@ -72,7 +83,7 @@ export const loadSafeImage = (source: string, signal?: AbortSignal) => new Promi
   image.onload = () => {
     if (settled) return;
     try {
-      assertImageDimensions(image);
+      assertImageDimensions(image, true);
       settled = true;
       cleanup();
       resolve(image);
@@ -154,6 +165,7 @@ export const fetchWithCancellation = async (
   try {
     return await fetcher(url, { ...init, signal: controller.signal });
   } catch (error: any) {
+    if (error?.name === 'AbortError' && upstreamSignal?.aborted) throw error;
     if (error?.name === 'AbortError') throw new Error('PA_ERROR_OPERATION_TIMEOUT');
     throw error;
   } finally {

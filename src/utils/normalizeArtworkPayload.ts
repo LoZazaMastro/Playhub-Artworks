@@ -1,51 +1,60 @@
-import t from './i18n';
-import {
-  assertBase64PayloadSize,
-  assertBlobSize,
-  canvasToBase64,
-  loadSafeImage,
-  releaseCanvas,
-  releaseImage,
-  withCompositionLock,
-} from './imageSafety';
+import { assertBase64PayloadSize, assertImageDimensions, boundedArtworkSize, canvasToBase64,
+  loadSafeImage, releaseCanvas, releaseImage, withCompositionLock } from './imageSafety';
+
 export interface ArtworkPayload {
   data: string;
   format: string;
   animated?: boolean;
+  dimensions?: [number, number] | null;
 }
 
-/**
- * Steam's API only accepts png/jpg as its filename type. Static WebP assets are
- * converted losslessly to PNG; animated assets intentionally use SteamGridDB's
- * established fake-PNG path so their animation remains intact in SteamUI.
- */
+/** Static oversize sources are resized before reaching Steam; animations stay intact. */
 export const normalizeArtworkPayload = async (payload: ArtworkPayload): Promise<{ data: string; format: 'png' | 'jpg' }> => {
   assertBase64PayloadSize(payload.data);
-  if (payload.format === 'png') return { data: payload.data, format: 'png' };
-  if (payload.format === 'jpg') return { data: payload.data, format: 'jpg' };
-  if (payload.animated) return { data: payload.data, format: 'png' };
-
+  // Steam accepts animated WebM via the established fake-PNG path; Image cannot decode video.
+  if (payload.animated && payload.format === 'webm') return { data: payload.data, format: 'png' };
   return await withCompositionLock(async () => {
-    const mime = payload.format === 'ico' ? 'image/x-icon' : `image/${payload.format}`;
-    const blob = await (await fetch(`data:${mime};base64,${payload.data}`)).blob();
-    assertBlobSize(blob);
-    const objectUrl = URL.createObjectURL(blob);
+    const format = payload.format === 'jpeg' ? 'jpg' : payload.format;
+    const mime = format === 'ico' ? 'image/x-icon' : format === 'jpg' ? 'image/jpeg' : `image/${format}`;
     let image: HTMLImageElement | null = null;
     let canvas: HTMLCanvasElement | null = null;
     try {
-      image = await loadSafeImage(objectUrl);
+      image = await loadSafeImage(`data:${mime};base64,${payload.data}`);
+      const [width, height] = boundedArtworkSize(image.naturalWidth, image.naturalHeight);
+      if (payload.animated) {
+        // Resizing via canvas would silently remove animation. Reject instead.
+        assertImageDimensions(image);
+        return { data: payload.data, format: 'png' };
+      }
+      if (width === image.naturalWidth && height === image.naturalHeight && (format === 'png' || format === 'jpg')) {
+        return { data: payload.data, format };
+      }
       canvas = document.createElement('canvas');
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-      const context = canvas.getContext('2d');
-      if (!context || !canvas.width || !canvas.height) throw new Error(t('PA_ERROR_INVALID_ARTWORK', 'The artwork is invalid.'));
-      context.drawImage(image, 0, 0);
-      const data = await canvasToBase64(canvas, 'png');
-      return { data, format: 'png' };
+      canvas.width = width;
+      canvas.height = height;
+      // JPEG input remains JPEG; PNG/WebP/logo input keeps transparency.
+      const outputFormat = format === 'jpg' ? 'jpg' : 'png';
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('PA_ERROR_INVALID_ARTWORK');
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        try {
+          return { data: await canvasToBase64(canvas, outputFormat), format: outputFormat };
+        } catch (error: any) {
+          // A compressed WebP can expand past the byte budget when converted to PNG.
+          // Reduce resolution, never discard transparency or relax the RPC byte cap.
+          if (error?.message !== 'PA_ERROR_ARTWORK_TOO_LARGE' || attempt === 3) throw error;
+          canvas.width = Math.max(1, Math.floor(canvas.width * .75));
+          canvas.height = Math.max(1, Math.floor(canvas.height * .75));
+        }
+      }
+      throw new Error('PA_ERROR_ARTWORK_TOO_LARGE');
+
     } finally {
       releaseImage(image);
       releaseCanvas(canvas);
-      URL.revokeObjectURL(objectUrl);
     }
   });
 };

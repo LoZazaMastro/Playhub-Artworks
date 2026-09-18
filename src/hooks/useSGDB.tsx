@@ -11,6 +11,9 @@ import {
 import { call, fetchNoCors } from '@decky/api';
 
 import getAppOverview from '../utils/getAppOverview';
+import { combineAssetSearchResults } from '../utils/searchResults';
+import { watchDownloadProgress } from '../utils/downloadProgress';
+import { isRuntimeActive } from '../utils/runtimeLifecycle';
 import t from '../utils/i18n';
 import log from '../utils/log';
 import {
@@ -152,6 +155,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     assetType = getAmbiguousAssetType(assetType);
     try {
       await withSteamArtworkWriteLock(async () => {
+        if (!isRuntimeActive()) throw new DOMException('Aborted', 'AbortError');
         await clearAsset(assetType);
         await SteamClient.Apps.SetCustomArtworkForApp(appId, data, format, assetType);
       });
@@ -219,7 +223,9 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
     } catch (error: any) {
       log('sgdb response unreadable', { url, status: res.status, message: error?.message, stack: error?.stack });
-      throw new Error(t('PA_ERROR_SGDB_UNREADABLE', 'The SteamGridDB response could not be read.'));
+      const unreadable: any = new Error(t('PA_ERROR_SGDB_UNREADABLE', 'The SteamGridDB response could not be read.'));
+      unreadable.status = Number(res.status);
+      throw unreadable;
     }
 
     const ok = typeof res.ok === 'boolean' ? res.ok : (Number(res.status ?? 200) < 400);
@@ -228,7 +234,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
         ? assetRes.errors.join(', ')
         : t('PA_ERROR_SGDB_REQUEST', 'SteamGridDB request failed{status}.').replace('{status}', res.status ? ` (${res.status})` : '');
       const apiErr = new Error(message);
-      (apiErr as any).status = res.status;
+      (apiErr as any).status = Number(res.status) >= 400 ? Number(res.status) : /^game not found[.!]?$/i.test(message.trim()) ? 404 : Number(res.status);
       throw apiErr;
     }
     return assetRes.data ?? [];
@@ -243,28 +249,23 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       if (path) {
         const data = await call<[path: string], ArtworkPayload>('read_artwork_payload', location);
+        if (!isRuntimeActive()) throw new DOMException('Aborted', 'AbortError');
         reportProgress?.(80);
         return data;
       }
       const jobId = `artwork-${appId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      let polling = false;
-      const timer = window.setInterval(() => {
-        if (polling) return;
-        polling = true;
-        void call<[jobId: string], { percent?: number }>('get_download_progress', jobId)
-          .then((progress) => reportProgress?.(Math.min(80, Number(progress?.percent ?? 0) * .8)))
-          .finally(() => { polling = false; });
-      }, 120);
+      const stopProgress = watchDownloadProgress(jobId, reportProgress);
       try {
         const data = await call<[url: string, jobId: string], ArtworkPayload>('download_artwork_payload', location, jobId);
+        if (!isRuntimeActive()) throw new DOMException('Aborted', 'AbortError');
         reportProgress?.(80);
         return data;
       } finally {
-        window.clearInterval(timer);
-        void call('clear_download_progress', jobId);
+        stopProgress();
+        if (isRuntimeActive()) void call('clear_download_progress', jobId).catch(() => undefined);
       }
     } catch (error) {
-      return null;
+      throw error;
     }
   }, [appId]);
 
@@ -327,7 +328,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return res;
     } catch (err: any) {
       log('searchGames failed', { message: err?.message, stack: err?.stack });
-      return [];
+      throw err;
     }
   }, [apiRequest]);
 
@@ -375,7 +376,8 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
           Nintendo Store); with nothing picked the backend keeps its own best match.
         */
         const storePick = filters?.storeGame?.provider === provider ? filters.storeGame : undefined;
-        const storeQuery = providerConfig.storeSearch ? String(storePick?.id ?? '') : '';
+        const storeQuery = providerConfig.storeSearch ? String(storePick?.id ?? '')
+          : provider === 'iidb' && gameProvider === 'iidb' ? String(gameId ?? '') : '';
         const storeTitle = providerConfig.storeSearch ? String(storePick?.name ?? '') : '';
         const aspectMode = String(filters?.aspectMode ?? providerConfig.defaultAspectMode?.[assetType] ?? 'portrait');
         /*
@@ -434,19 +436,12 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     log('asset search', gameId, providers, qs);
     const settled = await Promise.allSettled(jobs);
     settled.forEach((result) => {
-      if (result.status === 'rejected' && result.reason?.name !== 'AbortError') {
+      if (result.status === 'rejected' && result.reason?.name !== 'AbortError' && result.reason?.status !== 404) {
         log('asset search job failed', { message: result.reason?.message, stack: result.reason?.stack });
       }
     });
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const combined = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
-    const seen = new Set<string>();
-    return combined.filter((asset: any) => {
-      const key = String(asset?.url ?? asset?.thumb ?? asset?.id ?? '');
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return combineAssetSearchResults(settled);
   }, [apiRequest, appId, appOverview?.display_name]);
 
   const getSgdbGame = useCallback(async (game: any) => {
@@ -455,7 +450,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       log('sgdb game', gameRes);
       return gameRes;
     } catch (err: any) {
-      log('getSgdbGame failed', { message: err?.message, stack: err?.stack });
+      if (err?.status !== 404) log('getSgdbGame failed', { message: err?.message, stack: err?.stack });
       return [];
     }
   }, [apiRequest]);
@@ -466,7 +461,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
       log('sgdb steam game', gameRes);
       return gameRes;
     } catch (err: any) {
-      log('SteamGridDB official Steam assets unavailable', steamAppId, err);
+      if (err?.status !== 404) log('SteamGridDB official Steam assets unavailable', steamAppId, err);
       return null;
     }
   }, [apiRequest]);
@@ -476,6 +471,7 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    let active = true;
     if (appId) {
       setAppOverview(null);
       void (async () => {
@@ -484,13 +480,14 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
           await getAppDetails(appId);
           const overview = await getAppOverview(appId);
           log('overview', overview);
-          setAppOverview(overview);
+          if (active) setAppOverview(overview);
         } catch (error) {
           log('app overview failed', appId, error);
-          setAppOverview(null);
+          if (active) setAppOverview(null);
         }
       })();
     }
+    return () => { active = false; };
   }, [appId]);
 
   const value = useMemo(() => ({

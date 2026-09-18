@@ -475,7 +475,8 @@ const ArtworkComposerModal: FC<{
           duration: 1800,
         });
       } catch (error: any) {
-        log('composer save failed', { target, message: error?.message, stack: error?.stack });
+        log('composer save failed', { target, message: error?.message, stack: error?.stack,
+          width: error?.width, height: error?.height, maxPixels: error?.maxPixels });
         toaster.toast({
           title: target === 'hero' ? t('PA_PERFECT_HERO_NOT_SAVED', 'Perfect Hero was not saved') : t('PA_PERFECT_BANNER_NOT_SAVED', 'Perfect Banner was not saved'),
           body: localizeError(error, 'PA_TRY_AGAIN'),

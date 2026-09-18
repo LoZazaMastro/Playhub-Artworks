@@ -30,7 +30,13 @@ during 2025 and 2026 by LoZazaMastro, and the changes are covered by the same li
 
 The complete corresponding source of every release lives in this repository. Release archives
 ship a compiled `dist/index.js`; the sources it is built from are the `src/` directory of the
-matching tag, and `pnpm install && pnpm run build` reproduces it.
+matching release. The standard build is `pnpm install && pnpm run build`.
+
+For the supplied 1.1.4 archives, the shipped bundle was built offline with TypeScript 5.8.3,
+using `tools/build-offline.cjs` and the unchanged third-party runtime/CSS snapshot from the
+supplied 1.1.3 release. Its provenance is recorded in `tools/vendor/manifest.json` and
+`dist/build-info.json`; see `tools/vendor/README.md` and `TESTING_1.1.4.md`. A standard Rollup
+build can produce a different binary and was not executed in the delivery environment.
 
 ## New in Playhub Artworks
 

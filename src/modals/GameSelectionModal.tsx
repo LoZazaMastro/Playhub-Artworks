@@ -14,23 +14,23 @@ import {
 import {
   FC,
   SVGAttributes,
-  useMemo,
   useState,
   useEffect,
   useRef,
   VFC,
 } from 'react';
-import debounce from 'just-debounce';
 import { SiSteam, SiEpicgames, SiOrigin, SiUbisoft, SiBattledotnet } from 'react-icons/si';
 import { IconType } from 'react-icons';
 
-import t from '../utils/i18n';
+import t, { localizeError } from '../utils/i18n';
+import { toaster } from '@decky/api';
+import log from '../utils/log';
 import FlashpointIcon from '../components/Icons/FlashpointIcon';
 import EshopIcon from '../components/Icons/EshopIcon';
 import GogIcon from '../components/Icons/GogIcon';
 
 // @todo: find a better way to get this
-const SearchIcon = Object.values(IconsModule).find((mod: any) => mod?.toString().includes('M27.5 24C29.4972 21.1283 30.3471')) as FC<SVGAttributes<SVGElement>>;
+const SearchIcon = Object.values(IconsModule ?? {}).find((mod: any) => mod?.toString().includes('M27.5 24C29.4972 21.1283 30.3471')) as FC<SVGAttributes<SVGElement>>;
 
 const utcYear = (date: number) => new Date(date * 1000).toLocaleString('en-US', { year: 'numeric', timeZone: 'UTC' });
 
@@ -97,6 +97,7 @@ const SearchTextField: FC<TextFieldProps> = (props) => {
     };
 
     const input = fieldRef.current?.m_elInput;
+    if (!input) return;
     input.addEventListener('vgp_oncancel', onCancel);
     input.addEventListener('vgp_onok', onCancel);
     return () => {
@@ -108,7 +109,7 @@ const SearchTextField: FC<TextFieldProps> = (props) => {
   return (
     <Field
       bottomSeparator="thick"
-      icon={<SearchIcon />}
+      icon={SearchIcon ? <SearchIcon /> : undefined}
       label={t('LABEL_GAME_SEARCH_TITLE', 'Search for a Game...')}
       childrenLayout="below"
     >
@@ -140,20 +141,26 @@ const GameSelectionModal: FC<{
     closeModal?.();
   };
 
-  const handleSearch = useMemo(() => debounce(async (term) => {
-    if (!term) {
-      setLoading(false);
-      return;
-    }
-    const resp = await searchGames(term);
-    setGames(resp);
-    setLoading(false);
-  }, 600), [searchGames]);
-
   useEffect(() => {
-    setLoading(true);
-    handleSearch(value);
-  }, [handleSearch, value]);
+    let active = true;
+    setLoading(Boolean(value.trim()));
+    setGames([]);
+    const timer = window.setTimeout(() => {
+      if (!value.trim()) return;
+      void (async () => {
+        try {
+          const response = await searchGames(value.trim());
+          if (active) setGames(Array.isArray(response) ? response : []);
+        } catch (error) {
+          if (active) {
+            log('game picker search failed', error);
+            toaster.toast({ title: 'Playhub Artworks', body: localizeError(error, 'PA_TRY_AGAIN') });
+          }
+        } finally { if (active) setLoading(false); }
+      })();
+    }, 600);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [searchGames, value]);
 
   return (
     <ModalRoot className="sgdb-modal sgdb-modal-gameselect" closeModal={closeModal}>

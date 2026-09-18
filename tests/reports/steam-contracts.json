@@ -1,0 +1,121 @@
+{
+  "scope": "Static contracts in user-supplied Steam files; not a live Steam/Decky integration test",
+  "scannedJavaScriptFiles": 367,
+  "checks": {
+    "Steam window exposes memory history": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "main gamepad predicate is available": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "React memo and forwardRef symbols exist": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/libraries/libraries~00299a408.js",
+        "steamui - Copia/libraries/libraries~2dcc5aaf7.js"
+      ]
+    },
+    "game-specific menu factory uses navigator props": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "game menu exposes live target apps": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "menu Properties action remains identifiable": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "game-menu export marker remains available": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "carousel native column-width method exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "carousel width is decorated/bound": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "carousel scroll method exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "portrait artwork CSS module keys exist": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "gamepad library CSS module key exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "home recents scope CSS module key exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "home hero image CSS module key exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "custom artwork write API exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "custom logo-position API exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "app-details subscription API exists": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    },
+    "custom landscape URL getter retains Steam spelling": {
+      "passed": true,
+      "matches": [
+        "steamui - Copia/chunk~2dcc5aaf7.js"
+      ]
+    }
+  },
+  "matchedFileSha256": {
+    "steamui - Copia/chunk~2dcc5aaf7.js": "af34036df7a4b0b73888f0069f9968c14a3afdb4dccfb2d679ba1136a7fa878d",
+    "steamui - Copia/libraries/libraries~00299a408.js": "2e12d4d2f83b98069e20747eb6250b8f54ddc902e9c586dd688769f146a03467",
+    "steamui - Copia/libraries/libraries~2dcc5aaf7.js": "e92807eaeb1e867408b5614012465c0ef988cbece2afe469c7810f0921edb966"
+  },
+  "missing": []
+}

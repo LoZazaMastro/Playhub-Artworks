@@ -1,4 +1,5 @@
-import { findSP } from '@decky/ui';
+import { findSteamUI as findSP } from '../utils/steamWindow';
+
 
 import { appportraitClasses, gamepadLibraryClasses, homeCarouselClasses, libraryAssetImageClasses, sel } from '../static-classes';
 import { restoreStyles, restoreStylesTo } from '../utils/styleInjector';
@@ -33,6 +34,7 @@ const MAX_REPAIRS = 12;
 let lastRepair = -Infinity;
 let repairs = 0;
 let timers: number[] = [];
+let generation = 0;
 let heartbeat: number | undefined;
 let knownDocument: Document | null = null;
 let knownView: Window | null = null;
@@ -152,10 +154,12 @@ export const guardLayout = async (reason: string): Promise<Verdict> => {
 
 /** Re-runs the whole layout setup and reads the result back into the log. */
 const reapply = async () => {
+  const started = generation;
   try {
     markWork('layout reapplication');
     restoreStyles();
     await refreshLayoutPatches(true);
+    if (started !== generation) return;
     attachHomeCarousel();
     remeasureGrids();
   } catch (error) {
@@ -164,11 +168,13 @@ const reapply = async () => {
     markWork('');
   }
 
-  window.setTimeout(() => {
+  if (started !== generation) return;
+  timers.push(window.setTimeout(() => {
+    if (started !== generation) return;
     const after = verifyLayout();
     if (after.verdict === 'ok') repairs = 0;
     log('layout guard: after correction', { result: after.verdict, detail: after.detail });
-  }, 1200);
+  }, 1200));
 };
 
 const later = (delay: number, reason: string) => {
@@ -358,6 +364,7 @@ export const guardAfterRoute = (path: string) => {
 };
 
 export const stopLayoutGuard = () => {
+  generation += 1;
   timers.forEach((timer) => window.clearTimeout(timer));
   timers = [];
   if (heartbeat) window.clearInterval(heartbeat);

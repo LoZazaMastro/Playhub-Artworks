@@ -6,7 +6,8 @@ const queue: any[] = [];
 let flushTimer: number | undefined;
 
 const serialize = (value: any, depth: number, seen: WeakSet<object>): any => {
-  if (value instanceof Error) return { type: value.name, message: value.message, stack: value.stack };
+  if (value instanceof Error) return { type: value.name, message: value.message, stack: value.stack,
+    width: (value as any).width, height: (value as any).height, maxPixels: (value as any).maxPixels };
   if (typeof value === 'string') {
     const safeValue = /^https?:\/\//i.test(value) ? value.replace(/([?#]).*$/, '') : value;
     return safeValue.length > 500 ? `${safeValue.slice(0, 500)}…` : safeValue;
@@ -46,16 +47,47 @@ const safeSerialize = (value: any) => {
   }
 };
 
-const flush = () => {
+let active = true;
+let inFlight = false;
+let generation = 0;
+
+export const startLogging = () => { active = true; };
+export const stopLogging = () => {
+  active = false;
+  generation += 1;
+  if (flushTimer !== undefined) window.clearTimeout(flushTimer);
   flushTimer = undefined;
-  const events = queue.splice(0, 20);
-  if (events.length) void call('write_diagnostic_events', events).catch(() => undefined);
-  if (queue.length) flushTimer = window.setTimeout(flush, 350);
+  queue.length = 0;
+};
+const flush = async () => {
+  flushTimer = undefined;
+  if (!active || inFlight) return;
+  const epoch = generation;
+  const events: any[] = [];
+  let bytes = 0;
+  while (queue.length && events.length < 12) {
+    const size = JSON.stringify(queue[0]).length;
+    if (events.length && bytes + size > 32000) break;
+    bytes += size;
+    events.push(queue.shift());
+  }
+  if (!events.length) return;
+  inFlight = true;
+  let delay = 500;
+  try { await call('write_diagnostic_events', events); }
+  catch { delay = 5000; /* Do not retry failed diagnostics or create rejection loops. */ }
+  finally {
+    inFlight = false;
+    if (active && epoch === generation && queue.length && flushTimer === undefined) {
+      flushTimer = window.setTimeout(() => { void flush(); }, delay);
+    }
+  }
 };
 
 export default (...params: any[]) => {
+  if (!active) return;
   if (process.env.ROLLUP_ENV !== 'production') window.console.log('[Playhub Artworks]', ...params);
   if (queue.length >= 200) queue.splice(0, queue.length - 199);
   queue.push({ timestamp: new Date().toISOString(), route: steamPath(), params: params.map(safeSerialize) });
-  if (!flushTimer) flushTimer = window.setTimeout(flush, 350);
+  if (flushTimer === undefined && !inFlight) flushTimer = window.setTimeout(() => { void flush(); }, 500);
 };

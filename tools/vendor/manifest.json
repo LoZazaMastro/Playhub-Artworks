@@ -1,0 +1,74 @@
+{
+  "sourceVersion": "1.1.3",
+  "sourceBundleSha256": "bcb15c27e54c07fb14c1caa96fea8e314d51d992486e9c6e48fd0850872e188a",
+  "modules": {
+    "just-debounce": [
+      "justDebounce"
+    ],
+    "react-fast-compare": [
+      "reactFastCompare"
+    ],
+    "async-wait-until": [
+      "i"
+    ],
+    "react-icons/md": [
+      "MdApps",
+      "MdAutoAwesome",
+      "MdCropLandscape",
+      "MdCropPortrait",
+      "MdOutlineBrandingWatermark",
+      "MdTune",
+      "MdWallpaper",
+      "MdImage",
+      "MdRefresh",
+      "MdVisibility",
+      "MdVisibilityOff",
+      "MdZoomIn",
+      "MdZoomOut"
+    ],
+    "react-icons/hi2": [
+      "HiEye",
+      "HiEyeSlash",
+      "HiTrash",
+      "HiArrowUturnLeft",
+      "HiFolderOpen",
+      "HiArrowDown",
+      "HiArrowLeft",
+      "HiArrowRight",
+      "HiArrowUp",
+      "HiArrowDownTray",
+      "HiCheck",
+      "HiXMark"
+    ],
+    "react-icons/fa": [
+      "FaSlidersH",
+      "FaSteam",
+      "FaChevronDown",
+      "FaChevronUp",
+      "FaExternalLinkAlt",
+      "FaHome",
+      "FaImage",
+      "FaKey",
+      "FaArrowsAltV",
+      "FaFont",
+      "FaMagic",
+      "FaThLarge",
+      "FaTrash"
+    ],
+    "react-icons/si": [
+      "SiSteam",
+      "SiEpicgames",
+      "SiOrigin",
+      "SiUbisoft",
+      "SiBattledotnet"
+    ]
+  },
+  "scssSha256": {
+    "src/styles/_mixins.scss": "fdd9a50e59a5cb64d51c4a9dc828e389361704279672ab02698766bd2ab945f2",
+    "src/styles/modals/_editor.scss": "19b3543a728643558f8a43e1bf13911dd48735b452170bdf2596a2c16bcae7ea",
+    "src/styles/modals/_filters.scss": "c621f35b7241b4ad321c8cb11102a68e1ed7127ce6363a434f033e848c6bd7bc",
+    "src/styles/modals/_gameselect.scss": "cb9ed95ac2376c90355fa85b381beab37dc03a07e1dbaa6a9a5f5837fc59a18c",
+    "src/styles/modals/_official_assets.scss": "ba33624875e4c90db4837d87025172315412dbc3706ba726d2112ad5f224b806",
+    "src/styles/style.scss": "15dd510ddc0fc32741ef6292277a56af32f01a86cb328b8eb69fd2b2d658a4bc"
+  }
+}

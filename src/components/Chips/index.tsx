@@ -1,3 +1,4 @@
+import { findSteamUI as findSP } from '../../utils/steamWindow';
 import {
   FC,
   useLayoutEffect,
@@ -6,7 +7,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
-import { joinClassNames, findSP } from '@decky/ui';
+import { joinClassNames } from '@decky/ui';
 import debounce from 'just-debounce';
 
 const Chips: FC<{ children: ReactNode }> = ({ children }) => {
@@ -18,7 +19,7 @@ const Chips: FC<{ children: ReactNode }> = ({ children }) => {
     if (!el) return false;
     const sizeEl = el.parentElement; // element we can check size aginst
     if (sizeEl) {
-      return sizeEl.getBoundingClientRect().right + el.clientWidth + 10 > findSP().innerWidth;
+      return sizeEl.getBoundingClientRect().right + el.clientWidth + 10 > (findSP()?.window.innerWidth ?? window.innerWidth);
     }
     return false;
   }, []);

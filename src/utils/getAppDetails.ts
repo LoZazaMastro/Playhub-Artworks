@@ -1,28 +1,21 @@
 import { AppDetails } from '@decky/ui/dist/globals/steam-client/App';
 
-/**
- * Tries to retrieve the app details from Steam.
- *
- * @param appId id to get details for.
- * @returns AppDetails if succeeded or null otherwise.
- */
 export default async function getAppDetails(appId: number): Promise<AppDetails | null> {
-  return await new Promise((resolve) => {
-    let timeoutId: number | undefined | NodeJS.Timeout = undefined;
+  return await new Promise(resolve => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let registration: { unregister: () => void } | undefined;
+    let settled = false;
+    const finish = (details: AppDetails | null) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== undefined) clearTimeout(timer);
+      try { registration?.unregister(); } catch { /* Steam window closed. */ }
+      resolve(details);
+    };
     try {
-      const { unregister } = SteamClient.Apps.RegisterForAppDetails(appId, (details: any) => {
-        clearTimeout(timeoutId);
-        unregister();
-        resolve(details);
-      });
-
-      timeoutId = setTimeout(() => {
-        unregister();
-        resolve(null);
-      }, 300);
-    } catch (error) {
-      clearTimeout(timeoutId);
-      resolve(null);
-    }
+      registration = SteamClient.Apps.RegisterForAppDetails(appId, (details: AppDetails) => finish(details));
+      if (settled) { try { registration?.unregister(); } catch { /* Already removed. */ } }
+      else timer = setTimeout(() => finish(null), 1000);
+    } catch { finish(null); }
   });
 }

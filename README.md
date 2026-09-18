@@ -51,12 +51,31 @@ Install and update Playhub Artworks through the Plugin Store in [Playhub](https:
 2. Enable Decky's developer mode.
 3. Open **Decky > Settings > Developer > Install plugin from ZIP** and select the ZIP.
 
+## Version 1.1.4 — Hotfix 2
+
+The corrected build is identified as `1.1.4-hotfix.2`; the plugin version remains 1.1.4.
+This hotfix fixes React #130 when an artwork has notes: the note badge no longer renders an undefined Steam glyph. Native glyph discovery supports the supplied Steam build, with a local Menu icon when the native component is unavailable.
+See [HOTFIX_1.1.4.md](HOTFIX_1.1.4.md) for the reproduced crash, actual ReactDOM browser tests and verification scope.
+
+This update addresses delayed Steam/Big Picture initialization, game-menu patch ownership,
+search error recovery and bounded image resizing. It also stops plugin polling and diagnostic
+work during unload. Read [CHANGELOG.md](CHANGELOG.md) and the detailed
+[verification report](TESTING_1.1.4.md) for the tested scope and remaining live-client checks.
+
+After upgrading from 1.1.3, the first 1.1.4 or Hotfix 1, fully restart Steam and Decky/Playhub to discard old in-memory
+patches. Saved settings and artwork backups are not intentionally reset by this update.
+
 ## Development
 
 ```bash
 pnpm install
 pnpm run build
 ```
+
+The supplied 1.1.4 archive was built with the reproducible offline path rather than Rollup.
+With TypeScript installed locally or globally, `npm run test:offline` rebuilds all plugin
+sources with the frozen, unchanged dependency runtime and runs Python/frontend tests.
+Changes to SCSS require the normal build above. See `tools/vendor/README.md` for provenance.
 
 The frontend is built into `dist/index.js`. The Python backend and provider integrations are in `main.py` and `provider_search.py`.
 

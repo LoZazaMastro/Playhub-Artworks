@@ -23,7 +23,7 @@ import decky # type: ignore
 # Decky on Windows does not always prepend the plugin directory before loading
 # the backend. Add it before importing any bundled module.
 plugin_dir = Path(decky.DECKY_PLUGIN_DIR)
-for module_root in [plugin_dir, plugin_dir / 'defaults']:
+for module_root in [plugin_dir, plugin_dir / 'defaults', plugin_dir / 'py_modules', plugin_dir / 'defaults' / 'py_modules']:
     module_root_str = str(module_root)
     if module_root_str not in sys.path:
         sys.path.insert(0, module_root_str)
@@ -49,6 +49,8 @@ DIAGNOSTIC_MAX_BYTES = 5 * 1024 * 1024
 ARTWORK_DOWNLOAD_MAX_BYTES = 16 * 1024 * 1024
 ARTWORK_IMAGE_MAX_PIXELS = 16_000_000
 ARTWORK_IMAGE_MAX_DIMENSION = 6144
+ARTWORK_SOURCE_MAX_PIXELS = 36_000_000
+ARTWORK_SOURCE_MAX_DIMENSION = 16384
 ARTWORK_DOWNLOAD_CONCURRENCY = 2
 PROVIDER_SEARCH_CONCURRENCY = 3
 DOWNLOAD_CHUNK_BYTES = 128 * 1024
@@ -56,7 +58,7 @@ PERFECT_SOURCE_READ_CHUNK_BYTES = 384 * 1024
 PERFECT_SOURCE_LEGACY_RPC_MAX_BYTES = 1024 * 1024
 DERIVED_COVER_READ_CHUNK_BYTES = 252 * 1024
 DERIVED_COVER_METADATA_VERSION = 2
-PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.2'
+PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.4'
 _diagnostic_lock = threading.Lock()
 _download_progress_lock = threading.Lock()
 _download_progress = {}
@@ -169,7 +171,7 @@ def _image_size_bytes(content, asset_format):
         return content[6] or 256, content[7] or 256
     return None
 
-def _validate_artwork_content(content, content_type='', source=''):
+def _validate_artwork_content(content, content_type='', source='', allow_source=False):
     if not content:
         raise ValueError('PA_ERROR_INVALID_ARTWORK')
     if len(content) > ARTWORK_DOWNLOAD_MAX_BYTES:
@@ -181,9 +183,9 @@ def _validate_artwork_content(content, content_type='', source=''):
         if (
             width <= 0
             or height <= 0
-            or width > ARTWORK_IMAGE_MAX_DIMENSION
-            or height > ARTWORK_IMAGE_MAX_DIMENSION
-            or width * height > ARTWORK_IMAGE_MAX_PIXELS
+            or width > (ARTWORK_SOURCE_MAX_DIMENSION if allow_source else ARTWORK_IMAGE_MAX_DIMENSION)
+            or height > (ARTWORK_SOURCE_MAX_DIMENSION if allow_source else ARTWORK_IMAGE_MAX_DIMENSION)
+            or width * height > (ARTWORK_SOURCE_MAX_PIXELS if allow_source else ARTWORK_IMAGE_MAX_PIXELS)
         ):
             raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
     return asset_format, dimensions
@@ -231,7 +233,7 @@ def _download_limited(url, job_id='', shutdown_event=None, validate_artwork=True
         with _download_progress_lock:
             _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
     if validate_artwork:
-        asset_format, dimensions = _validate_artwork_content(content, content_type, url)
+        asset_format, dimensions = _validate_artwork_content(content, content_type, url, allow_source=True)
     else:
         asset_format, dimensions = '', None
     return content, content_type, asset_format, dimensions
@@ -818,7 +820,7 @@ class Plugin:
                     lambda: b64encode(content).decode('ascii'),
                 )
             _diagnostic('artwork.download.completed', url=url, bytes=len(content), format=asset_format, dimensions=dimensions, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return {'data': encoded, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
+            return {'data': encoded, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format), 'dimensions': dimensions}
         except Exception as error:
             if job_id:
                 with _download_progress_lock:
@@ -857,7 +859,7 @@ class Plugin:
                     lambda: b64encode(content).decode('ascii'),
                 )
             _diagnostic('artwork.download.completed', url=url, bytes=len(content), sha256=digest, format=asset_format, dimensions=dimensions, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return {'data': encoded, 'sha256': digest, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format)}
+            return {'data': encoded, 'sha256': digest, 'format': asset_format, 'animated': _asset_is_animated(content, asset_format), 'dimensions': dimensions}
         except Exception as error:
             _diagnostic('artwork.download.failed', url=url, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000), error=error)
             raise
@@ -868,7 +870,7 @@ class Plugin:
             if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
                 raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
             content = source.read_bytes()
-            _validate_artwork_content(content, source=path)
+            _validate_artwork_content(content, source=path, allow_source=True)
             return b64encode(content).decode('ascii')
         return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_sync)
 
@@ -878,7 +880,7 @@ class Plugin:
             if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
                 raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
             content = source.read_bytes()
-            asset_format, dimensions = _validate_artwork_content(content, source=path)
+            asset_format, dimensions = _validate_artwork_content(content, source=path, allow_source=True)
             return {
                 'data': b64encode(content).decode('ascii'),
                 'format': asset_format,
@@ -1009,7 +1011,7 @@ class Plugin:
         return None
 
     def _write_perfect_source(self, appid, target, payload, asset_format):
-        _validate_artwork_content(payload, source=f'perfect-source.{asset_format}')
+        _validate_artwork_content(payload, source=f'perfect-source.{asset_format}', allow_source=True)
         PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
         path = self._perfect_source_path(appid, target, asset_format)
         temporary = path.with_suffix(path.suffix + '.tmp')
@@ -1039,7 +1041,7 @@ class Plugin:
                     if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
                         continue
                     payload = source.read_bytes()
-                    asset_format, _dimensions = _validate_artwork_content(payload, source=source)
+                    asset_format, _dimensions = _validate_artwork_content(payload, source=source, allow_source=True)
                     self._write_perfect_source(appid, target, payload, asset_format)
                     return {'saved': True, 'existing': False, 'source': 'local', 'bytes': len(payload)}
                 except Exception as error:
@@ -1152,7 +1154,7 @@ class Plugin:
                 if path.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
                     raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
                 payload = path.read_bytes()
-                _validate_artwork_content(payload, source=path)
+                _validate_artwork_content(payload, source=path, allow_source=True)
                 mime = 'image/png' if path.suffix.lower() == '.png' else 'image/webp' if path.suffix.lower() == '.webp' else 'image/jpeg'
                 return f'data:{mime};base64,' + b64encode(payload).decode('ascii')
             except Exception as error:
@@ -1505,7 +1507,7 @@ class Plugin:
             return games
         except Exception as error:
             _diagnostic('provider.games.failed', provider=provider, title=title, error=error)
-            return []
+            raise
 
     async def search_provider_assets(self, provider='', title='', asset_type='grid_p', square_only=False, limit=24, minimum_quality='standard', mimes=None, content_type='all', query='', exact_size=''):
         """Search and validate provider images without blocking Decky's event loop."""
@@ -1537,11 +1539,11 @@ class Plugin:
         except asyncio.TimeoutError:
             decky.logger.warning(f'Artwork provider timeout provider={provider} title={title}')
             _diagnostic('provider.search.timeout', **search, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
-            return []
+            raise RuntimeError('PA_ERROR_OPERATION_TIMEOUT') from None
         except Exception as error:
             decky.logger.warning(f'Artwork provider failed provider={provider} title={title}: {error}')
             _diagnostic('provider.search.failed', **search, duration_ms=round((asyncio.get_running_loop().time() - started) * 1000), error=error)
-            return []
+            raise
 
     async def inspect_remote_artwork(self, url='', asset_type='grid_p', aspect_mode='portrait', minimum_quality='standard', mimes=None):
         started = asyncio.get_running_loop().time()

@@ -1,5 +1,6 @@
+import { findSteamUI as findSP } from '../utils/steamWindow';
 import { routerHook } from '@decky/api';
-import { findModuleExport, findSP } from '@decky/ui';
+import { findModuleExport } from '@decky/ui';
 
 import { appportraitClasses, gamepadLibraryClasses, libraryAssetImageClasses, sel } from '../static-classes';
 import { addStyle, removeStyle } from '../utils/styleInjector';

@@ -1,5 +1,6 @@
+import { findSteamUI as findSP } from '../utils/steamWindow';
 import { call } from '@decky/api';
-import { findSP, GamepadButton } from '@decky/ui';
+import { GamepadButton } from '@decky/ui';
 
 import { appportraitClasses, gamepadLibraryClasses, sel } from '../static-classes';
 import log from '../utils/log';
@@ -135,7 +136,9 @@ export const applyCachedDisableLibraryLetterHold = (): boolean => {
   return true;
 };
 
+let refreshGeneration = 0;
 export const refreshDisableLibraryLetterHold = async () => {
+  const generation = refreshGeneration;
   let stored = false;
   try {
     stored = Boolean(await call<[string, boolean], boolean>('get_setting', SETTING_KEY, false));
@@ -144,10 +147,11 @@ export const refreshDisableLibraryLetterHold = async () => {
     const cached = readCachedSetting();
     if (cached !== null) stored = cached;
   }
-  setDisableLibraryLetterHold(stored);
+  if (generation === refreshGeneration) setDisableLibraryLetterHold(stored);
 };
 
 export const stopDisableLibraryLetterHold = () => {
+  refreshGeneration += 1;
   enabled = false;
   unbindDocument();
   if (rebindTimer !== undefined) {

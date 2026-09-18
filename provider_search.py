@@ -3,6 +3,8 @@ import difflib
 import html
 import json
 import re
+import ssl
+import time
 import unicodedata
 import uuid
 from hashlib import sha1
@@ -10,9 +12,10 @@ from struct import unpack
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qs, quote, unquote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.2'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.4'
 
 PROVIDERS: Dict[str, Dict[str, Any]] = {
     'google': {'label': 'URL', 'hosts': ()},
@@ -57,6 +60,26 @@ def _google_url(query: str) -> str:
     })
 
 
+def _read_request(request: Request, maximum: int, timeout: int) -> bytes:
+    """One bounded retry for a transient GET failure; never bypass TLS validation."""
+    for attempt in range(2):
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                payload = response.read(maximum + 1)
+            if len(payload) > maximum:
+                raise ValueError('Provider response exceeds the size limit')
+            return payload
+        except (HTTPError, URLError, ssl.SSLError, TimeoutError, ConnectionError) as error:
+            reason = getattr(error, 'reason', error)
+            temporary = (
+                isinstance(error, HTTPError) and error.code in {429, 502, 503, 504}
+            ) or isinstance(reason, (ssl.SSLEOFError, TimeoutError, ConnectionError))
+            if request.get_method() != 'GET' or not temporary or attempt:
+                raise
+            time.sleep(0.25)
+    raise RuntimeError('Unreachable request state')
+
+
 def _fetch_html(url: str, timeout: int = 12) -> str:
     request = Request(url, headers={
         'User-Agent': USER_AGENT,
@@ -64,8 +87,7 @@ def _fetch_html(url: str, timeout: int = 12) -> str:
         'Accept-Language': 'en-US,en;q=0.9',
         'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+410; SOCS=CAESHAgBEhIaAB',
     })
-    with urlopen(request, timeout=timeout) as response:
-        return response.read(2_000_000).decode('utf-8', 'ignore')
+    return _read_request(request, 2_000_000, timeout).decode('utf-8', 'ignore')
 
 
 def _candidate_urls(markup: str) -> Iterable[str]:
@@ -278,37 +300,38 @@ def _json_request(url: str, payload: Optional[Dict[str, Any]] = None, headers: O
         data = json.dumps(payload).encode('utf-8')
         request_headers['Content-Type'] = 'application/json'
     request = Request(url, data=data, headers=request_headers, method='POST' if data is not None else 'GET')
-    with urlopen(request, timeout=timeout) as response:
-        return json.loads(response.read(8_000_000).decode('utf-8', 'ignore'))
+    return json.loads(_read_request(request, 8_000_000, timeout).decode('utf-8', 'ignore'))
 
 
-def _search_iidb(title: str, asset_type: str, limit: int) -> List[Dict[str, Any]]:
+def _search_iidb(title: str, asset_type: str, limit: int, parent_id: str = '') -> List[Dict[str, Any]]:
     requested_type = {
         'grid_l': 'banner',
         'hero': 'hero',
         'logo': 'logo',
         'icon': 'icon',
     }.get(asset_type, 'hero')
-    payload = _json_request('https://iidb-api.iisu.network/api/v1/assets/search/groups?' + urlencode({
-        'q': title,
-        'asset_type': requested_type,
-        'parent_limit': 4,
-        'assets_per_parent': 8,
-    }), headers={'Referer': 'https://iidb.iisu.network/'}, timeout=10)
-    groups = payload.get('groups') if isinstance(payload, dict) else []
-    ranked = []
-    for group in groups or []:
-        parent = group.get('parent') if isinstance(group, dict) and isinstance(group.get('parent'), dict) else {}
-        score = _title_score(title, str(parent.get('name') or ''))
-        if score >= 650:
-            ranked.append((score, group))
-    if not ranked:
-        return []
-    ranked.sort(key=lambda item: item[0], reverse=True)
-    selected = ranked[0][1]
-    parent = selected.get('parent') or {}
-    parent_id = parent.get('id')
-    assets = selected.get('assets') or []
+    assets = []
+    if not parent_id:
+        payload = _json_request('https://iidb-api.iisu.network/api/v1/assets/search/groups?' + urlencode({
+            'q': title,
+            'asset_type': requested_type,
+            'parent_limit': 4,
+            'assets_per_parent': 8,
+        }), headers={'Referer': 'https://iidb.iisu.network/'}, timeout=10)
+        groups = payload.get('groups') if isinstance(payload, dict) else []
+        ranked = []
+        for group in groups or []:
+            parent = group.get('parent') if isinstance(group, dict) and isinstance(group.get('parent'), dict) else {}
+            score = _title_score(title, str(parent.get('name') or ''))
+            if score >= 650:
+                ranked.append((score, group))
+        if not ranked:
+            return []
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        selected = ranked[0][1]
+        parent = selected.get('parent') or {}
+        parent_id = parent.get('id')
+        assets = selected.get('assets') or []
     if parent_id:
         try:
             expanded = _json_request('https://iidb-api.iisu.network/api/v1/assets/browse/enriched?' + urlencode({
@@ -319,7 +342,8 @@ def _search_iidb(title: str, asset_type: str, limit: int) -> List[Dict[str, Any]
             }), headers={'Referer': 'https://iidb.iisu.network/'}, timeout=10)
             assets = expanded.get('items') or assets
         except Exception:
-            pass
+            if not assets:
+                raise
     results = []
     for asset in assets:
         if not isinstance(asset, dict):
@@ -362,23 +386,39 @@ def _search_iidb(title: str, asset_type: str, limit: int) -> List[Dict[str, Any]
 
 
 def search_iidb_games(title: str, limit: int = 12) -> List[Dict[str, Any]]:
-    """Game names from iiDB's own parent index."""
-    payload = _json_request('https://iidb-api.iisu.network/api/v1/assets/search/groups?' + urlencode({
-        'q': title,
-        'parent_limit': max(1, min(24, int(limit))),
-        'assets_per_parent': 1,
-    }), headers={'Referer': 'https://iidb.iisu.network/'}, timeout=10)
-    games = []
-    for group in (payload.get('groups') or []) if isinstance(payload, dict) else []:
-        parent = group.get('parent') if isinstance(group, dict) else None
-        if not isinstance(parent, dict):
+    """Use typed groups, matching the working iiDB artwork query contract."""
+    title = str(title or '').strip()
+    if not title:
+        return []
+    limit = max(1, min(24, int(limit)))
+    games: Dict[str, Dict[str, str]] = {}
+    failures = []
+    # The groups endpoint requires an artwork type; the previous untyped query
+    # repeatedly returned HTTP 400. Do not infer an ID from another provider.
+    for asset_type in ('hero', 'banner', 'logo', 'icon'):
+        try:
+            payload = _json_request('https://iidb-api.iisu.network/api/v1/assets/search/groups?' + urlencode({
+                'q': title,
+                'asset_type': asset_type,
+                'parent_limit': min(4, limit),
+                'assets_per_parent': 1,
+            }), headers={'Referer': 'https://iidb.iisu.network/'}, timeout=5)
+        except Exception as error:
+            failures.append(error)
             continue
-        name = str(parent.get('name') or '').strip()
-        game_id = str(parent.get('id') or '').strip()
-        if name and game_id:
-            games.append({'id': game_id, 'name': name})
-    games.sort(key=lambda game: _title_score(title, game['name']), reverse=True)
-    return games[:max(1, int(limit))]
+        for group in (payload.get('groups') or []) if isinstance(payload, dict) else []:
+            parent = group.get('parent') if isinstance(group, dict) else None
+            if not isinstance(parent, dict):
+                continue
+            name = str(parent.get('name') or '').strip()
+            game_id = str(parent.get('id') or '').strip()
+            if name and game_id:
+                games.setdefault(game_id, {'id': game_id, 'name': name})
+        if len(games) >= limit:
+            break
+    if len(failures) == 4:
+        raise failures[0]
+    return sorted(games.values(), key=lambda game: _title_score(title, game['name']), reverse=True)[:limit]
 
 
 def _nintendo_cloudinary(public_id: str, width: int = 1920, aspect: str = '16:9') -> str:
@@ -993,7 +1033,7 @@ def search_provider_assets(provider: str, title: str, asset_type: str, square_on
     if provider == 'ign' and asset_type != 'grid_p':
         return []
     if provider == 'iidb':
-        raw = _search_iidb(title, asset_type, limit)
+        raw = _search_iidb(title, asset_type, limit, str(query or ''))
     elif provider == 'nintendo':
         raw = _search_nintendo(title, asset_type, limit, str(query or ''))
     elif provider == 'igdb':
