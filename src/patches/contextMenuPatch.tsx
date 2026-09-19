@@ -1,3 +1,6 @@
+import * as React from "react";
+import * as DeckyUI from "@decky/ui";
+import { insertPluginSection, installMenuSectionFallback } from "../pluginMenuSection";
 import { applyHookStubs, removeHookStubs, findModuleByExport, MenuItem, Navigation } from '@decky/ui';
 import { cloneElement, isValidElement } from 'react';
 import log from '../utils/log';
@@ -32,59 +35,14 @@ export const resolveLibraryContextMenu = (): any => {
 
 /** Clone the menu (including Steam's nested Properties fragment), never mutate it. */
 export const injectArtworkMenuItem = (tree: any, appid: number): any => {
-  let inserted = false;
-  const validType = (value: any) => typeof value === 'function' || typeof value === 'string'
-    || (value && [Symbol.for('react.memo'), Symbol.for('react.forward_ref')].includes(value.$$typeof));
-  const makeItem = (anchor: any) => {
-    // Use the exact native item already rendered by this Steam build. An old
-    // DFL export may be undefined even though Steam's own menu still works.
-    const Item = validType(anchor?.type) ? anchor.type : validType(MenuItem) ? MenuItem : undefined;
-    if (!Item) return undefined;
-    return <Item key={ITEM_KEY} onSelected={() => Navigation.Navigate(`/playhub-artworks/${appid}`)}>
-      Playhub Artworks
-    </Item>;
-  };
-  const isProperties = (node: any) => {
-    const handler = node?.props?.onSelected;
-    return typeof handler === 'function' && Function.prototype.toString.call(handler).includes('AppProperties');
-  };
-  const visit = (node: any, depth: number): any => {
-    if (depth > 24) return node;
-    if (Array.isArray(node)) {
-      const children: any[] = [];
-      for (const child of node) {
-        if (child?.key === ITEM_KEY) continue;
-        if (!inserted && isProperties(child)) {
-          const item = makeItem(child);
-          if (item) { children.push(item); inserted = true; }
-        }
-        children.push(visit(child, depth + 1));
-      }
-      return children;
-    }
-    if (!isValidElement(node)) return node;
-    const element: any = node;
-    if (element.key === ITEM_KEY) return null;
-    if (element.props?.children === undefined) return element;
-    const children = element.props.children;
-    // A single Properties child is legal React output too.
-    if (!inserted && isProperties(children)) {
-      const item = makeItem(children);
-      if (item) {
-        inserted = true;
-        return cloneElement(element, undefined, [item, visit(children, depth + 1)]);
-      }
-    }
-    return cloneElement(element, undefined, visit(children, depth + 1));
-  };
-  const result = visit(tree, 0);
-  // Unknown menu contracts fail open: do not append an invalid control to an
-  // arbitrary shared menu or throw during a later React render.
-  return inserted ? result : tree;
+  return insertPluginSection(React, tree,
+    <MenuItem key={ITEM_KEY} onSelected={() => Navigation.Navigate(`/playhub-artworks/${appid}`)}>Playhub Artworks</MenuItem>);
+
 };
 
 /** Patch only the game-specific class, not Steam's shared generic Menu prototype. */
 const contextMenuPatch = (initialType?: any) => {
+  const stopFallback = installMenuSectionFallback(React, DeckyUI, injectArtworkMenuItem);
   let disposed = false;
   let installed: { prototype: any; descriptor: PropertyDescriptor; wrapped: (...args: any[]) => any } | undefined;
   const handle = {
@@ -125,6 +83,7 @@ const contextMenuPatch = (initialType?: any) => {
     },
     unpatch: () => {
       disposed = true;
+      stopFallback();
       if (!installed) return;
       const { prototype, descriptor, wrapped } = installed;
       // Never overwrite a newer patch installed by another owner.

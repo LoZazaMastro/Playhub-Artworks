@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..'),noop=()=>{};
 function load(file,mocks={},globals={},sourceRoot=root){
  const module={exports:{}};
  const js=ts.transpileModule(fs.readFileSync(path.join(sourceRoot,file),'utf8'),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React,jsxFactory:'window.SP_REACT.createElement',esModuleInterop:true}}).outputText;
- vm.runInNewContext(js,{module,exports:module.exports,require:id=>{if(id==='react')return React;if(!(id in mocks))throw Error('Unmocked '+id);const out=mocks[id];return out&&typeof out==='object'&&'default' in out?{...out,__esModule:true}:out;},console,Symbol,Map,Set,WeakMap,WeakSet,Error,Promise,Date,Object,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});return module.exports;
+ vm.runInNewContext(js,{module,exports:module.exports,require:id=>{if(id==='../pluginMenuSection')return load('src/pluginMenuSection.ts',{},globals);if(id==='react')return React;if(!(id in mocks))throw Error('Unmocked '+id);const out=mocks[id];return out&&typeof out==='object'&&'default' in out?{...out,__esModule:true}:out;},console,Symbol,Map,Set,WeakMap,WeakSet,Error,Promise,Date,Object,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});return module.exports;
 }
 function env(path='/index.html'){
  const listeners=new Map();return {SP_REACT:React,closed:false,document:{head:{}},location:{pathname:path,href:'https://steamloopback.host'+path},localStorage:{getItem:()=>null,setItem:noop},

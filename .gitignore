@@ -49,3 +49,12 @@ backend/out
 
 /py_modules/
 decky_plugin.py
+CHANGELOG*
+HANDOVER*
+HOTFIX*.md
+HOTFIX*.txt
+TESTING_*
+TEST_REPORT*
+SOURCE_RECOVERY*
+STEAM_SNAPSHOT_AUDIT*
+INSTALL_*

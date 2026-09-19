@@ -23,7 +23,7 @@ function clock(extra={}) {
 function load(file,mocks={},globals={}) {
   const module={exports:{}};
   const js=ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React,jsxFactory:'window.SP_REACT.createElement',esModuleInterop:true}}).outputText;
-  vm.runInNewContext(js,{module,exports:module.exports,require:name=>{assert.ok(Object.hasOwn(mocks,name),'Unmocked import: '+name);const result=mocks[name];return result && typeof result==='object' && 'default' in result ? {...result,__esModule:true} : result;},console,Promise,Map,Set,WeakMap,WeakSet,Error,DOMException,AbortController,Number,Date,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});
+  vm.runInNewContext(js,{module,exports:module.exports,require:name=>{if(name==='../pluginMenuSection')return load('src/pluginMenuSection.ts',{},globals);assert.ok(Object.hasOwn(mocks,name),'Unmocked import: '+name);const result=mocks[name];return result && typeof result==='object' && 'default' in result ? {...result,__esModule:true} : result;},console,Promise,Map,Set,WeakMap,WeakSet,Error,DOMException,AbortController,Number,Date,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});
   return module.exports;
 }
 function fakeDocument() {
