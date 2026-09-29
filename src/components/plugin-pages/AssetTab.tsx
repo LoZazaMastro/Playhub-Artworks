@@ -42,11 +42,11 @@ const AssetTab: FC<{ assetType: SGDBAssetType; onArtworkApplied?: () => void }> 
         the untouched source it was built from - so the next edit starts from THIS artwork
         instead of quietly re-composing the old one.
       */
+      await changeAssetFromUrl(asset.url, assetType);
+      // Do not discard the original/visibility state until replacement actually succeeds.
       if (assetType === 'hero' || assetType === 'grid_l') {
         await clearPerfectArtwork(appOverview.appid, assetType);
       }
-
-      await changeAssetFromUrl(asset.url, assetType);
 
       /*
         A ZazaMastro hero already has the logo painted into it, so Steam's separate

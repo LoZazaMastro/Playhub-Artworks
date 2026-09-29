@@ -235,7 +235,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "يدمج Perfect Hero الخلفية والشعار في صورة واحدة حتى يظل الشعار ظاهرًا من الصفحة الرئيسية عند استخدام ملف Playhub في CSS Loader. صور Hero من ZazaMastro مجهزة مسبقًا؛ وينشئ Playhub Artworks التركيب تلقائيًا لبقية الألعاب.",
   "PA_REGENERATE_ALL": "إعادة إنشاء الكل",
   "PA_REMAKE_PERFECT_HERO_TITLE": "هل تريد إعادة بناء كل صور Perfect Hero؟",
-  "PA_REMAKE_PERFECT_HERO_DESC": "ستُعاد إنشاء صور Hero لكل الألعاب، بما فيها الصور الصحيحة بالفعل.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "سيتم حذف كل صور Perfect Hero الحالية في هذه الدفعة، بما فيها المنشأة يدويًا، قبل إعادة إنشائها، مع الخلفيات المحفوظة وعلامات الاكتمال. عند حدوث خطأ أو الإلغاء، لن تُستعاد الصور المحذوفة وسيظهر الشعار المنفصل مجددًا. لن تُحذف الأغلفة أو اللافتات أو الأيقونات.",
   "PA_REBUILD": "إعادة البناء",
   "PA_REPLACE_ALL_COVERS_TITLE": "هل تريد استبدال كل الأغلفة؟",
   "PA_REPLACE_ALL_COVERS_DESC": "ستُستبدل الأغلفة الحالية لكل الألعاب. ستبقى الألعاب التي لا يتوفر لها غلاف جديد دون تغيير.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "استعادة الغلاف السابق",
   "PA_DERIVED_COVER_RESTORED": "تمت استعادة الغلاف السابق.",
   "PA_ERROR_COVER_BACKUP_FAILED": "تعذر إنشاء نسخة احتياطية آمنة من الغلاف الحالي، لذلك لم يتم تغييره.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "تعذر استعادة الغلاف السابق. تم الاحتفاظ بنسخته الاحتياطية."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "تعذر استعادة الغلاف السابق. تم الاحتفاظ بنسخته الاحتياطية.",
+  "PA_BATCH_PERFECT_HERO_RESET": "جارٍ إزالة صور Perfect Hero الحالية",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "تمت إزالة {count} من صور Perfect Hero",
+  "PA_ERROR_PERFECT_HERO_RESET": "تعذر إكمال إزالة Perfect Hero أو استعادة الشعار المنفصل. راجع السجلات وحاول مجددًا.",
+  "PA_ERROR_LOGO_NOT_FOUND": "لم يتم العثور على شعار مناسب للعبة. لم يتم إنشاء Perfect Hero جديد. تحقق من ربط اللعبة أو طبّق شعارًا أولًا."
 }

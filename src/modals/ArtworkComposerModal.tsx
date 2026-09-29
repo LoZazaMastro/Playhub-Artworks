@@ -175,6 +175,7 @@ const ArtworkComposerModal: FC<{
     someone who wants clean heroes wants them for every game, not one at a time.
   */
   const [logoHidden, setLogoHidden] = useState(false);
+  const [logoPreferenceReady, setLogoPreferenceReady] = useState(false);
   const [logoShadowOpacity, setLogoShadowOpacity] = useState(50);
   const [logoShadowBlur, setLogoShadowBlur] = useState(40);
   const [frameWidth, setFrameWidth] = useState(0);
@@ -193,7 +194,7 @@ const ArtworkComposerModal: FC<{
         setLogoHidden(Boolean(stored));
       } catch (_) {
         // The default (logo included) is the safe one.
-      }
+      } finally { setLogoPreferenceReady(true); }
     })();
   }, []);
 
@@ -245,7 +246,7 @@ const ArtworkComposerModal: FC<{
   }, [composed, currentCandidates, originalCandidates, zazaBackground]);
 
   const steamBackground = useArtworkPreview(backgroundCandidates);
-  const logoCandidates = useMemo(() => (app ? artworkSources(app, 'logo') : []), [app]);
+  const logoCandidates = useMemo(() => (app && logoPreferenceReady && !logoHidden ? artworkSources(app, 'logo') : []), [app, logoPreferenceReady, logoHidden]);
   const logoSource = useArtworkPreview(logoCandidates);
 
   /*
@@ -256,8 +257,8 @@ const ArtworkComposerModal: FC<{
     The candidate list is known straight away, so it is what decides.
   */
   useEffect(() => {
-    if (app && logoCandidates.length === 0) setLayer('background');
-  }, [app, logoCandidates.length]);
+    if (app && (logoHidden || (logoPreferenceReady && logoCandidates.length === 0))) setLayer('background');
+  }, [app, logoCandidates.length, logoHidden, logoPreferenceReady]);
 
   /* What actually gets drawn: nothing at all while the logo is switched off. */
   const activeLogo = logoHidden ? '' : logoSource;
@@ -667,11 +668,11 @@ const ArtworkComposerModal: FC<{
               </DialogButton>
             </Focusable>
 
-            {!logoSource && (
+            {!logoHidden && logoPreferenceReady && !logoSource && (
               <span className="pa-editor-hint">{t('PA_NO_LOGO_COMPOSE_BG_ONLY', 'This game has no logo, so only the background will be composed.')}</span>
             )}
 
-            {Boolean(logoSource) && (
+            {(logoHidden || Boolean(logoSource)) && (
               <Focusable className="pa-editor-row" flow-children="horizontal">
                 <DialogButton
                   data-pa-logo-visible={logoHidden ? 'false' : 'true'}
@@ -683,7 +684,7 @@ const ArtworkComposerModal: FC<{
               </Focusable>
             )}
 
-            {logoHidden && Boolean(logoSource) && (
+            {logoHidden && (
               <span className="pa-editor-hint">
                 {t('PA_LOGO_EXCLUDED_DESC', 'The logo is not merged into the image; Steam keeps displaying it over the background.')}
               </span>

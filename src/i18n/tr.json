@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero, arka planı ve logoyu tek bir görselde birleştirir; böylece CSS Loader'ın Playhub profili kullanılırken logo Ana Sayfa'da görünür kalır. ZazaMastro hero görselleri önceden hazırlanmıştır; diğer oyunlar için kompozisyonu Playhub Artworks otomatik olarak oluşturur.",
   "PA_REGENERATE_ALL": "Tümünü yeniden oluştur",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Tüm Perfect Hero görselleri yeniden oluşturulsun mu?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Zaten doğru olanlar da dâhil olmak üzere tüm oyunların hero görselleri yeniden oluşturulur.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Bu gruptaki tüm mevcut Perfect Hero görselleri, elle oluşturulanlar da dahil, yeniden oluşturulmadan önce kayıtlı arka planlar ve tamamlanma işaretleriyle birlikte silinecek. Hata veya iptal durumunda silinen görseller geri gelmez ve ayrı logo yeniden gösterilir. Kapaklar, afişler ve simgeler silinmez.",
   "PA_REBUILD": "Yeniden oluştur",
   "PA_REPLACE_ALL_COVERS_TITLE": "Tüm kapaklar değiştirilsin mi?",
   "PA_REPLACE_ALL_COVERS_DESC": "Tüm oyunların mevcut kapakları değiştirilecek. Yeni kapağı olmayan oyunlar değişmeden kalır.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Önceki kapağı geri yükle",
   "PA_DERIVED_COVER_RESTORED": "Önceki kapak geri yüklendi.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Geçerli kapak güvenli bir şekilde yedeklenemediği için değiştirilmedi.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Önceki kapak geri yüklenemedi. Yedeği saklandı."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Önceki kapak geri yüklenemedi. Yedeği saklandı.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Mevcut Perfect Hero görselleri kaldırılıyor",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero kaldırıldı",
+  "PA_ERROR_PERFECT_HERO_RESET": "Perfect Hero kaldırılamadı veya ayrı logo geri yüklenemedi. Günlükleri kontrol edip yeniden deneyin.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Kullanılabilir bir oyun logosu bulunamadı. Yeni Perfect Hero oluşturulmadı. Oyun eşleştirmesini kontrol edin veya önce bir logo uygulayın."
 }

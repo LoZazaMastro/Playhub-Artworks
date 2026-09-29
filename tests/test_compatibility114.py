@@ -24,8 +24,9 @@ class Compatibility114Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'PA_ERROR_ARTWORK_TOO_LARGE'):
             BACKEND._validate_artwork_content(png_header(16000, 16000), allow_source=True)
 
-    def test_source_byte_limit_remains_16_mib(self):
-        self.assertEqual(BACKEND.ARTWORK_DOWNLOAD_MAX_BYTES, 16 * 1024 * 1024)
+    def test_source_and_rpc_byte_limits_are_independent(self):
+        self.assertEqual(BACKEND.ARTWORK_DOWNLOAD_MAX_BYTES, 128 * 1024 * 1024)
+        self.assertEqual(BACKEND.ARTWORK_RPC_MAX_BYTES, 16 * 1024 * 1024)
         with patch.object(BACKEND, 'ARTWORK_DOWNLOAD_MAX_BYTES', 24):
             with self.assertRaisesRegex(ValueError, 'PA_ERROR_ARTWORK_TOO_LARGE'):
                 BACKEND._validate_artwork_content(png_header(7680, 4320, b'overflow'), allow_source=True)

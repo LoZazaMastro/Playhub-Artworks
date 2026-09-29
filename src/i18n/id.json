@@ -235,7 +235,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero menggabungkan latar belakang dan logo menjadi satu gambar agar logo tetap terlihat dari Beranda saat menggunakan profil Playhub di CSS Loader. Gambar hero ZazaMastro sudah disiapkan; Playhub Artworks membuat komposisi secara otomatis untuk permainan lain.",
   "PA_REGENERATE_ALL": "Buat ulang semua",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Bangun ulang semua Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Gambar hero untuk semua permainan akan dibuat ulang, termasuk yang sudah benar.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Semua Perfect Hero dalam kumpulan ini, termasuk yang dibuat manual, akan dihapus sebelum dibuat ulang, beserta latar belakang tersimpan dan penanda selesai. Jika terjadi kesalahan atau pembatalan, gambar yang dihapus tidak dipulihkan dan logo terpisah ditampilkan kembali. Sampul, banner, dan ikon tidak dihapus.",
   "PA_REBUILD": "Bangun ulang",
   "PA_REPLACE_ALL_COVERS_TITLE": "Ganti semua sampul?",
   "PA_REPLACE_ALL_COVERS_DESC": "Sampul saat ini untuk semua permainan akan diganti. Permainan tanpa sampul baru tidak akan diubah.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Pulihkan sampul sebelumnya",
   "PA_DERIVED_COVER_RESTORED": "Sampul sebelumnya telah dipulihkan.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Sampul saat ini tidak dapat dicadangkan dengan aman, jadi tidak diubah.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Sampul sebelumnya tidak dapat dipulihkan. Cadangannya tetap disimpan."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Sampul sebelumnya tidak dapat dipulihkan. Cadangannya tetap disimpan.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Menghapus Perfect Hero yang ada",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero dihapus",
+  "PA_ERROR_PERFECT_HERO_RESET": "Tidak dapat menyelesaikan penghapusan Perfect Hero atau memulihkan logo terpisah. Periksa log dan coba lagi.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Logo permainan yang dapat digunakan tidak ditemukan. Perfect Hero baru tidak dibuat. Periksa asosiasi permainan atau terapkan logo terlebih dahulu."
 }

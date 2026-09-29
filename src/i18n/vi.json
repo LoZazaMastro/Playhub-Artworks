@@ -235,7 +235,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero hợp nhất nền và logo thành một ảnh để logo vẫn hiển thị trên Trang chủ khi dùng hồ sơ Playhub của CSS Loader. Ảnh hero ZazaMastro đã được chuẩn bị sẵn; Playhub Artworks sẽ tự động tạo bố cục cho các trò chơi khác.",
   "PA_REGENERATE_ALL": "Tạo lại tất cả",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Tạo lại tất cả Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Ảnh hero của mọi trò chơi sẽ được tạo lại, kể cả những ảnh đã đúng.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Tất cả Perfect Hero hiện có trong đợt này, kể cả ảnh tạo thủ công, sẽ bị xóa trước khi tạo lại cùng với nền đã lưu và dấu hoàn tất. Nếu xảy ra lỗi hoặc hủy, ảnh đã xóa sẽ không được khôi phục và logo riêng sẽ hiển thị trở lại. Ảnh bìa, biểu ngữ và biểu tượng không bị xóa.",
   "PA_REBUILD": "Tạo lại",
   "PA_REPLACE_ALL_COVERS_TITLE": "Thay toàn bộ bìa?",
   "PA_REPLACE_ALL_COVERS_DESC": "Bìa hiện tại của mọi trò chơi sẽ được thay thế. Trò chơi không có bìa mới sẽ giữ nguyên.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Khôi phục ảnh bìa trước",
   "PA_DERIVED_COVER_RESTORED": "Đã khôi phục ảnh bìa trước.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Không thể sao lưu an toàn ảnh bìa hiện tại nên ảnh không bị thay đổi.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Không thể khôi phục ảnh bìa trước. Bản sao lưu vẫn được giữ lại."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Không thể khôi phục ảnh bìa trước. Bản sao lưu vẫn được giữ lại.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Đang xóa các Perfect Hero hiện có",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "Đã xóa {count} Perfect Hero",
+  "PA_ERROR_PERFECT_HERO_RESET": "Không thể hoàn tất việc xóa Perfect Hero hoặc khôi phục logo riêng. Hãy kiểm tra nhật ký và thử lại.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Không tìm thấy logo trò chơi phù hợp. Chưa tạo Perfect Hero mới. Hãy kiểm tra liên kết trò chơi hoặc áp dụng logo trước."
 }

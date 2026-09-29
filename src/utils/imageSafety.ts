@@ -1,8 +1,9 @@
 export const MAX_ARTWORK_BYTES = 16 * 1024 * 1024;
 export const MAX_ARTWORK_PIXELS = 16_000_000;
 export const MAX_ARTWORK_DIMENSION = 6144;
-export const MAX_SOURCE_PIXELS = 36_000_000;
-export const MAX_SOURCE_DIMENSION = 16384;
+export const MAX_SOURCE_BYTES = 128 * 1024 * 1024;
+export const MAX_SOURCE_PIXELS = 100_000_000;
+export const MAX_SOURCE_DIMENSION = 32768;
 export const IMAGE_FETCH_TIMEOUT_MS = 20_000;
 export const IMAGE_DECODE_TIMEOUT_MS = 15_000;
 
@@ -15,19 +16,19 @@ export const estimatedBase64Bytes = (payload: string): number => {
   return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
 };
 
-export const assertBase64PayloadSize = (payload: string) => {
-  if (estimatedBase64Bytes(payload) > MAX_ARTWORK_BYTES) throw tooLarge();
+export const assertBase64PayloadSize = (payload: string, source = false) => {
+  if (estimatedBase64Bytes(payload) > (source ? MAX_SOURCE_BYTES : MAX_ARTWORK_BYTES)) throw tooLarge();
 };
 
-export const assertDataUrlSize = (source: string) => {
+export const assertDataUrlSize = (source: string, sourceImage = false) => {
   if (!source.startsWith('data:')) return;
   const comma = source.indexOf(',');
   if (comma < 0) throw new Error('PA_ERROR_INVALID_ARTWORK');
-  assertBase64PayloadSize(source.slice(comma + 1));
+  assertBase64PayloadSize(source.slice(comma + 1), sourceImage);
 };
 
-export const assertBlobSize = (blob: Blob) => {
-  if (blob.size > MAX_ARTWORK_BYTES) throw tooLarge();
+export const assertBlobSize = (blob: Blob, source = false) => {
+  if (blob.size > (source ? MAX_SOURCE_BYTES : MAX_ARTWORK_BYTES)) throw tooLarge();
 };
 
 export const assertImageDimensions = (image: HTMLImageElement, source = false) => {
@@ -55,7 +56,7 @@ export const boundedArtworkSize = (width: number, height: number): [number, numb
 
 export const loadSafeImage = (source: string, signal?: AbortSignal) => new Promise<HTMLImageElement>((resolve, reject) => {
   try {
-    assertDataUrlSize(source);
+    assertDataUrlSize(source, true);
   } catch (error) {
     reject(error);
     return;
@@ -198,5 +199,66 @@ export const withSteamArtworkWriteLock = async <T>(operation: () => Promise<T>):
     return await operation();
   } finally {
     release();
+  }
+};
+
+/** Decode base64 in small slices, rather than creating a second source-sized string. */
+export const base64ToBlob = (data: string, mime: string, source = false): Blob => {
+  assertBase64PayloadSize(data, source);
+  const parts: Uint8Array[] = [];
+  for (let start = 0; start < data.length; start += 256 * 1024) {
+    const raw = atob(data.slice(start, start + 256 * 1024));
+    const bytes = new Uint8Array(raw.length);
+    for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index);
+    parts.push(bytes);
+  }
+  return new Blob(parts as BlobPart[], { type: mime });
+};
+
+export const throwIfImageCancelled = (signal?: AbortSignal) => {
+  if (signal?.aborted) throw new DOMException('PA_OPERATION_CANCELLED', 'AbortError');
+};
+
+/** Keep the fetch timeout alive through the response BODY, not just its headers. */
+export const fetchLocalImageBlob = async (source: string, signal?: AbortSignal): Promise<Blob> => {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  const timer = window.setTimeout(abort, IMAGE_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(source, { cache: 'no-cache', signal: controller.signal });
+    if (!response.ok) throw new Error('PA_ERROR_IMAGE_UNAVAILABLE');
+    const length = Number(response.headers.get('content-length') || 0);
+    if (length > MAX_SOURCE_BYTES) throw tooLarge();
+    if (!response.body?.getReader) {
+      const blob = await response.blob();
+      assertBlobSize(blob, true);
+      return blob;
+    }
+    const reader = response.body.getReader();
+    const parts: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        throwIfImageCancelled(signal);
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > MAX_SOURCE_BYTES) throw tooLarge();
+        parts.push(value);
+      }
+    } finally {
+      await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+    }
+    return new Blob(parts as BlobPart[], { type: response.headers.get('content-type') || 'application/octet-stream' });
+  } catch (error: any) {
+    throwIfImageCancelled(signal);
+    if (error?.name === 'AbortError') throw new Error('PA_ERROR_OPERATION_TIMEOUT');
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
   }
 };

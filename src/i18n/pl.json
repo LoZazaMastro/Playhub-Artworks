@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero łączy tło i logo w jeden obraz, dzięki czemu logo pozostaje widoczne na ekranie głównym podczas używania profilu Playhub w CSS Loaderze. Grafiki hero ZazaMastro są już przygotowane; dla pozostałych gier Playhub Artworks tworzy kompozycję automatycznie.",
   "PA_REGENERATE_ALL": "Wygeneruj wszystko ponownie",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Odtworzyć wszystkie Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Grafiki hero wszystkich gier zostaną wygenerowane ponownie, również te, które są już prawidłowe.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Wszystkie Perfect Hero w tej partii, także utworzone ręcznie, zostaną usunięte przed ponownym utworzeniem wraz z zapisanymi tłami i znacznikami ukończenia. W razie błędu lub anulowania usunięte obrazy nie zostaną przywrócone, a osobne logo znów będzie widoczne. Okładki, banery i ikony nie zostaną usunięte.",
   "PA_REBUILD": "Odtwórz",
   "PA_REPLACE_ALL_COVERS_TITLE": "Zastąpić wszystkie okładki?",
   "PA_REPLACE_ALL_COVERS_DESC": "Bieżące okładki wszystkich gier zostaną zastąpione. Gry bez nowej okładki pozostaną bez zmian.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Przywróć poprzednią okładkę",
   "PA_DERIVED_COVER_RESTORED": "Poprzednia okładka została przywrócona.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Nie udało się bezpiecznie utworzyć kopii bieżącej okładki, dlatego nie została zmieniona.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Nie udało się przywrócić poprzedniej okładki. Jej kopia zapasowa została zachowana."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Nie udało się przywrócić poprzedniej okładki. Jej kopia zapasowa została zachowana.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Usuwanie istniejących Perfect Hero",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "Usunięte Perfect Hero: {count}",
+  "PA_ERROR_PERFECT_HERO_RESET": "Nie udało się ukończyć usuwania Perfect Hero lub przywrócić osobnego logo. Sprawdź dzienniki i spróbuj ponownie.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Nie znaleziono odpowiedniego logo gry. Nowy Perfect Hero nie został utworzony. Sprawdź powiązanie gry lub najpierw zastosuj logo."
 }

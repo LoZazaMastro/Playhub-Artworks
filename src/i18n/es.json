@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Un Perfect Hero combina el fondo y el logotipo en una sola imagen para que el logotipo siga visible en Inicio al usar el perfil Playhub de CSS Loader. Las imágenes hero de ZazaMastro ya están preparadas; Playhub Artworks crea automáticamente la composición para los demás juegos.",
   "PA_REGENERATE_ALL": "Regenerar todo",
   "PA_REMAKE_PERFECT_HERO_TITLE": "¿Volver a crear todos los Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Se regenerarán las imágenes hero de todos los juegos, incluidas las que ya sean correctas.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Todos los Perfect Hero de este lote, incluidos los manuales, se eliminarán antes de recrearlos, junto con los fondos guardados y las marcas de finalización. Si hay un error o se cancela, los eliminados no se restaurarán y el logotipo separado volverá a mostrarse. No se eliminarán portadas, banners ni iconos.",
   "PA_REBUILD": "Volver a crear",
   "PA_REPLACE_ALL_COVERS_TITLE": "¿Sustituir todas las portadas?",
   "PA_REPLACE_ALL_COVERS_DESC": "Se sustituirán las portadas actuales de todos los juegos. Los juegos sin una portada nueva no cambiarán.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Restaurar la carátula anterior",
   "PA_DERIVED_COVER_RESTORED": "Se ha restaurado la carátula anterior.",
   "PA_ERROR_COVER_BACKUP_FAILED": "No se pudo guardar una copia segura de la carátula actual, así que no se modificó.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "No se pudo restaurar la carátula anterior. Se ha conservado su copia de seguridad."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "No se pudo restaurar la carátula anterior. Se ha conservado su copia de seguridad.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Eliminando los Perfect Hero existentes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero eliminados",
+  "PA_ERROR_PERFECT_HERO_RESET": "No se pudo completar la eliminación del Perfect Hero o restaurar el logotipo separado. Revisa los registros e inténtalo de nuevo.",
+  "PA_ERROR_LOGO_NOT_FOUND": "No se encontró un logotipo utilizable para el juego. No se creó un nuevo Perfect Hero. Revisa la asociación del juego o aplica primero un logotipo."
 }

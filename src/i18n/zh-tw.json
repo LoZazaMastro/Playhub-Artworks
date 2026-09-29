@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero 會將背景和標誌合併為一張圖片，讓使用 Playhub CSS Loader 設定檔時仍能在首頁顯示標誌。ZazaMastro 主視覺已準備好；其他遊戲由 Playhub Artworks 自動合成。",
   "PA_REGENERATE_ALL": "全部重新產生",
   "PA_REMAKE_PERFECT_HERO_TITLE": "重新製作所有 Perfect Hero？",
-  "PA_REMAKE_PERFECT_HERO_DESC": "將重新產生所有遊戲的主視覺，包括已經正確的項目。",
+  "PA_REMAKE_PERFECT_HERO_DESC": "此批次中所有現有的 Perfect Hero（包括手動建立的）都將在重新產生前刪除，同時清除已儲存的背景與完成標記。若產生失敗或取消，已刪除的圖片不會還原，獨立標誌將重新顯示。封面、橫幅與圖示不會被刪除。",
   "PA_REBUILD": "重新製作",
   "PA_REPLACE_ALL_COVERS_TITLE": "取代所有封面？",
   "PA_REPLACE_ALL_COVERS_DESC": "將取代所有遊戲目前的封面。沒有新封面的遊戲維持不變。",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "還原先前的封面",
   "PA_DERIVED_COVER_RESTORED": "已還原先前的封面。",
   "PA_ERROR_COVER_BACKUP_FAILED": "無法安全備份目前的封面，因此未進行任何變更。",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "無法還原先前的封面。備份已保留。"
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "無法還原先前的封面。備份已保留。",
+  "PA_BATCH_PERFECT_HERO_RESET": "正在刪除現有的 Perfect Hero",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "已刪除 {count} 個 Perfect Hero",
+  "PA_ERROR_PERFECT_HERO_RESET": "無法完成 Perfect Hero 的刪除或還原獨立標誌。請檢查記錄並重試。",
+  "PA_ERROR_LOGO_NOT_FOUND": "找不到可用的遊戲標誌，未建立新的 Perfect Hero。請檢查遊戲關聯，或先套用一個標誌。"
 }

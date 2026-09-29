@@ -118,7 +118,10 @@ class ResourceSafetyTests(unittest.TestCase):
         frontend = (ROOT / 'src' / 'utils' / 'perfectArtwork.ts').read_text(encoding='utf-8')
         composer = (ROOT / 'src' / 'modals' / 'ArtworkComposerModal.tsx').read_text(encoding='utf-8')
         batch = (ROOT / 'src' / 'utils' / 'zazamastroBatch.ts').read_text(encoding='utf-8')
-        self.assertIn("'read_perfect_source_chunk'", frontend)
+        self.assertIn('readArtworkPayload', frontend)
+        transfer = (ROOT / 'src' / 'utils' / 'artworkTransfer.ts').read_text(encoding='utf-8')
+        self.assertIn("'read_artwork_transfer_chunk'", transfer)
+        self.assertLessEqual(BACKEND.ARTWORK_TRANSFER_CHUNK_BYTES, 384 * 1024)
         self.assertIn('preservePerfectSource(', composer)
         self.assertNotIn('savePerfectSource(', composer)
         self.assertNotIn("call('save_perfect_source'", batch)
@@ -143,11 +146,11 @@ class ResourceSafetyTests(unittest.TestCase):
         finally:
             plugin._download_executor.shutdown(wait=True)
 
-    def test_release_metadata_is_1_1_4(self):
+    def test_release_metadata_is_1_1_6(self):
         package = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
         release = json.loads((ROOT / '.playhub-release.json').read_text(encoding='utf-8'))
-        self.assertEqual(package['version'], '1.1.4')
-        self.assertEqual(release['version'], '1.1.4')
+        self.assertEqual(package['version'], '1.1.6')
+        self.assertEqual(release['version'], '1.1.6')
 
 
 if __name__ == '__main__':

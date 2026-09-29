@@ -1,2 +1,2 @@
 /** Same requested release; distinguish corrected bundles in diagnostic logs. */
-export const ARTWORKS_BUILD = '1.1.5';
+export const ARTWORKS_BUILD = '1.1.7';

@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "A Perfect Hero egyetlen képbe egyesíti a hátteret és a logót, így a logó a Kezdőlapon is látható marad a CSS Loader Playhub-profiljának használatakor. A ZazaMastro hero képek már elő vannak készítve; más játékokhoz a Playhub Artworks automatikusan elkészíti a kompozíciót.",
   "PA_REGENERATE_ALL": "Összes újragenerálása",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Újraépíted az összes Perfect Hero képet?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Minden játék hero képe újragenerálódik, azoké is, amelyek már megfelelőek.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "A köteg összes meglévő Perfect Hero képe, a kézzel készítettek is, az újrakészítés előtt törlődik a mentett hátterekkel és készültségi jelölésekkel együtt. Hiba vagy megszakítás esetén a törölt képek nem állnak vissza, a külön logó pedig újra látható lesz. A borítók, bannerek és ikonok nem törlődnek.",
   "PA_REBUILD": "Újraépítés",
   "PA_REPLACE_ALL_COVERS_TITLE": "Lecseréled az összes borítót?",
   "PA_REPLACE_ALL_COVERS_DESC": "Minden játék jelenlegi borítója lecserélődik. Az új borító nélküli játékok változatlanok maradnak.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Előző borító visszaállítása",
   "PA_DERIVED_COVER_RESTORED": "Az előző borító visszaállt.",
   "PA_ERROR_COVER_BACKUP_FAILED": "A jelenlegi borítóról nem sikerült biztonságos mentést készíteni, ezért változatlan maradt.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Az előző borítót nem sikerült visszaállítani. A biztonsági mentése megmaradt."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Az előző borítót nem sikerült visszaállítani. A biztonsági mentése megmaradt.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Meglévő Perfect Hero képek eltávolítása",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero eltávolítva",
+  "PA_ERROR_PERFECT_HERO_RESET": "Nem sikerült befejezni a Perfect Hero eltávolítását vagy visszaállítani a külön logót. Ellenőrizd a naplókat, majd próbáld újra.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Nem található használható játéklogó. Nem készült új Perfect Hero. Ellenőrizd a játék társítását, vagy előbb alkalmazz egy logót."
 }

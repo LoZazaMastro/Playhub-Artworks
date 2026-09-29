@@ -1,3 +1,4 @@
+import { artworkPayloadUrl, readArtworkPayload } from './artworkTransfer';
 import { call } from '@decky/api';
 
 import { hideLogo, showLogo } from './logoControl';
@@ -28,13 +29,6 @@ const safeCall = async <T>(fallback: T, method: string, ...args: any[]): Promise
   }
 };
 
-type PerfectSourceInfo = {
-  exists?: boolean;
-  size?: number;
-  mime?: string;
-  chunk_size?: number;
-};
-
 type PerfectSourceSave = {
   saved?: boolean;
   existing?: boolean;
@@ -54,16 +48,10 @@ export const getPerfectSource = async (appId: number, target: PerfectTarget): Pr
   if (pending) return pending;
 
   const read = (async () => {
-    const info = await safeCall<PerfectSourceInfo>({ exists: false }, 'get_perfect_source_info', appId, target);
-    if (!info.exists || !info.size) return '';
-    const chunkSize = Math.max(3, Number(info.chunk_size || 384 * 1024));
-    const parts: string[] = [];
-    for (let offset = 0; offset < Number(info.size); offset += chunkSize) {
-      const part = await safeCall('', 'read_perfect_source_chunk', appId, target, offset);
-      if (!part) return '';
-      parts.push(String(part));
-    }
-    return `data:${info.mime || 'image/jpeg'};base64,${parts.join('')}`;
+    try {
+      const payload = await readArtworkPayload('', { perfectSource: { appId, target }, staticOnly: true });
+      return payload ? artworkPayloadUrl(payload) : '';
+    } catch (_) { return ''; }
   })();
 
   sourceReads.set(id, read);
@@ -121,6 +109,7 @@ export const markPerfectArtwork = async (appId: number, target: PerfectTarget, w
   */
   const logoHidden = withLogo ? await hideLogo(appId) : false;
   await safeCall(false, 'set_setting', key(appId, target), true);
+  if (target === 'hero') await safeCall(false, 'set_setting', `perfect_hero_info_${appId}`, { version: 116, origin: 'manual', withLogo });
   return logoHidden;
 };
 
@@ -130,5 +119,9 @@ export const clearPerfectArtwork = async (appId: number, target: PerfectTarget) 
   sourceWrites.delete(key(appId, target));
   await safeCall(false, 'delete_setting', key(appId, target));
   await safeCall(false, 'clear_perfect_source', appId, target);
-  if (target === 'hero') await showLogo(appId);
+  if (target === 'hero') {
+    await safeCall(false, 'delete_setting', `perfect_hero_info_${appId}`);
+    await safeCall(false, 'delete_setting', `zazamastro_hero_${appId}`);
+    await showLogo(appId);
+  }
 };

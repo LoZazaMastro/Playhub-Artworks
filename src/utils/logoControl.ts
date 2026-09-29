@@ -136,16 +136,23 @@ export const hideLogo = async (appId: number): Promise<boolean> => {
   }
 
   const hidden = await writeLogoPosition(appId, MIN_LOGO_POSITION);
-  if (hidden) await safeCall(false, 'set_setting', `logo_hidden_${appId}`, true);
+  if (hidden) {
+    await safeCall(false, 'set_setting', `logo_hidden_${appId}`, true);
+    await safeCall(false, 'set_setting', `logo_visible_${appId}`, false);
+  }
   return hidden;
 };
 
 export const showLogo = async (appId: number): Promise<boolean> => {
   const stored = await safeCall<Partial<LogoPosition> | null>(null, 'get_setting', `logo_position_backup_${appId}`, null);
-  const shown = await writeLogoPosition(appId, normalizeLogoPosition(stored ?? DEFAULT_LOGO_POSITION));
+  const position = normalizeLogoPosition(stored ?? DEFAULT_LOGO_POSITION);
+  const visiblePosition = position.nWidthPct <= 0.01 || position.nHeightPct <= 0.01
+    ? DEFAULT_LOGO_POSITION : position;
+  const shown = await writeLogoPosition(appId, visiblePosition);
   if (shown) {
     await safeCall(false, 'delete_setting', `logo_position_backup_${appId}`);
     await safeCall(false, 'set_setting', `logo_hidden_${appId}`, false);
+    await safeCall(false, 'set_setting', `logo_visible_${appId}`, true);
   }
   return shown;
 };

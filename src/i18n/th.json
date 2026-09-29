@@ -235,7 +235,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero รวมพื้นหลังและโลโก้ไว้ในภาพเดียว เพื่อให้โลโก้ยังมองเห็นได้จากหน้าหลักเมื่อใช้โปรไฟล์ Playhub ใน CSS Loader ภาพ Hero ของ ZazaMastro เตรียมไว้แล้ว ส่วนเกมอื่น Playhub Artworks จะสร้างภาพประกอบให้อัตโนมัติ",
   "PA_REGENERATE_ALL": "สร้างใหม่ทั้งหมด",
   "PA_REMAKE_PERFECT_HERO_TITLE": "สร้าง Perfect Hero ทั้งหมดใหม่หรือไม่",
-  "PA_REMAKE_PERFECT_HERO_DESC": "ภาพ Hero ของทุกเกมจะถูกสร้างใหม่ รวมถึงภาพที่ถูกต้องอยู่แล้ว",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Perfect Hero ที่มีอยู่ทั้งหมดในชุดนี้ รวมถึงที่สร้างเอง จะถูกลบก่อนสร้างใหม่ พร้อมพื้นหลังที่บันทึกไว้และสถานะเสร็จสมบูรณ์ หากเกิดข้อผิดพลาดหรือยกเลิก ภาพที่ลบจะไม่ถูกกู้คืน และโลโก้แยกจะแสดงอีกครั้ง ปก แบนเนอร์ และไอคอนจะไม่ถูกลบ",
   "PA_REBUILD": "สร้างใหม่",
   "PA_REPLACE_ALL_COVERS_TITLE": "แทนที่ปกทั้งหมดหรือไม่",
   "PA_REPLACE_ALL_COVERS_DESC": "ปกปัจจุบันของทุกเกมจะถูกแทนที่ เกมที่ไม่มีปกใหม่จะไม่เปลี่ยนแปลง",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "กู้คืนภาพปกก่อนหน้า",
   "PA_DERIVED_COVER_RESTORED": "กู้คืนภาพปกก่อนหน้าแล้ว",
   "PA_ERROR_COVER_BACKUP_FAILED": "ไม่สามารถสำรองภาพปกปัจจุบันได้อย่างปลอดภัย จึงไม่มีการเปลี่ยนแปลง",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "ไม่สามารถกู้คืนภาพปกก่อนหน้าได้ แต่ยังเก็บข้อมูลสำรองไว้"
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "ไม่สามารถกู้คืนภาพปกก่อนหน้าได้ แต่ยังเก็บข้อมูลสำรองไว้",
+  "PA_BATCH_PERFECT_HERO_RESET": "กำลังลบ Perfect Hero ที่มีอยู่",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "ลบ Perfect Hero แล้ว {count} ภาพ",
+  "PA_ERROR_PERFECT_HERO_RESET": "ไม่สามารถลบ Perfect Hero หรือคืนค่าโลโก้แยกให้เสร็จสมบูรณ์ได้ โปรดตรวจสอบบันทึกแล้วลองอีกครั้ง",
+  "PA_ERROR_LOGO_NOT_FOUND": "ไม่พบโลโก้เกมที่ใช้ได้ จึงไม่ได้สร้าง Perfect Hero ใหม่ โปรดตรวจสอบการเชื่อมโยงเกมหรือใช้โลโก้ก่อน"
 }

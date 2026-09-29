@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Ein Perfect Hero vereint Hintergrund und Logo in einem Bild, damit das Logo auf der Startseite mit dem Playhub-CSS-Loader-Profil sichtbar bleibt. ZazaMastro-Heroes sind bereits vorbereitet; für andere Spiele erstellt Playhub Artworks die Komposition automatisch.",
   "PA_REGENERATE_ALL": "Alle neu erzeugen",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Alle Perfect Heroes neu erstellen?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Die Heroes aller Spiele werden neu erzeugt, auch bereits korrekte.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Alle vorhandenen Perfect Heroes in diesem Auftrag, auch manuell erstellte, werden vor dem Neuaufbau zusammen mit gespeicherten Hintergründen und Abschlussmarkierungen gelöscht. Bei Fehlern oder Abbruch bleiben entfernte Heroes gelöscht; das separate Logo wird wieder angezeigt. Cover, Banner und Symbole werden nicht gelöscht.",
   "PA_REBUILD": "Neu erstellen",
   "PA_REPLACE_ALL_COVERS_TITLE": "Alle Cover ersetzen?",
   "PA_REPLACE_ALL_COVERS_DESC": "Die aktuellen Cover aller Spiele werden ersetzt. Spiele ohne neues Cover bleiben unverändert.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Vorheriges Cover wiederherstellen",
   "PA_DERIVED_COVER_RESTORED": "Das vorherige Cover wurde wiederhergestellt.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Das aktuelle Cover konnte nicht sicher gesichert werden und blieb daher unverändert.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Das vorherige Cover konnte nicht wiederhergestellt werden. Die Sicherung wurde beibehalten."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Das vorherige Cover konnte nicht wiederhergestellt werden. Die Sicherung wurde beibehalten.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Vorhandene Perfect Heroes werden entfernt",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes entfernt",
+  "PA_ERROR_PERFECT_HERO_RESET": "Der Perfect Hero konnte nicht vollständig entfernt oder das separate Logo nicht wiederhergestellt werden. Prüfe die Protokolle und versuche es erneut.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Kein verwendbares Spiellogo gefunden. Es wurde kein neuer Perfect Hero erstellt. Prüfe die Spielzuordnung oder wende zuerst ein Logo an."
 }

@@ -23,7 +23,7 @@ function clock(extra={}) {
 function load(file,mocks={},globals={}) {
   const module={exports:{}};
   const js=ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React,jsxFactory:'window.SP_REACT.createElement',esModuleInterop:true}}).outputText;
-  vm.runInNewContext(js,{module,exports:module.exports,require:name=>{if(name==='../pluginMenuSection')return load('src/pluginMenuSection.ts',{},globals);assert.ok(Object.hasOwn(mocks,name),'Unmocked import: '+name);const result=mocks[name];return result && typeof result==='object' && 'default' in result ? {...result,__esModule:true} : result;},console,Promise,Map,Set,WeakMap,WeakSet,Error,DOMException,AbortController,Number,Date,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});
+  vm.runInNewContext(js,{module,exports:module.exports,require:name=>{if(name==='../pluginMenuSection')return load('src/pluginMenuSection.ts',{},globals);assert.ok(Object.hasOwn(mocks,name),'Unmocked import: '+name);const result=mocks[name];return result && typeof result==='object' && 'default' in result ? {...result,__esModule:true} : result;},console,Promise,Map,Set,WeakMap,WeakSet,Error,DOMException,AbortController,Number,Date,Blob,atob,btoa,URL,process:{env:{ROLLUP_ENV:'production'}},...globals},{filename:file});
   return module.exports;
 }
 function fakeDocument() {
@@ -164,13 +164,16 @@ test('image decode abort releases source; composition queue releases after a fai
 });
 test('normalizer preserves small PNG and animated WebM; large static PNG is resized without losing alpha',async()=>{
  let dims=[7680,4320],drawn,canvases=0,loads=0;
- const safety=load('src/utils/imageSafety.ts');
+ const safety=load('src/utils/imageSafety.ts',{}, {Blob,atob});
  const canvas={getContext:()=>({drawImage:(...args)=>drawn=args}),width:0,height:0};
- const api=load('src/utils/normalizeArtworkPayload.ts',{'./imageSafety':{...safety,loadSafeImage:async()=>{loads++;return {naturalWidth:dims[0],naturalHeight:dims[1]};},canvasToBase64:async(_c,format)=>{assert.equal(format,'png');return 'resized';},releaseImage:noop,releaseCanvas:noop}}, {document:{createElement:()=>{canvases++;return canvas;}}});
+ const api=load('src/utils/normalizeArtworkPayload.ts',{
+ './imageMetadata':{artworkMime:f=>f==='webm'?'video/webm':`image/${f}`,inspectImageBlob:async blob=>({format:blob.type==='video/webm'?'webm':blob.type.slice(6),dimensions:blob.type==='video/webm'?null:dims,animated:blob.type==='video/webm'||blob.type==='image/webp'})},
+ './imageSafety':{...safety,blobToSafeDataUrl:async()=> 'data:image/png;base64,AAAA',loadSafeImage:async()=>{loads++;return {naturalWidth:dims[0],naturalHeight:dims[1]};},canvasToBase64:async(_c,format)=>{assert.equal(format,'png');return 'resized';},releaseImage:noop,releaseCanvas:noop}},
+ {document:{createElement:()=>{canvases++;return canvas;}},Blob,atob,URL});
  const result=await api.normalizeArtworkPayload({data:'AAAA',format:'png'});assert.equal(result.data,'resized');assert.equal(result.format,'png');assert.ok(canvas.width*canvas.height<=16000000);assert.equal(drawn[3],canvas.width);
  dims=[600,900];const small=await api.normalizeArtworkPayload({data:'AAAA',format:'png'});assert.equal(small.data,'AAAA');assert.equal(canvases,1);
  const before=loads;const video=await api.normalizeArtworkPayload({data:'AAAA',format:'webm',animated:true});assert.equal(video.format,'png');assert.equal(loads,before);
- dims=[7680,4320];await assert.rejects(api.normalizeArtworkPayload({data:'AAAA',format:'webp',animated:true}),/PA_ERROR_ARTWORK_TOO_LARGE/);
+ dims=[7680,4320];await assert.rejects(api.normalizeArtworkPayload({data:'AAAA',format:'webp',animated:true}),/PA_ERROR_ANIMATED_ARTWORK_TOO_LARGE/);
 });
 test('synchronous Steam app-details callback does not leak a subscription or create a timeout',async()=>{
  let unregistered=0,timers=0;
@@ -197,11 +200,12 @@ test('runtime unload immediately cancels progress polling and ignores an in-flig
 });
 
 test('PNG conversion shrinks within the byte budget rather than stripping transparency',async()=>{
- const safety=load('src/utils/imageSafety.ts');let attempts=0;
+ const safety=load('src/utils/imageSafety.ts',{}, {Blob,atob});let attempts=0;
  const canvas={width:0,height:0,getContext:()=>({drawImage:noop})};
- const api=load('src/utils/normalizeArtworkPayload.ts',{'./imageSafety':{...safety,loadSafeImage:async()=>({naturalWidth:3840,naturalHeight:2160}),
+ const api=load('src/utils/normalizeArtworkPayload.ts',{'./imageMetadata':{artworkMime:()=> 'image/webp',inspectImageBlob:async()=>({format:'webp',dimensions:[3840,2160],animated:false})},
+ './imageSafety':{...safety,loadSafeImage:async()=>({naturalWidth:3840,naturalHeight:2160}),
  canvasToBase64:async(_canvas,format)=>{assert.equal(format,'png');if(++attempts===1)throw Error('PA_ERROR_ARTWORK_TOO_LARGE');return 'bounded';},releaseImage:noop,releaseCanvas:noop}},
- {document:{createElement:()=>canvas}});
+ {document:{createElement:()=>canvas},Blob,atob,URL});
  assert.equal((await api.normalizeArtworkPayload({data:'AAAA',format:'webp'})).data,'bounded');
- assert.equal(attempts,2);assert.equal(canvas.width,2880);assert.equal(canvas.height,1620);
+ assert.equal(attempts,2);assert.equal(canvas.width,3264);assert.equal(canvas.height,1836);
 });

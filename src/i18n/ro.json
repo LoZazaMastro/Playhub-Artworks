@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Un Perfect Hero combină fundalul și logo-ul într-o singură imagine, astfel încât logo-ul să rămână vizibil pe ecranul Acasă când folosești profilul Playhub din CSS Loader. Imaginile hero ZazaMastro sunt deja pregătite; pentru celelalte jocuri, Playhub Artworks creează automat compoziția.",
   "PA_REGENERATE_ALL": "Regenerează tot",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Reconstruiești toate imaginile Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Imaginile hero pentru toate jocurile vor fi regenerate, inclusiv cele care sunt deja corecte.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Toate imaginile Perfect Hero din acest lot, inclusiv cele create manual, vor fi șterse înainte de recreare, împreună cu fundalurile salvate și marcajele de finalizare. În caz de eroare sau anulare, imaginile șterse nu vor fi restaurate, iar sigla separată va fi afișată din nou. Copertele, bannerele și pictogramele nu vor fi șterse.",
   "PA_REBUILD": "Reconstruiește",
   "PA_REPLACE_ALL_COVERS_TITLE": "Înlocuiești toate copertele?",
   "PA_REPLACE_ALL_COVERS_DESC": "Copertele actuale ale tuturor jocurilor vor fi înlocuite. Jocurile fără o copertă nouă rămân neschimbate.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Restaurează coperta anterioară",
   "PA_DERIVED_COVER_RESTORED": "Coperta anterioară a fost restaurată.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Coperta actuală nu a putut fi salvată în siguranță, așa că a rămas neschimbată.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Coperta anterioară nu a putut fi restaurată. Copia de siguranță a fost păstrată."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Coperta anterioară nu a putut fi restaurată. Copia de siguranță a fost păstrată.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Se elimină imaginile Perfect Hero existente",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} imagini Perfect Hero eliminate",
+  "PA_ERROR_PERFECT_HERO_RESET": "Eliminarea imaginii Perfect Hero sau restaurarea siglei separate nu a putut fi finalizată. Verifică jurnalele și încearcă din nou.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Nu a fost găsită o siglă utilizabilă pentru joc. Nu a fost creat un nou Perfect Hero. Verifică asocierea jocului sau aplică mai întâi o siglă."
 }

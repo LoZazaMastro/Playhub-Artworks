@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "En Perfect Hero slår sammen bakgrunn og logo til ett bilde, slik at logoen forblir synlig på Hjem med Playhub-profilen i CSS Loader. ZazaMastro-heroer er allerede klargjort; Playhub Artworks lager komposisjonen automatisk for andre spill.",
   "PA_REGENERATE_ALL": "Generer alle på nytt",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Bygge alle Perfect Heroes på nytt?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Heroene for alle spill genereres på nytt, også de som allerede er riktige.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Alle eksisterende Perfect Heroes i denne jobben, også manuelt opprettede, slettes før de bygges på nytt, sammen med lagrede bakgrunner og fullføringsmarkeringer. Ved feil eller avbrytelse forblir slettede bilder slettet, og den separate logoen gjenopprettes. Omslag, bannere og ikoner slettes ikke.",
   "PA_REBUILD": "Bygg på nytt",
   "PA_REPLACE_ALL_COVERS_TITLE": "Erstatte alle covere?",
   "PA_REPLACE_ALL_COVERS_DESC": "De nåværende coverne for alle spill erstattes. Spill uten et nytt cover forblir uendret.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Gjenopprett forrige omslag",
   "PA_DERIVED_COVER_RESTORED": "Det forrige omslaget er gjenopprettet.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Det gjeldende omslaget kunne ikke sikkerhetskopieres på en trygg måte og ble derfor ikke endret.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige omslaget kunne ikke gjenopprettes. Sikkerhetskopien er beholdt."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige omslaget kunne ikke gjenopprettes. Sikkerhetskopien er beholdt.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Fjerner eksisterende Perfect Heroes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes fjernet",
+  "PA_ERROR_PERFECT_HERO_RESET": "Kunne ikke fullføre fjerningen av Perfect Hero eller gjenopprette den separate logoen. Kontroller loggene og prøv igjen.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Fant ingen brukbar spillogo. Ingen ny Perfect Hero ble opprettet. Kontroller spilltilknytningen eller bruk en logo først."
 }

@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Um Perfect Hero combina o fundo e o logotipo numa só imagem para que o logotipo continue visível no Início ao usar o perfil Playhub do CSS Loader. As imagens hero ZazaMastro já estão preparadas; o Playhub Artworks cria automaticamente a composição para os outros jogos.",
   "PA_REGENERATE_ALL": "Regenerar tudo",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Recriar todos os Perfect Heroes?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "As imagens hero de todos os jogos serão regeneradas, incluindo as que já estão corretas.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Todos os Perfect Hero deste lote, incluindo os manuais, serão excluídos antes de serem recriados, junto com os fundos salvos e os marcadores de conclusão. Em caso de erro ou cancelamento, os excluídos não serão restaurados e o logotipo separado voltará a aparecer. Capas, banners e ícones não serão excluídos.",
   "PA_REBUILD": "Recriar",
   "PA_REPLACE_ALL_COVERS_TITLE": "Substituir todas as capas?",
   "PA_REPLACE_ALL_COVERS_DESC": "As capas atuais de todos os jogos serão substituídas. Os jogos sem uma nova capa permanecerão inalterados.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Restaurar capa anterior",
   "PA_DERIVED_COVER_RESTORED": "A capa anterior foi restaurada.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Não foi possível fazer um backup seguro da capa atual, por isso ela não foi alterada.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Não foi possível restaurar a capa anterior. O backup foi mantido."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Não foi possível restaurar a capa anterior. O backup foi mantido.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Removendo os Perfect Hero existentes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero removidos",
+  "PA_ERROR_PERFECT_HERO_RESET": "Não foi possível concluir a remoção do Perfect Hero ou restaurar o logotipo separado. Confira os logs e tente novamente.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Nenhum logotipo utilizável foi encontrado para o jogo. Nenhum novo Perfect Hero foi criado. Confira a associação do jogo ou aplique um logotipo primeiro."
 }

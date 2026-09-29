@@ -1,5 +1,10 @@
 import concurrent.futures
-import difflib
+# Some Windows Decky runtimes omit difflib. Title matching must not prevent
+# the entire backend (including unrelated artwork downloads) from starting.
+try:
+    from difflib import SequenceMatcher as _SequenceMatcher
+except ImportError:
+    _SequenceMatcher = None
 import html
 import json
 import re
@@ -15,7 +20,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.4'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36 Playhub-Artworks/1.1.6'
 
 PROVIDERS: Dict[str, Dict[str, Any]] = {
     'google': {'label': 'URL', 'hosts': ()},
@@ -250,6 +255,58 @@ def _normalize_title(value: str) -> str:
     return re.sub(r'[^a-z0-9]+', ' ', text).strip()
 
 
+def _fallback_sequence_ratio(left: str, right: str) -> float:
+    """Dependency-free matching-block ratio for the no-junk title-matching case.
+
+    Preserve the existing SequenceMatcher(None, left, right) ranking, including
+    earliest-match tie breaking and the long-input popular-character heuristic.
+    This intentionally implements only the ratio needed here, not a difflib shim.
+    The work list avoids recursion limits for longer provider titles.
+    """
+    total = len(left) + len(right)
+    if not total:
+        return 1.0
+    positions = {}
+    for index, char in enumerate(right):
+        positions.setdefault(char, []).append(index)
+    if len(right) >= 200:
+        threshold = len(right) // 100 + 1
+        positions = {char: indexes for char, indexes in positions.items() if len(indexes) <= threshold}
+
+    work = [(0, len(left), 0, len(right))]
+    matched = 0
+    while work:
+        a_start, a_end, b_start, b_end = work.pop()
+        best_a, best_b, length = a_start, b_start, 0
+        previous = {}
+        for a_index in range(a_start, a_end):
+            current = {}
+            for b_index in positions.get(left[a_index], ()):
+                if b_index < b_start:
+                    continue
+                if b_index >= b_end:
+                    break
+                size = previous.get(b_index - 1, 0) + 1
+                current[b_index] = size
+                if size > length:
+                    best_a, best_b, length = a_index - size + 1, b_index - size + 1, size
+            previous = current
+        # Popular characters may extend a match but never seed one.
+        while best_a > a_start and best_b > b_start and left[best_a - 1] == right[best_b - 1]:
+            best_a -= 1
+            best_b -= 1
+            length += 1
+        while best_a + length < a_end and best_b + length < b_end and left[best_a + length] == right[best_b + length]:
+            length += 1
+        if length:
+            matched += length
+            if a_start < best_a and b_start < best_b:
+                work.append((a_start, best_a, b_start, best_b))
+            if best_a + length < a_end and best_b + length < b_end:
+                work.append((best_a + length, a_end, best_b + length, b_end))
+    return 2.0 * matched / total
+
+
 def _title_score(query: str, candidate: str) -> int:
     left = _normalize_title(query)
     right = _normalize_title(candidate)
@@ -263,7 +320,8 @@ def _title_score(query: str, candidate: str) -> int:
     right_numbers = set(re.findall(r'\b\d+\b', right))
     if left_numbers != right_numbers and (left_numbers or right_numbers):
         return 0
-    similarity = difflib.SequenceMatcher(None, left, right).ratio()
+    similarity = (_SequenceMatcher(None, left, right).ratio() if _SequenceMatcher is not None
+                  else _fallback_sequence_ratio(left, right))
     return int(similarity * 900) if similarity >= 0.72 else 0
 
 

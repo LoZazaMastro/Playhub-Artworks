@@ -58,3 +58,7 @@ TEST_REPORT*
 SOURCE_RECOVERY*
 STEAM_SNAPSHOT_AUDIT*
 INSTALL_*
+
+# Current release documentation belongs in the project repository.
+!CHANGELOG.md
+!TESTING_1.1.6.md

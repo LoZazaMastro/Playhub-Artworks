@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Heroは背景とロゴを1枚の画像に統合し、PlayhubのCSS Loaderプロファイル使用時もホーム画面でロゴを表示します。ZazaMastroのヒーロー画像は準備済みで、その他のゲームはPlayhub Artworksが自動で合成します。",
   "PA_REGENERATE_ALL": "すべて再生成",
   "PA_REMAKE_PERFECT_HERO_TITLE": "すべてのPerfect Heroを作り直しますか？",
-  "PA_REMAKE_PERFECT_HERO_DESC": "すでに正しいものも含め、すべてのゲームのヒーロー画像を再生成します。",
+  "PA_REMAKE_PERFECT_HERO_DESC": "この処理の対象となる既存のPerfect Heroは、手動で作成したものも含め、再生成前に保存済みの背景と完了フラグとともに削除されます。エラーやキャンセルが発生しても削除済みの画像は元に戻らず、別レイヤーのロゴが再表示されます。カバー、バナー、アイコンは削除されません。",
   "PA_REBUILD": "再作成",
   "PA_REPLACE_ALL_COVERS_TITLE": "すべてのカバーを置き換えますか？",
   "PA_REPLACE_ALL_COVERS_DESC": "すべてのゲームの現在のカバーを置き換えます。新しいカバーが見つからないゲームは変更されません。",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "以前のカバーを復元",
   "PA_DERIVED_COVER_RESTORED": "以前のカバーを復元しました。",
   "PA_ERROR_COVER_BACKUP_FAILED": "現在のカバーを安全にバックアップできなかったため、変更しませんでした。",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "以前のカバーを復元できませんでした。バックアップは保持されています。"
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "以前のカバーを復元できませんでした。バックアップは保持されています。",
+  "PA_BATCH_PERFECT_HERO_RESET": "既存のPerfect Heroを削除中",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "Perfect Heroを{count}件削除",
+  "PA_ERROR_PERFECT_HERO_RESET": "Perfect Heroの削除または別レイヤーのロゴの復元を完了できませんでした。ログを確認して再試行してください。",
+  "PA_ERROR_LOGO_NOT_FOUND": "使用できるゲームのロゴが見つかりませんでした。新しいPerfect Heroは作成されていません。ゲームの関連付けを確認するか、先にロゴを適用してください。"
 }

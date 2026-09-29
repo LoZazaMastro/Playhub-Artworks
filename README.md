@@ -51,19 +51,43 @@ Install and update Playhub Artworks through the Plugin Store in [Playhub](https:
 2. Enable Decky's developer mode.
 3. Open **Decky > Settings > Developer > Install plugin from ZIP** and select the ZIP.
 
-## Version 1.1.4 — Hotfix 2
+## Version 1.1.6
 
-The corrected build is identified as `1.1.4-hotfix.2`; the plugin version remains 1.1.4.
-This hotfix fixes React #130 when an artwork has notes: the note badge no longer renders an undefined Steam glyph. Native glyph discovery supports the supplied Steam build, with a local Menu icon when the native component is unavailable.
-See [HOTFIX_1.1.4.md](HOTFIX_1.1.4.md) for the reproduced crash, actual ReactDOM browser tests and verification scope.
+Automatic Perfect Heroes now resolve usable logos from the current user's local artwork,
+Steam's cached and official images, and multiple SteamGridDB candidates. Failed logo or
+background candidates no longer silently produce a logo-free “completed” Perfect Hero.
 
-This update addresses delayed Steam/Big Picture initialization, game-menu patch ownership,
-search error recovery and bounded image resizing. It also stops plugin polling and diagnostic
-work during unload. Read [CHANGELOG.md](CHANGELOG.md) and the detailed
-[verification report](TESTING_1.1.4.md) for the tested scope and remaining live-client checks.
+Large static artwork is downloaded in bounded chunks, then recompressed/resized for Steam.
+The source-file budget is separate from the output budget, including high-resolution and
+16-bit PNGs. Transparent logos remain transparent; animated uploads are never silently
+flattened. See [CHANGELOG.md](CHANGELOG.md) and [TESTING_1.1.6.md](TESTING_1.1.6.md).
 
-After upgrading from 1.1.3, the first 1.1.4 or Hotfix 1, fully restart Steam and Decky/Playhub to discard old in-memory
-patches. Saved settings and artwork backups are not intentionally reset by this update.
+After installing, fully restart Steam and Decky/Playhub so frontend and backend both use 1.1.6.
+Saved preferences, exclusions and existing artwork are not reset by the upgrade.
+
+### Regenerate all and Apply missing
+
+**Regenerate all** now has two explicit phases. After confirmation, it first removes every
+identified Perfect Hero in the eligible library batch, including manual compositions and
+legacy ZazaMastro heroes, and clears saved background sources and completion markers. Only
+when this cleanup pass finishes does it search for replacements and rebuild the heroes.
+The progress display separately counts successfully removed Perfect Heroes.
+
+If a replacement cannot be created, the old Perfect Hero stays removed: Steam falls back to
+its normal background (where available) and the separate logo is restored. Cancellation does
+not bring deleted compositions back. Covers, banners, icons, the actual logo files, game
+associations and the API key are not deleted by this command. An unmarked ordinary custom
+hero is not erased merely because no replacement can be found. Failed reset operations are
+reported and block regeneration for that game rather than silently reusing its old state.
+
+**Apply missing** remains non-destructive for intact existing Perfect Heroes, including
+manual compositions without a logo. Installing this update does not run any cleanup by
+itself. Earlier background-only false completions can be removed in one operation with
+**Regenerate all**; removing each game manually is no longer necessary.
+
+The startup fix also supports the reported Windows Decky runtime without `difflib`: a
+bundled dependency-free title-similarity fallback is used only when the standard matcher
+cannot be imported. No Python installation or extra runtime package is required for this fix.
 
 ## Development
 
@@ -72,9 +96,11 @@ pnpm install
 pnpm run build
 ```
 
-The supplied 1.1.4 archive was built with the reproducible offline path rather than Rollup.
+The supplied 1.1.6 archive was built with the reproducible offline path rather than Rollup.
 With TypeScript installed locally or globally, `npm run test:offline` rebuilds all plugin
 sources with the frozen, unchanged dependency runtime and runs Python/frontend tests.
+The optional real-image suite is `npm run test:artwork-browser` and requires test-only Pillow,
+Playwright and Chromium. It uses generated fixtures, not Steam account data or live downloads.
 Changes to SCSS require the normal build above. See `tools/vendor/README.md` for provenance.
 
 The frontend is built into `dist/index.js`. The Python backend and provider integrations are in `main.py` and `provider_search.py`.

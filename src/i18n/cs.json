@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero sloučí pozadí a logo do jednoho obrázku, takže logo zůstane viditelné na domovské obrazovce při použití profilu Playhub v CSS Loaderu. Hero obrázky ZazaMastro jsou již připravené; pro ostatní hry vytvoří Playhub Artworks kompozici automaticky.",
   "PA_REGENERATE_ALL": "Znovu vygenerovat vše",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Znovu vytvořit všechny Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Hero obrázky všech her budou znovu vygenerovány, včetně těch, které jsou již správné.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Všechny Perfect Hero v této dávce, včetně ručně vytvořených, budou před novým vytvořením odstraněny spolu s uloženými pozadími a značkami dokončení. Při chybě nebo zrušení se odstraněné obrázky neobnoví a samostatné logo bude znovu viditelné. Obaly, bannery a ikony se neodstraní.",
   "PA_REBUILD": "Znovu vytvořit",
   "PA_REPLACE_ALL_COVERS_TITLE": "Nahradit všechny obaly?",
   "PA_REPLACE_ALL_COVERS_DESC": "Aktuální obaly všech her budou nahrazeny. Hry bez nového obalu zůstanou beze změny.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Obnovit předchozí obal",
   "PA_DERIVED_COVER_RESTORED": "Předchozí obal byl obnoven.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Aktuální obal se nepodařilo bezpečně zálohovat, proto zůstal beze změny.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Předchozí obal se nepodařilo obnovit. Jeho záloha zůstala uložená."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Předchozí obal se nepodařilo obnovit. Jeho záloha zůstala uložená.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Odstraňování stávajících Perfect Hero",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "Odstraněno Perfect Hero: {count}",
+  "PA_ERROR_PERFECT_HERO_RESET": "Nepodařilo se dokončit odstranění Perfect Hero nebo obnovit samostatné logo. Zkontrolujte protokoly a zkuste to znovu.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Nebylo nalezeno použitelné logo hry. Nový Perfect Hero nebyl vytvořen. Zkontrolujte přiřazení hry nebo nejprve použijte logo."
 }

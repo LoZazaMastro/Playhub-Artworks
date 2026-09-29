@@ -235,7 +235,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero menggabungkan latar belakang dan logo menjadi satu imej supaya logo kekal kelihatan dari Laman Utama apabila menggunakan profil Playhub dalam CSS Loader. Imej hero ZazaMastro telah disediakan; Playhub Artworks mencipta gubahan secara automatik untuk permainan lain.",
   "PA_REGENERATE_ALL": "Jana semula semua",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Bina semula semua Perfect Hero?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Imej hero untuk semua permainan akan dijana semula, termasuk yang sudah betul.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Semua Perfect Hero dalam kelompok ini, termasuk yang dibuat secara manual, akan dipadam sebelum dibina semula bersama latar belakang tersimpan dan penanda selesai. Jika berlaku ralat atau pembatalan, imej yang dipadam tidak dipulihkan dan logo berasingan dipaparkan semula. Kulit, sepanduk dan ikon tidak dipadam.",
   "PA_REBUILD": "Bina semula",
   "PA_REPLACE_ALL_COVERS_TITLE": "Gantikan semua kulit?",
   "PA_REPLACE_ALL_COVERS_DESC": "Kulit semasa untuk semua permainan akan digantikan. Permainan tanpa kulit baharu tidak akan berubah.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Pulihkan kulit sebelumnya",
   "PA_DERIVED_COVER_RESTORED": "Kulit sebelumnya telah dipulihkan.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Kulit semasa tidak dapat disandarkan dengan selamat, jadi ia tidak diubah.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Kulit sebelumnya tidak dapat dipulihkan. Sandarannya telah dikekalkan."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Kulit sebelumnya tidak dapat dipulihkan. Sandarannya telah dikekalkan.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Membuang Perfect Hero sedia ada",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero dibuang",
+  "PA_ERROR_PERFECT_HERO_RESET": "Tidak dapat menyelesaikan pembuangan Perfect Hero atau memulihkan logo berasingan. Semak log dan cuba lagi.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Tiada logo permainan yang boleh digunakan ditemui. Perfect Hero baharu tidak dicipta. Semak perkaitan permainan atau gunakan logo terlebih dahulu."
 }

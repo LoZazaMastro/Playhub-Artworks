@@ -1,3 +1,4 @@
+import { artworkPayloadUrl, readArtworkSource } from './artworkTransfer';
 import { useEffect, useState } from 'react';
 
 /**
@@ -6,44 +7,39 @@ import { useEffect, useState } from 'react';
  * Going through Steam's own stores means the plugin never has to guess a file name,
  * and every asset type resolves the same way.
  */
+const readUrls = (getter: () => any): string[] => {
+  try {
+    const value = getter();
+    const values = Array.isArray(value) ? value : value ? [value] : [];
+    return values.map(item => typeof item === 'string' ? item : item?.strURL || item?.url || '').filter(Boolean);
+  } catch (_) { return []; }
+};
+
 export const artworkSources = (app: AppStoreAppOverview, assetType: SGDBAssetType): string[] => {
   const store = window.appStore as any;
   const details = window.appDetailsStore as any;
-  const list = (value: any): string[] => (Array.isArray(value) ? value : value ? [value] : []);
-
-  try {
-    switch (assetType) {
-    case 'grid_p':
-      return [
-        ...list(store?.GetCustomVerticalCapsuleURLs?.(app)),
-        ...list(store?.GetVerticalCapsuleURLForApp?.(app)),
-        ...list(store?.GetCachedVerticalImageURLForApp?.(app)),
-        ...list(store?.GetPregeneratedVerticalCapsuleForApp?.(app)),
-      ].filter(Boolean);
-    case 'grid_l':
-      return [
-        ...list(store?.GetCustomLandcapeImageURLs?.(app)),
-        ...list(store?.GetLandscapeImageURLForApp?.(app)),
-        ...list(store?.GetCachedLandscapeImageURLForApp?.(app)),
-      ].filter(Boolean);
-    case 'hero':
-      return [
-        ...list(store?.GetCustomHeroImageURLs?.(app)),
-        ...list(details?.GetHeroImagesForAppId?.(app.appid)?.rgHeroImages),
-      ].filter(Boolean);
-    case 'logo':
-      return [
-        ...list(store?.GetCustomLogoImageURLs?.(app)),
-        ...list(details?.GetLogoImagesForAppId?.(app.appid)?.rgLogoImages),
-      ].filter(Boolean);
-    case 'icon':
-      return list(store?.GetIconURLForApp?.(app)).filter(Boolean);
-    default:
-      return [];
-    }
-  } catch (_) {
-    return [];
+  const getters: Array<() => any> = [];
+  switch (assetType) {
+  case 'grid_p':
+    getters.push(() => store?.GetCustomVerticalCapsuleURLs?.(app), () => store?.GetVerticalCapsuleURLForApp?.(app),
+      () => store?.GetCachedVerticalImageURLForApp?.(app), () => store?.GetPregeneratedVerticalCapsuleForApp?.(app));
+    break;
+  case 'grid_l':
+    getters.push(() => store?.GetCustomLandscapeImageURLs?.(app), () => store?.GetCustomLandcapeImageURLs?.(app),
+      () => store?.GetLandscapeImageURLForApp?.(app), () => store?.GetCachedLandscapeImageURLForApp?.(app));
+    break;
+  case 'hero':
+    getters.push(() => store?.GetCustomHeroImageURLs?.(app), () => details?.GetHeroImagesForAppId?.(app.appid)?.rgHeroImages);
+    break;
+  case 'logo':
+    getters.push(() => store?.GetCustomLogoImageURLs?.(app), () => details?.GetLogoImagesForAppId?.(app.appid)?.rgLogoImages,
+      () => (app as any)?.m_strLogoURL);
+    break;
+  case 'icon': getters.push(() => store?.GetIconURLForApp?.(app)); break;
   }
+  const official = app.appid > 0 && app.appid < 0x80000000 && !(app as any).is_shortcut
+    ? officialArtwork(app.appid, assetType) : [];
+  return [...new Set([...getters.flatMap(readUrls), ...official])];
 };
 
 /*
@@ -54,7 +50,7 @@ export const artworkSources = (app: AppStoreAppOverview, assetType: SGDBAssetTyp
   "only Steam's artwork" was still handing back the Perfect composition, logo and all.
 */
 const isCustomArtwork = (url: string): boolean =>
-  /steamloopback\.host/i.test(url) || /\/library\/\d{6,}\//.test(url) || /\/userimages\//i.test(url);
+  /steamloopback\.host/i.test(url) || /\/customimages\//i.test(url) || /\/library\/\d{6,}\//.test(url) || /\/userimages\//i.test(url);
 
 /*
   Valve's own file for this app, straight from the store CDN.
@@ -73,7 +69,7 @@ const officialArtwork = (appId: number, assetType: SGDBAssetType): string[] => {
   case 'grid_p':
     return [`${base}/library_600x900.jpg`];
   case 'logo':
-    return [`${base}/logo.png`];
+    return [`${base}/logo.png`, `${base}/library_logo.png`];
   default:
     return [];
   }
@@ -166,34 +162,25 @@ export const steamOwnArtworkSources = (app: AppStoreAppOverview, assetType: SGDB
 export const useArtworkPreview = (sources: string[], reloadKey: unknown = 0) => {
   const [resolved, setResolved] = useState('');
   const key = `${sources.join('|')}#${String(reloadKey)}`;
-
   useEffect(() => {
     let active = true;
-    let objectUrl = '';
+    const controller = new AbortController();
     setResolved('');
     void (async () => {
       for (const source of sources) {
+        if (!active) return;
         try {
-          const response = await fetch(source, { cache: 'reload' });
-          if (!response.ok) continue;
-          const blob = await response.blob();
-          if (!blob.size) continue;
-          objectUrl = URL.createObjectURL(blob);
-          if (active) setResolved(objectUrl);
-          else URL.revokeObjectURL(objectUrl);
-          return;
-        } catch (_) {
-          // try the next candidate
-        }
+          const payload = await readArtworkSource(source, { signal: controller.signal, staticOnly: true });
+          if (payload) {
+            // Owned data URLs survive the editor closing and the asynchronous save.
+            if (active) setResolved(artworkPayloadUrl(payload));
+            return;
+          }
+        } catch (_) { /* Try the next real candidate, not a thumbnail. */ }
       }
     })();
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  // The joined key already covers every source plus the explicit reload trigger.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { active = false; controller.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-
   return resolved;
 };

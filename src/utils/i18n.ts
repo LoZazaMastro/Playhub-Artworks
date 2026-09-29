@@ -321,6 +321,14 @@ const trans_string = (key: string, originalString: string, steamToken = false): 
 };
 
 const ERROR_FALLBACKS: Record<string, string> = {
+  PA_ERROR_LOGO_NOT_FOUND: "No usable game logo was found. The existing artwork and logo visibility were left unchanged. Check the game association or apply a logo first.",
+  PA_ERROR_ANIMATED_ARTWORK_TOO_LARGE: "This animated artwork exceeds the 16 MiB or 16-megapixel output limit. Use a smaller animated file or a static alternative; animations are not flattened.",
+  PA_ERROR_INCOMPLETE_DOWNLOAD: "The image download was incomplete. Please retry.",
+  PA_ERROR_TRANSFER_EXPIRED: "The temporary image transfer expired. Please retry.",
+  PA_ERROR_TRANSFER_BUSY: "Too many image transfers are active. Finish or cancel the current operation, then retry.",
+  PA_ERROR_SOURCE_NOT_PRESERVED: "The original background could not be saved for re-editing. Check available disk space and permissions.",
+  PA_ERROR_STATIC_ARTWORK_REQUIRED: "Perfect Hero composition requires a static background and logo. Choose a non-animated image.",
+
   PA_TRY_AGAIN: 'Try again.',
   PA_TRY_RESTART: 'Try again after restarting the plugin.',
   PA_FAILED: 'Failed.',
@@ -344,7 +352,7 @@ const ERROR_FALLBACKS: Record<string, string> = {
   PA_ERROR_INTERNAL_ARTWORK: 'The artwork operation could not be completed.',
   PA_ERROR_COVER_BACKUP_FAILED: 'The current cover could not be backed up safely, so it was left unchanged.',
   PA_ERROR_DERIVED_COVER_RESTORE_FAILED: 'The previous cover could not be restored. Its backup has been kept.',
-  PA_ERROR_ARTWORK_TOO_LARGE: 'This artwork is too large to process safely. Choose a smaller image.',
+  PA_ERROR_ARTWORK_TOO_LARGE: "This image exceeds the safety limits: 128 MiB, 100 megapixels, or 32768 pixels per side for source files; output is bounded to 16 MiB and 16 megapixels. Static sources within these limits are resized automatically.",
   PA_ERROR_ARTWORK_FORMAT_UNKNOWN: 'The artwork format is not recognized.',
   PA_ERROR_IMAGE_CHECK_TIMEOUT: 'Checking the image took too long.',
   PA_ERROR_DIRECT_IMAGE_URL: 'Enter the direct HTTP or HTTPS address of an image.',
@@ -360,7 +368,8 @@ export const localizeError = (error: unknown, fallbackKey = 'PA_ERROR_GENERIC'):
     ? error.trim()
     : String((error as any)?.message ?? error ?? '').trim();
 
-  if (ERROR_FALLBACKS[raw]) return trans_string(raw, ERROR_FALLBACKS[raw]);
+  const code = raw.match(/\bPA_ERROR_[A-Z_]+\b/)?.[0] || raw;
+  if (ERROR_FALLBACKS[code]) return trans_string(code, ERROR_FALLBACKS[code]).replace('{status}', '');
 
   // Some callers have already translated a known error before wrapping it in Error.
   const alreadyLocalized = Object.entries(ERROR_FALLBACKS).some(

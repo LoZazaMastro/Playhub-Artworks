@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Een Perfect Hero voegt achtergrond en logo samen tot één afbeelding, zodat het logo op Home zichtbaar blijft met het Playhub-profiel van CSS Loader. ZazaMastro-heroes zijn al voorbereid; voor andere games maakt Playhub Artworks de compositie automatisch.",
   "PA_REGENERATE_ALL": "Alles opnieuw genereren",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Alle Perfect Heroes opnieuw maken?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "De heroes van alle games worden opnieuw gegenereerd, ook als ze al correct zijn.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Alle bestaande Perfect Heroes in deze batch, ook handgemaakte, worden vóór het opnieuw maken verwijderd, samen met opgeslagen achtergronden en voltooiingsmarkeringen. Bij fouten of annulering blijven verwijderde afbeeldingen verwijderd en wordt het aparte logo hersteld. Covers, banners en pictogrammen worden niet verwijderd.",
   "PA_REBUILD": "Opnieuw maken",
   "PA_REPLACE_ALL_COVERS_TITLE": "Alle covers vervangen?",
   "PA_REPLACE_ALL_COVERS_DESC": "De huidige covers van alle games worden vervangen. Games zonder nieuwe cover blijven ongewijzigd.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Vorige cover herstellen",
   "PA_DERIVED_COVER_RESTORED": "De vorige cover is hersteld.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Er kon geen veilige back-up van de huidige cover worden gemaakt, dus deze is niet gewijzigd.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "De vorige cover kon niet worden hersteld. De back-up is bewaard."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "De vorige cover kon niet worden hersteld. De back-up is bewaard.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Bestaande Perfect Heroes verwijderen",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes verwijderd",
+  "PA_ERROR_PERFECT_HERO_RESET": "Het verwijderen van de Perfect Hero of herstellen van het aparte logo is mislukt. Controleer de logboeken en probeer het opnieuw.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Geen bruikbaar spellogo gevonden. Er is geen nieuwe Perfect Hero gemaakt. Controleer de spelkoppeling of pas eerst een logo toe."
 }

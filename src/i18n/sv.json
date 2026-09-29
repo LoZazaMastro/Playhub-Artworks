@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "En Perfect Hero kombinerar bakgrund och logotyp till en bild så att logotypen förblir synlig på startsidan med Playhub-profilen i CSS Loader. ZazaMastro-heroes är redan förberedda; Playhub Artworks skapar kompositionen automatiskt för andra spel.",
   "PA_REGENERATE_ALL": "Skapa alla på nytt",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Bygg om alla Perfect Heroes?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Heroes för alla spel skapas på nytt, även de som redan är korrekta.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Alla befintliga Perfect Heroes i den här körningen, även manuellt skapade, tas bort före återskapandet tillsammans med sparade bakgrunder och slutförandemarkeringar. Vid fel eller avbrott förblir borttagna bilder borttagna och den separata logotypen återställs. Omslag, banderoller och ikoner tas inte bort.",
   "PA_REBUILD": "Bygg om",
   "PA_REPLACE_ALL_COVERS_TITLE": "Ersätta alla omslag?",
   "PA_REPLACE_ALL_COVERS_DESC": "De nuvarande omslagen för alla spel ersätts. Spel utan ett nytt omslag förblir oförändrade.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Återställ föregående omslag",
   "PA_DERIVED_COVER_RESTORED": "Det föregående omslaget har återställts.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Det aktuella omslaget kunde inte säkerhetskopieras på ett säkert sätt och ändrades därför inte.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det föregående omslaget kunde inte återställas. Säkerhetskopian har behållits."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det föregående omslaget kunde inte återställas. Säkerhetskopian har behållits.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Tar bort befintliga Perfect Heroes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes borttagna",
+  "PA_ERROR_PERFECT_HERO_RESET": "Kunde inte slutföra borttagningen av Perfect Hero eller återställa den separata logotypen. Kontrollera loggarna och försök igen.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Ingen användbar spellogotyp hittades. Ingen ny Perfect Hero skapades. Kontrollera spelkopplingen eller använd en logotyp först."
 }

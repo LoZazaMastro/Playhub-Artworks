@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero 会将背景和徽标合并为一张图片，以便使用 Playhub CSS Loader 配置时仍能在主页显示徽标。ZazaMastro 主视觉已准备好；其他游戏由 Playhub Artworks 自动合成。",
   "PA_REGENERATE_ALL": "全部重新生成",
   "PA_REMAKE_PERFECT_HERO_TITLE": "重新制作所有 Perfect Hero？",
-  "PA_REMAKE_PERFECT_HERO_DESC": "将重新生成所有游戏的主视觉，包括已经正确的项目。",
+  "PA_REMAKE_PERFECT_HERO_DESC": "本批次中所有现有的 Perfect Hero（包括手动创建的）将在重新生成前删除，同时清除已保存的背景和完成标记。如果生成失败或被取消，已删除的图像不会恢复，独立徽标将重新显示。封面、横幅和图标不会被删除。",
   "PA_REBUILD": "重新制作",
   "PA_REPLACE_ALL_COVERS_TITLE": "替换所有封面？",
   "PA_REPLACE_ALL_COVERS_DESC": "将替换所有游戏的当前封面。没有新封面的游戏保持不变。",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "恢复之前的封面",
   "PA_DERIVED_COVER_RESTORED": "已恢复之前的封面。",
   "PA_ERROR_COVER_BACKUP_FAILED": "无法安全备份当前封面，因此未对其进行更改。",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "无法恢复之前的封面。备份已保留。"
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "无法恢复之前的封面。备份已保留。",
+  "PA_BATCH_PERFECT_HERO_RESET": "正在删除现有的 Perfect Hero",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "已删除 {count} 个 Perfect Hero",
+  "PA_ERROR_PERFECT_HERO_RESET": "无法完成 Perfect Hero 的删除或恢复独立徽标。请检查日志并重试。",
+  "PA_ERROR_LOGO_NOT_FOUND": "未找到可用的游戏徽标，未创建新的 Perfect Hero。请检查游戏关联，或先应用一个徽标。"
 }

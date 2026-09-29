@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Perfect Hero yhdistää taustan ja logon yhdeksi kuvaksi, jotta logo näkyy Koti-näkymässä Playhubin CSS Loader -profiilia käytettäessä. ZazaMastro-hero-kuvat ovat jo valmiita; Playhub Artworks luo sommittelun automaattisesti muille peleille.",
   "PA_REGENERATE_ALL": "Luo kaikki uudelleen",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Luodaanko kaikki Perfect Hero -kuvat uudelleen?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Kaikkien pelien hero-kuvat luodaan uudelleen, myös jo oikeat.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Kaikki tämän erän nykyiset Perfect Herot, myös käsin tehdyt, poistetaan ennen uudelleenluontia yhdessä tallennettujen taustojen ja valmistumismerkintöjen kanssa. Virhe tai peruutus ei palauta poistettuja kuvia, ja erillinen logo palautetaan näkyviin. Kansia, bannereita ja kuvakkeita ei poisteta.",
   "PA_REBUILD": "Luo uudelleen",
   "PA_REPLACE_ALL_COVERS_TITLE": "Korvataanko kaikki kannet?",
   "PA_REPLACE_ALL_COVERS_DESC": "Kaikkien pelien nykyiset kannet korvataan. Pelit, joille ei löydy uutta kantta, pysyvät ennallaan.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Palauta edellinen kansikuva",
   "PA_DERIVED_COVER_RESTORED": "Edellinen kansikuva palautettiin.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Nykyistä kansikuvaa ei voitu varmuuskopioida turvallisesti, joten sitä ei muutettu.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Edellistä kansikuvaa ei voitu palauttaa. Sen varmuuskopio säilytettiin."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Edellistä kansikuvaa ei voitu palauttaa. Sen varmuuskopio säilytettiin.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Poistetaan nykyisiä Perfect Heroja",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroa poistettu",
+  "PA_ERROR_PERFECT_HERO_RESET": "Perfect Heron poistamista tai erillisen logon palauttamista ei voitu suorittaa loppuun. Tarkista lokit ja yritä uudelleen.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Käyttökelpoista pelin logoa ei löytynyt. Uutta Perfect Heroa ei luotu. Tarkista pelin kohdistus tai ota logo ensin käyttöön."
 }

@@ -6,6 +6,10 @@ from os.path import dirname
 from os import W_OK, access, stat
 from stat import FILE_ATTRIBUTE_HIDDEN
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+import time
+import secrets
+import shutil
 from urllib.parse import urlparse
 from struct import unpack
 from hashlib import sha256
@@ -46,11 +50,13 @@ WINDOWS = system() == "Windows"
 DIAGNOSTIC_DIR = Path(decky.DECKY_PLUGIN_LOG_DIR).parent / 'Playhub-Artworks'
 DIAGNOSTIC_FILE = DIAGNOSTIC_DIR / 'playhub-artworks.jsonl'
 DIAGNOSTIC_MAX_BYTES = 5 * 1024 * 1024
-ARTWORK_DOWNLOAD_MAX_BYTES = 16 * 1024 * 1024
+# Source files (including 16-bit PNGs) are NOT Steam/RPC output payloads.
+ARTWORK_DOWNLOAD_MAX_BYTES = 128 * 1024 * 1024
+ARTWORK_RPC_MAX_BYTES = 16 * 1024 * 1024
 ARTWORK_IMAGE_MAX_PIXELS = 16_000_000
 ARTWORK_IMAGE_MAX_DIMENSION = 6144
-ARTWORK_SOURCE_MAX_PIXELS = 36_000_000
-ARTWORK_SOURCE_MAX_DIMENSION = 16384
+ARTWORK_SOURCE_MAX_PIXELS = 100_000_000
+ARTWORK_SOURCE_MAX_DIMENSION = 32768
 ARTWORK_DOWNLOAD_CONCURRENCY = 2
 PROVIDER_SEARCH_CONCURRENCY = 3
 DOWNLOAD_CHUNK_BYTES = 128 * 1024
@@ -58,7 +64,13 @@ PERFECT_SOURCE_READ_CHUNK_BYTES = 384 * 1024
 PERFECT_SOURCE_LEGACY_RPC_MAX_BYTES = 1024 * 1024
 DERIVED_COVER_READ_CHUNK_BYTES = 252 * 1024
 DERIVED_COVER_METADATA_VERSION = 2
-PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.4'
+PLUGIN_USER_AGENT = 'Playhub-Artworks/1.1.6'
+ARTWORK_TRANSFER_CHUNK_BYTES = 252 * 1024  # 336 KiB base64, below Decky's message limit
+ARTWORK_TRANSFER_TTL = 300
+ARTWORK_TRANSFER_MAX_FILES = 8
+ARTWORK_TRANSFER_DIR = Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / 'artwork_transfers'
+ARTWORK_DOWNLOAD_DEADLINE = 120
+
 _diagnostic_lock = threading.Lock()
 _download_progress_lock = threading.Lock()
 _download_progress = {}
@@ -174,7 +186,7 @@ def _image_size_bytes(content, asset_format):
 def _validate_artwork_content(content, content_type='', source='', allow_source=False):
     if not content:
         raise ValueError('PA_ERROR_INVALID_ARTWORK')
-    if len(content) > ARTWORK_DOWNLOAD_MAX_BYTES:
+    if len(content) > (ARTWORK_DOWNLOAD_MAX_BYTES if allow_source else ARTWORK_RPC_MAX_BYTES):
         raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
     asset_format = _asset_format(content, content_type, source)
     dimensions = _image_size_bytes(content, asset_format)
@@ -203,40 +215,145 @@ def _response_length(response):
     except (TypeError, ValueError, AttributeError):
         return 0
 
-def _download_limited(url, job_id='', shutdown_event=None, validate_artwork=True):
-    req = Request(url, headers={'User-Agent': PLUGIN_USER_AGENT})
-    received = 0
-    content = bytearray()
-    with urlopen(req, context=get_ssl_context(), timeout=20) as response:
-        total = _response_length(response)
-        content_type = response.headers.get('Content-Type') or ''
-        if total > ARTWORK_DOWNLOAD_MAX_BYTES:
-            raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
-        if job_id:
-            with _download_progress_lock:
-                _download_progress[str(job_id)] = {'received': 0, 'total': total, 'percent': 0, 'status': 'running'}
-        while True:
-            if shutdown_event is not None and shutdown_event.is_set():
-                raise RuntimeError('PA_OPERATION_CANCELLED')
-            chunk = response.read(DOWNLOAD_CHUNK_BYTES)
-            if not chunk:
-                break
-            received += len(chunk)
-            if received > ARTWORK_DOWNLOAD_MAX_BYTES:
-                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
-            content.extend(chunk)
+def _download_limited(url, job_id='', shutdown_event=None, validate_artwork=True, output_path=None):
+    """Bounded download, with optional disk staging instead of a giant in-memory RPC.
+
+    Retry only transient transport/server failures; malformed/oversized art is never
+    retried. An absolute deadline also bounds servers that dribble bytes forever.
+    """
+    if urlparse(str(url)).scheme not in {'http', 'https'}:
+        raise ValueError('PA_ERROR_INVALID_ARTWORK')
+    deadline = time.monotonic() + ARTWORK_DOWNLOAD_DEADLINE
+
+    def check_cancelled():
+        if shutdown_event is not None and shutdown_event.is_set():
+            raise RuntimeError('PA_OPERATION_CANCELLED')
+        if time.monotonic() > deadline:
+            raise TimeoutError('PA_ERROR_OPERATION_TIMEOUT')
+
+    for attempt in range(3):
+        received = 0
+        content = bytearray() if output_path is None else None
+        target = None
+        try:
+            check_cancelled()
+            headers = {'User-Agent': PLUGIN_USER_AGENT, 'Accept': 'image/webp,image/png,image/jpeg,image/*,*/*;q=0.8'}
+            # Public asset request only: never forward the user's API key to a CDN.
+            if (urlparse(str(url)).hostname or '').endswith('.steamgriddb.com'):
+                headers['Referer'] = 'https://www.steamgriddb.com/'
+            req = Request(url, headers=headers)
+            with urlopen(req, context=get_ssl_context(), timeout=20) as response:
+                total = _response_length(response)
+                content_type = response.headers.get('Content-Type') or ''
+                if total > ARTWORK_DOWNLOAD_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                if output_path is not None:
+                    target = open(output_path, 'wb')
+                if job_id:
+                    with _download_progress_lock:
+                        _download_progress[str(job_id)] = {'received': 0, 'total': total, 'percent': 0, 'status': 'running'}
+                while True:
+                    check_cancelled()
+                    chunk = response.read(DOWNLOAD_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    received += len(chunk)
+                    if received > ARTWORK_DOWNLOAD_MAX_BYTES:
+                        raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                    if target is not None:
+                        target.write(chunk)
+                    else:
+                        content.extend(chunk)
+                    if job_id:
+                        percent = min(99, round(received * 100 / total)) if total > 0 else 0
+                        with _download_progress_lock:
+                            _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': percent, 'status': 'running'}
+                check_cancelled()
+                if total and received != total:
+                    raise ConnectionError('PA_ERROR_INCOMPLETE_DOWNLOAD')
+            if target is not None:
+                target.close()
+                target = None
+            if validate_artwork:
+                if output_path is not None:
+                    metadata = _probe_artwork_file(output_path, content_type, url)
+                    asset_format, dimensions = metadata['format'], metadata['dimensions']
+                else:
+                    asset_format, dimensions = _validate_artwork_content(content, content_type, url, allow_source=True)
+            else:
+                asset_format, dimensions = '', None
             if job_id:
-                percent = min(99, round(received * 100 / total)) if total > 0 else 0
                 with _download_progress_lock:
-                    _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': percent, 'status': 'running'}
-    if job_id:
-        with _download_progress_lock:
-            _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
-    if validate_artwork:
-        asset_format, dimensions = _validate_artwork_content(content, content_type, url, allow_source=True)
-    else:
-        asset_format, dimensions = '', None
-    return content, content_type, asset_format, dimensions
+                    _download_progress[str(job_id)] = {'received': received, 'total': total, 'percent': 100, 'status': 'complete'}
+            return content if content is not None else Path(output_path), content_type, asset_format, dimensions
+        except (HTTPError, URLError, TimeoutError, ConnectionError) as error:
+            retryable = not isinstance(error, HTTPError) or error.code in {408, 429, 500, 502, 503, 504}
+            if not retryable or attempt == 2:
+                raise
+            wait = 0.5 * (2 ** attempt)
+            if isinstance(error, HTTPError):
+                try:
+                    wait = max(wait, min(5.0, float(error.headers.get('Retry-After') or 0)))
+                except (TypeError, ValueError, AttributeError):
+                    pass
+                error.close()
+            _diagnostic('artwork.download.retry', url=url, attempt=attempt + 1, reason=str(error))
+            end = time.monotonic() + wait
+            while time.monotonic() < end:
+                check_cancelled()
+                time.sleep(min(0.1, max(0, end - time.monotonic())))
+        finally:
+            if target is not None:
+                target.close()
+
+
+def _probe_artwork_file(path, content_type='', source=''):
+    """Inspect bytes without decoding pixels or loading a large source into RAM."""
+    path = Path(path)
+    size = path.stat().st_size
+    if size <= 0:
+        raise ValueError('PA_ERROR_INVALID_ARTWORK')
+    if size > ARTWORK_DOWNLOAD_MAX_BYTES:
+        raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+    with path.open('rb') as handle:
+        head = handle.read(min(size, 2 * 1024 * 1024))
+        # Do not accept an HTML/CDN error page just because its URL ends in .png.
+        asset_format = _asset_format(head)
+        dimensions = _image_size_bytes(head, asset_format)
+        if asset_format != 'webm' and dimensions is None:
+            raise ValueError('PA_ERROR_INVALID_ARTWORK')
+        _validate_artwork_content(head, content_type, source, allow_source=True)
+        animated = _asset_is_animated(head, asset_format)
+        if asset_format == 'png':
+            # acTL is a PNG chunk, not an arbitrary substring in image metadata.
+            # Skip ancillary chunks, however large, before the first IDAT.
+            animated = False
+            position = 8
+            for _ in range(4096):
+                if position + 8 > size:
+                    break
+                handle.seek(position)
+                chunk = handle.read(8)
+                length = int.from_bytes(chunk[:4], 'big')
+                kind = chunk[4:8]
+                if position + length + 12 > size:
+                    raise ValueError('PA_ERROR_INVALID_ARTWORK')
+                if kind == b'acTL':
+                    animated = True
+                    break
+                if kind in {b'IDAT', b'IEND'}:
+                    break
+                position += length + 12
+    return {'size': size, 'format': asset_format, 'dimensions': dimensions, 'animated': animated}
+
+
+class _CombinedStop:
+    def __init__(self, *events):
+        self.events = events
+
+    def is_set(self):
+        return any(event.is_set() for event in self.events)
+
 
 def _remote_sha256_limited(url, shutdown_event=None):
     req = Request(url, headers={'User-Agent': PLUGIN_USER_AGENT})
@@ -419,23 +536,28 @@ def _grid_file_candidates(grid_dir, appid, asset_type):
     return candidates
 
 def _librarycache_file_candidates(appid, asset_type):
-    app_dir = get_steam_libcache() / str(appid)
-    if not app_dir.exists():
-        return []
-
+    appid = str(int(appid))
+    root = get_steam_libcache()
+    app_dir = root / appid
     stems = {
         'hero': ['library_hero'],
-        'logo': ['logo'],
+        'logo': ['logo', 'library_logo'],
         'grid_p': ['library_600x900'],
         'grid_l': ['header'],
     }.get(asset_type, [])
     candidates = []
-    for stem in stems:
-        for ext in ['.png', '.jpg', '.jpeg', '.webp']:
-            path = app_dir / f'{stem}{ext}'
-            if path.is_file():
-                candidates.append(path)
-    return candidates
+    # Steam has used both flat <appid>_logo.png and per-app/hashed directories.
+    directories = [root]
+    if app_dir.is_dir():
+        directories.append(app_dir)
+        directories.extend(child for child in app_dir.iterdir() if child.is_dir())
+    for directory in directories:
+        for stem in stems:
+            prefix = f'{appid}_{stem}' if directory == root else stem
+            for extension in ('.png', '.jpg', '.jpeg', '.webp'):
+                candidates.extend(file for file in directory.glob(f'{prefix}*{extension}')
+                                  if file.is_file() and re.fullmatch(re.escape(prefix) + r'(?:_[a-zA-Z0-9_-]+)?', file.stem))
+    return sorted(set(candidates), key=lambda file: file.stat().st_mtime, reverse=True)
 
 def _sha256_file(path):
     digest = sha256()
@@ -766,6 +888,17 @@ class Plugin:
         self._settings_data = _read_settings_file()
         self._shutdown_event = threading.Event()
         self._derived_cover_lock = threading.Lock()
+        self._transfer_lock = threading.RLock()
+        self._transfer_jobs = {}
+        self._transfers = {}
+        ARTWORK_TRANSFER_DIR.mkdir(parents=True, exist_ok=True)
+        # Runtime files contain no settings; old, orphaned transfers are disposable.
+        for stale in ARTWORK_TRANSFER_DIR.glob('*.bin'):
+            try:
+                if time.time() - stale.stat().st_mtime > ARTWORK_TRANSFER_TTL:
+                    stale.unlink()
+            except OSError:
+                pass
         self._download_semaphore = asyncio.Semaphore(ARTWORK_DOWNLOAD_CONCURRENCY)
         self._download_executor = ThreadPoolExecutor(max_workers=ARTWORK_DOWNLOAD_CONCURRENCY, thread_name_prefix='artwork-download')
         self._provider_executor = ThreadPoolExecutor(max_workers=PROVIDER_SEARCH_CONCURRENCY, thread_name_prefix='artwork-provider')
@@ -773,6 +906,9 @@ class Plugin:
 
     async def _unload(self):
         self._shutdown_event.set()
+        with self._transfer_lock:
+            for token in list(self._transfers):
+                self._release_transfer_sync(token)
         self._download_executor.shutdown(wait=False, cancel_futures=True)
         self._provider_executor.shutdown(wait=False, cancel_futures=True)
         _diagnostic('backend.stopped')
@@ -783,6 +919,141 @@ class Plugin:
                 _diagnostic('frontend.event', payload=event)
         return True
 
+    def _release_transfer_sync(self, token):
+        with self._transfer_lock:
+            entry = self._transfers.pop(str(token), None)
+            if entry:
+                try:
+                    Path(entry['path']).unlink(missing_ok=True)
+                except OSError:
+                    pass
+        return True
+
+    def _transfer_entry(self, token):
+        if not re.fullmatch(r'[0-9a-f]{32}', str(token)):
+            raise ValueError('PA_ERROR_INVALID_ARTWORK')
+        entry = self._transfers.get(str(token))
+        if entry is None or time.monotonic() - entry['touched'] > ARTWORK_TRANSFER_TTL:
+            if entry is not None:
+                self._release_transfer_sync(token)
+            raise ValueError('PA_ERROR_TRANSFER_EXPIRED')
+        entry['touched'] = time.monotonic()
+        return entry
+
+    async def prepare_artwork_transfer(self, url='', path='', job_id=''):
+        """Stage raw bytes on disk; return metadata only, never a huge base64 message."""
+        job_id = str(job_id or secrets.token_hex(16))
+        cancelled = threading.Event()
+        stop = _CombinedStop(self._shutdown_event, cancelled)
+        token = secrets.token_hex(16)
+        destination = ARTWORK_TRANSFER_DIR / (token + '.bin')
+        with self._transfer_lock:
+            self._transfer_jobs[job_id] = cancelled
+
+        def stage_sync():
+            try:
+                if stop.is_set():
+                    raise RuntimeError('PA_OPERATION_CANCELLED')
+                with self._transfer_lock:
+                    for stale_token, entry in list(self._transfers.items()):
+                        if time.monotonic() - entry['touched'] > ARTWORK_TRANSFER_TTL:
+                            self._release_transfer_sync(stale_token)
+                    if len(self._transfers) >= ARTWORK_TRANSFER_MAX_FILES:
+                        raise RuntimeError('PA_ERROR_TRANSFER_BUSY')
+                ARTWORK_TRANSFER_DIR.mkdir(parents=True, exist_ok=True)
+                if path:
+                    source = Path(str(path))
+                    _probe_artwork_file(source)
+                    # Snapshot: later reads must not see a different Steam artwork.
+                    with source.open('rb') as src, destination.open('wb') as dst:
+                        received = 0
+                        while True:
+                            if stop.is_set():
+                                raise RuntimeError('PA_OPERATION_CANCELLED')
+                            chunk = src.read(DOWNLOAD_CHUNK_BYTES)
+                            if not chunk:
+                                break
+                            received += len(chunk)
+                            if received > ARTWORK_DOWNLOAD_MAX_BYTES:
+                                raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
+                            dst.write(chunk)
+                else:
+                    _download_limited(str(url), job_id, stop, output_path=destination)
+                metadata = _probe_artwork_file(destination)
+                metadata['sha256'] = _sha256_file(destination)
+                if stop.is_set():
+                    raise RuntimeError('PA_OPERATION_CANCELLED')
+                with self._transfer_lock:
+                    self._transfers[token] = {**metadata, 'path': destination, 'touched': time.monotonic()}
+                _diagnostic('artwork.transfer.prepared', url=url, bytes=metadata['size'], format=metadata['format'], dimensions=metadata['dimensions'])
+                return {**metadata, 'token': token, 'chunk_size': ARTWORK_TRANSFER_CHUNK_BYTES}
+            except Exception:
+                destination.unlink(missing_ok=True)
+                raise
+
+        try:
+            async with self._download_semaphore:
+                return await asyncio.get_running_loop().run_in_executor(self._download_executor, stage_sync)
+        except Exception as error:
+            with _download_progress_lock:
+                previous = _download_progress.get(job_id, {})
+                _download_progress[job_id] = {**previous, 'status': 'error'}
+            _diagnostic('artwork.transfer.failed', url=url, error=error)
+            raise
+        finally:
+            with self._transfer_lock:
+                self._transfer_jobs.pop(job_id, None)
+
+    async def read_artwork_transfer_chunk(self, token='', offset=0):
+        def read_sync():
+            with self._transfer_lock:
+                entry = self._transfer_entry(token)
+                position = int(offset)
+                if position < 0 or position >= entry['size'] or position % ARTWORK_TRANSFER_CHUNK_BYTES:
+                    raise ValueError('PA_ERROR_INVALID_ARTWORK')
+                with Path(entry['path']).open('rb') as source:
+                    source.seek(position)
+                    return b64encode(source.read(ARTWORK_TRANSFER_CHUNK_BYTES)).decode('ascii')
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, read_sync)
+
+    async def release_artwork_transfer(self, token=''):
+        return self._release_transfer_sync(token)
+
+    async def cancel_artwork_transfer(self, job_id=''):
+        with self._transfer_lock:
+            event = self._transfer_jobs.get(str(job_id))
+            if event:
+                event.set()
+        return True
+
+    async def prepare_perfect_source_transfer(self, appid=0, target='hero', job_id=''):
+        path = self._find_perfect_source(appid, target)
+        if not path:
+            return None
+        return await self.prepare_artwork_transfer(path=str(path), job_id=job_id)
+
+    async def preserve_perfect_source_from_transfer(self, appid=0, target='hero', token='', replace=False):
+        def save_sync():
+            with self._transfer_lock:
+                entry = self._transfer_entry(token)
+                existing = self._find_perfect_source(appid, target)
+                if existing and not replace:
+                    return {'saved': True, 'existing': True}
+                path = self._perfect_source_path(appid, target, entry['format'])
+                PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_suffix(path.suffix + '.' + secrets.token_hex(4) + '.tmp')
+                try:
+                    copyfile(entry['path'], temporary)
+                    temporary.replace(path)
+                    for ext in ('png', 'jpg', 'webp'):
+                        old = self._perfect_source_path(appid, target, ext)
+                        if old != path:
+                            old.unlink(missing_ok=True)
+                finally:
+                    temporary.unlink(missing_ok=True)
+                return {'saved': True, 'existing': False, 'bytes': entry['size']}
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, save_sync)
+
     async def download_as_base64(self, url='', job_id=''):
         started = asyncio.get_running_loop().time()
         try:
@@ -792,6 +1063,8 @@ class Plugin:
                     self._download_executor,
                     lambda: _download_limited(url, job_id, self._shutdown_event),
                 )
+                if len(content) > ARTWORK_RPC_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
                 encoded = await loop.run_in_executor(
                     self._download_executor,
                     lambda: b64encode(content).decode('ascii'),
@@ -815,6 +1088,8 @@ class Plugin:
                     self._download_executor,
                     lambda: _download_limited(url, job_id, self._shutdown_event),
                 )
+                if len(content) > ARTWORK_RPC_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
                 encoded = await loop.run_in_executor(
                     self._download_executor,
                     lambda: b64encode(content).decode('ascii'),
@@ -854,6 +1129,8 @@ class Plugin:
                     lambda: _download_limited(url, '', self._shutdown_event),
                 )
                 digest = sha256(content).hexdigest()
+                if len(content) > ARTWORK_RPC_MAX_BYTES:
+                    raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
                 encoded = await loop.run_in_executor(
                     self._download_executor,
                     lambda: b64encode(content).decode('ascii'),
@@ -867,7 +1144,7 @@ class Plugin:
     async def read_file_as_base64(self, path=''):
         def read_sync():
             source = Path(path)
-            if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+            if source.stat().st_size > ARTWORK_RPC_MAX_BYTES:
                 raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
             content = source.read_bytes()
             _validate_artwork_content(content, source=path, allow_source=True)
@@ -877,7 +1154,7 @@ class Plugin:
     async def read_artwork_payload(self, path=''):
         def read_sync():
             source = Path(path)
-            if source.stat().st_size > ARTWORK_DOWNLOAD_MAX_BYTES:
+            if source.stat().st_size > ARTWORK_RPC_MAX_BYTES:
                 raise ValueError('PA_ERROR_ARTWORK_TOO_LARGE')
             content = source.read_bytes()
             asset_format, dimensions = _validate_artwork_content(content, source=path, allow_source=True)
@@ -1166,16 +1443,51 @@ class Plugin:
     async def clear_perfect_source(self, appid=0, target='hero'):
         def clear_sync():
             try:
-                path = self._find_perfect_source(appid, target)
-                if path:
-                    path.unlink()
-                    _diagnostic('perfect.source.cleared', appid=appid, target=target)
+                # Validate before constructing paths. Remove every format, not only
+                # the first one found: an older PNG must not mask a leftover JPEG.
+                canonical = self._perfect_source_path(appid, target, 'png')
+                removed = 0
+                for ext in ('png', 'jpg', 'jpeg', 'webp'):
+                    path = canonical.with_suffix('.' + ext)
+                    for candidate in (path, path.with_suffix(path.suffix + '.tmp')):
+                        try:
+                            candidate.unlink()
+                            removed += 1
+                        except FileNotFoundError:
+                            pass
+                _diagnostic('perfect.source.cleared', appid=appid, target=target, removed=removed)
                 return True
             except Exception as error:
                 _diagnostic('perfect.source.clear_failed', appid=appid, target=target, error=error)
                 return False
 
         return await asyncio.get_running_loop().run_in_executor(self._download_executor, clear_sync)
+
+    async def clear_perfect_hero_state(self, appid=0, restore_logo=True):
+        """Commit an explicit Hero reset after the renderer cleared Steam's image.
+
+        No Steam artwork is deleted by the backend. Banners, covers, associations,
+        API keys and the actual separate logo file are deliberately out of scope.
+        Keep bookkeeping on disk-write failure so a later reset can retry it.
+        """
+        appid = int(appid)
+        if appid <= 0 or appid > 0xffffffff:
+            raise ValueError('PA_ERROR_INVALID_ARTWORK')
+        if not await self.clear_perfect_source(appid, 'hero'):
+            raise RuntimeError('PA_ERROR_PERFECT_HERO_RESET')
+        async with self._settings_lock:
+            pending = dict(self._settings_data)
+            for prefix in ('perfect_hero_', 'perfect_hero_info_', 'zazamastro_hero_'):
+                pending.pop(f'{prefix}{appid}', None)
+            if restore_logo:
+                pending.pop(f'logo_position_backup_{appid}', None)
+                pending[f'logo_hidden_{appid}'] = False
+                pending[f'logo_visible_{appid}'] = True
+            if pending != self._settings_data:
+                await asyncio.to_thread(_write_settings_file, pending)
+                self._settings_data = pending
+        _diagnostic('perfect.hero.reset', appid=appid, restore_logo=bool(restore_logo))
+        return True
 
     # --- Covers derived from a banner or hero ---------------------------
 
@@ -1629,25 +1941,28 @@ class Plugin:
         _diagnostic('library.enumeration.completed', app_count=len(result), duration_ms=round((asyncio.get_running_loop().time() - started) * 1000))
         return result
 
-    async def get_local_asset_info(self, appid, asset_type):
-        userdata = get_steam_userdata()
-        result = { 'exists': False }
-        if userdata.exists():
-            for user_dir in userdata.iterdir():
-                grid_dir = user_dir / 'config' / 'grid'
-                for file in _grid_file_candidates(grid_dir, appid, asset_type):
-                    width_height = _image_size(file)
-                    if width_height:
-                        return { 'exists': True, 'width': width_height[0], 'height': width_height[1], 'path': str(file), 'source': 'custom', 'sha256': _sha256_file(file) }
-                    return { 'exists': True, 'path': str(file), 'source': 'custom', 'sha256': _sha256_file(file) }
-
-        for file in _librarycache_file_candidates(appid, asset_type):
-            width_height = _image_size(file)
-            if width_height:
-                return { 'exists': True, 'width': width_height[0], 'height': width_height[1], 'path': str(file), 'source': 'official' }
-            return { 'exists': True, 'path': str(file), 'source': 'official' }
-
-        return result
+    async def get_local_asset_info(self, appid, asset_type, steam_user=''):
+        def inspect_sync():
+            userdata = get_steam_userdata()
+            result = { 'exists': False }
+            if userdata.exists():
+                user_dirs = [userdata / str(steam_user)] if str(steam_user).isdigit() else list(userdata.iterdir())
+                for user_dir in user_dirs:
+                    grid_dir = user_dir / 'config' / 'grid'
+                    for file in _grid_file_candidates(grid_dir, appid, asset_type):
+                        width_height = _image_size(file)
+                        if width_height:
+                            return { 'exists': True, 'width': width_height[0], 'height': width_height[1], 'path': str(file), 'source': 'custom', 'sha256': _sha256_file(file) }
+                        return { 'exists': True, 'path': str(file), 'source': 'custom', 'sha256': _sha256_file(file) }
+    
+            for file in _librarycache_file_candidates(appid, asset_type):
+                width_height = _image_size(file)
+                if width_height:
+                    return { 'exists': True, 'width': width_height[0], 'height': width_height[1], 'path': str(file), 'source': 'official' }
+                return { 'exists': True, 'path': str(file), 'source': 'official' }
+    
+            return result
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, inspect_sync)
 
     async def get_zazamastro_position_candidates(self):
         """Return locally verified games whose current hero is the one applied by ZazaMastro Fix.

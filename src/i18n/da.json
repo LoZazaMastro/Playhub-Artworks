@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "En Perfect Hero samler baggrund og logo i ét billede, så logoet forbliver synligt på Startsiden med Playhub-profilen i CSS Loader. ZazaMastro-heroes er allerede klargjort; Playhub Artworks opretter automatisk kompositionen til andre spil.",
   "PA_REGENERATE_ALL": "Gendan alle",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Genopbyg alle Perfect Heroes?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Heroes for alle spil gendannes, også dem der allerede er korrekte.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Alle eksisterende Perfect Heroes i denne kørsel, også manuelt oprettede, slettes før genopbygningen sammen med gemte baggrunde og færdigmarkeringer. Ved fejl eller annullering forbliver de slettede billeder slettet, og det separate logo gendannes. Omslag, bannere og ikoner slettes ikke.",
   "PA_REBUILD": "Genopbyg",
   "PA_REPLACE_ALL_COVERS_TITLE": "Erstat alle covers?",
   "PA_REPLACE_ALL_COVERS_DESC": "De nuværende covers til alle spil erstattes. Spil uden et nyt cover forbliver uændrede.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Gendan forrige cover",
   "PA_DERIVED_COVER_RESTORED": "Det forrige cover er gendannet.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Det aktuelle cover kunne ikke sikkerhedskopieres forsvarligt og blev derfor ikke ændret.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige cover kunne ikke gendannes. Sikkerhedskopien er bevaret."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Det forrige cover kunne ikke gendannes. Sikkerhedskopien er bevaret.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Fjerner eksisterende Perfect Heroes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes fjernet",
+  "PA_ERROR_PERFECT_HERO_RESET": "Perfect Hero kunne ikke fjernes helt, eller det separate logo kunne ikke gendannes. Kontrollér logfilerne, og prøv igen.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Intet brugbart spillogo blev fundet. Der blev ikke oprettet en ny Perfect Hero. Kontrollér spiltilknytningen, eller anvend først et logo."
 }

@@ -12,6 +12,7 @@ import { call, fetchNoCors } from '@decky/api';
 
 import getAppOverview from '../utils/getAppOverview';
 import { combineAssetSearchResults } from '../utils/searchResults';
+import { readArtworkPayload } from '../utils/artworkTransfer';
 import { watchDownloadProgress } from '../utils/downloadProgress';
 import { isRuntimeActive } from '../utils/runtimeLifecycle';
 import t from '../utils/i18n';
@@ -246,19 +247,24 @@ export const SGDBProvider: FC<{ children: ReactNode }> = ({ children }) => {
     reportProgress?: (progress: number) => void
   ) : Promise<ArtworkPayload | null> => {
     log('downloading', location);
+    let lastProgress = 0;
+    const progress = (value: number) => {
+      lastProgress = Math.max(lastProgress, value);
+      reportProgress?.(lastProgress);
+    };
     try {
       if (path) {
-        const data = await call<[path: string], ArtworkPayload>('read_artwork_payload', location);
+        const data = await readArtworkPayload(location, { path: true, progress });
         if (!isRuntimeActive()) throw new DOMException('Aborted', 'AbortError');
-        reportProgress?.(80);
+        progress(80);
         return data;
       }
       const jobId = `artwork-${appId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const stopProgress = watchDownloadProgress(jobId, reportProgress);
+      const stopProgress = watchDownloadProgress(jobId, percent => progress(percent * .75));
       try {
-        const data = await call<[url: string, jobId: string], ArtworkPayload>('download_artwork_payload', location, jobId);
+        const data = await readArtworkPayload(location, { jobId, progress });
         if (!isRuntimeActive()) throw new DOMException('Aborted', 'AbortError');
-        reportProgress?.(80);
+        progress(80);
         return data;
       } finally {
         stopProgress();

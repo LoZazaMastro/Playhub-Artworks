@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Un Perfect Hero fusionne l’arrière-plan et le logo en une seule image afin que le logo reste visible depuis l’accueil avec le profil Playhub de CSS Loader. Les héros ZazaMastro sont déjà préparés ; Playhub Artworks crée automatiquement la composition pour les autres jeux.",
   "PA_REGENERATE_ALL": "Tout régénérer",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Recréer tous les Perfect Heroes ?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "Les héros de tous les jeux seront régénérés, y compris ceux qui sont déjà corrects.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Tous les Perfect Hero de ce lot, y compris les créations manuelles, seront supprimés avant leur recréation, ainsi que les arrière-plans enregistrés et les marqueurs de réussite. En cas d’erreur ou d’annulation, les éléments supprimés ne seront pas rétablis et le logo séparé sera restauré. Les jaquettes, bannières et icônes ne seront pas supprimées.",
   "PA_REBUILD": "Recréer",
   "PA_REPLACE_ALL_COVERS_TITLE": "Remplacer toutes les couvertures ?",
   "PA_REPLACE_ALL_COVERS_DESC": "Les couvertures actuelles de tous les jeux seront remplacées. Les jeux sans nouvelle couverture resteront inchangés.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Restaurer la jaquette précédente",
   "PA_DERIVED_COVER_RESTORED": "La jaquette précédente a été restaurée.",
   "PA_ERROR_COVER_BACKUP_FAILED": "La jaquette actuelle n'a pas pu être sauvegardée en toute sécurité et n'a donc pas été modifiée.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "La jaquette précédente n'a pas pu être restaurée. Sa sauvegarde a été conservée."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "La jaquette précédente n'a pas pu être restaurée. Sa sauvegarde a été conservée.",
+  "PA_BATCH_PERFECT_HERO_RESET": "Suppression des Perfect Hero existants",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero supprimés",
+  "PA_ERROR_PERFECT_HERO_RESET": "Impossible de terminer la suppression du Perfect Hero ou de restaurer le logo séparé. Consultez les journaux et réessayez.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Aucun logo utilisable trouvé pour ce jeu. Aucun nouveau Perfect Hero n’a été créé. Vérifiez l’association du jeu ou appliquez d’abord un logo."
 }

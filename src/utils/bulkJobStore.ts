@@ -47,6 +47,7 @@ export const startBulkArtworkJob = async (kind: ZazaBatchKind, steamWrites = 2) 
       changed: current?.changed ?? 0,
       skipped: current?.skipped ?? 0,
       failed: current?.failed ?? 0,
+      removed: current?.removed ?? 0,
       current: current?.current,
       lastError: cancelled ? current?.lastError : message,
       message,

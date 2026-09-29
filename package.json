@@ -1,6 +1,6 @@
 {
   "name": "playhub-artworks",
-  "version": "1.1.5",
+  "version": "1.1.7",
   "description": "A controller-first Steam artwork manager for Playhub.",
   "type": "module",
   "scripts": {
@@ -15,7 +15,8 @@
     "check:backend": "python -m py_compile main.py provider_search.py",
     "build:offline": "node tools/build-offline.cjs",
     "test:frontend": "node tools/test-frontend.cjs",
-    "test:offline": "npm run test:regression && npm run check:backend && npm run build:offline && npm run test:frontend"
+    "test:offline": "npm run test:regression && npm run check:backend && npm run build:offline && npm run test:frontend",
+    "test:artwork-browser": "python tools/test-artwork-browser.py --report tests/reports/artwork-browser-1.1.6.json"
   },
   "repository": {
     "type": "git",

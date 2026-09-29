@@ -225,7 +225,7 @@
   "PA_PERFECT_HERO_QAM_DESC": "Um Perfect Hero combina o fundo e o logótipo numa só imagem para que o logótipo continue visível no Início ao usar o perfil Playhub do CSS Loader. As imagens hero ZazaMastro já estão preparadas; o Playhub Artworks cria automaticamente a composição para os outros jogos.",
   "PA_REGENERATE_ALL": "Regenerar tudo",
   "PA_REMAKE_PERFECT_HERO_TITLE": "Recriar todos os Perfect Heroes?",
-  "PA_REMAKE_PERFECT_HERO_DESC": "As imagens hero de todos os jogos serão regeneradas, incluindo as que já estão corretas.",
+  "PA_REMAKE_PERFECT_HERO_DESC": "Todos os Perfect Hero deste lote, incluindo os manuais, serão eliminados antes de serem recriados, juntamente com os fundos guardados e os marcadores de conclusão. Em caso de erro ou cancelamento, os eliminados não serão restaurados e o logótipo separado voltará a ser apresentado. Capas, banners e ícones não serão eliminados.",
   "PA_REBUILD": "Recriar",
   "PA_REPLACE_ALL_COVERS_TITLE": "Substituir todas as capas?",
   "PA_REPLACE_ALL_COVERS_DESC": "As capas atuais de todos os jogos serão substituídas. Os jogos sem uma nova capa permanecerão inalterados.",
@@ -324,5 +324,9 @@
   "PA_RESTORE_DERIVED_COVER": "Restaurar a capa anterior",
   "PA_DERIVED_COVER_RESTORED": "A capa anterior foi restaurada.",
   "PA_ERROR_COVER_BACKUP_FAILED": "Não foi possível criar uma cópia de segurança da capa atual, por isso não foi alterada.",
-  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Não foi possível restaurar a capa anterior. A cópia de segurança foi mantida."
+  "PA_ERROR_DERIVED_COVER_RESTORE_FAILED": "Não foi possível restaurar a capa anterior. A cópia de segurança foi mantida.",
+  "PA_BATCH_PERFECT_HERO_RESET": "A eliminar os Perfect Hero existentes",
+  "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero eliminados",
+  "PA_ERROR_PERFECT_HERO_RESET": "Não foi possível concluir a remoção do Perfect Hero ou restaurar o logótipo separado. Consulte os registos e tente novamente.",
+  "PA_ERROR_LOGO_NOT_FOUND": "Não foi encontrado um logótipo utilizável para o jogo. Não foi criado um novo Perfect Hero. Verifique a associação do jogo ou aplique primeiro um logótipo."
 }

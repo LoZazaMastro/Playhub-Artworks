@@ -94,7 +94,7 @@ const COVER_CARDS: Array<{
     replaceLabel: t('PA_REGENERATE_ALL', 'Regenerate all'),
     replaceConfirm: {
       title: t('PA_REMAKE_PERFECT_HERO_TITLE', 'Rebuild all Perfect Heroes?'),
-      body: t('PA_REMAKE_PERFECT_HERO_DESC', 'Heroes for all games will be regenerated, including those already correct.'),
+      body: t('PA_REMAKE_PERFECT_HERO_DESC', 'All existing Perfect Heroes, including manual ones, will be deleted before rebuilding. Saved backgrounds and completion flags will also be cleared. If rebuilding fails or is cancelled, removed heroes stay removed and the separate logo is restored. Covers, banners and icons are not deleted.'),
       ok: t('PA_REBUILD', 'Rebuild'),
     },
   },
@@ -122,6 +122,7 @@ const Progress: VFC<{ value: ZazaBatchProgress }> = ({ value }) => {
         <span>
           {value.total > 0 ? `${value.processed} ${t('PA_OF', 'of')} ${value.total}` : t('PA_IN_PROGRESS', "In progress")}
           {' · '}{t('PA_PROGRESS_SUMMARY', '{changed} applied · {skipped} skipped{failed}').replace('{changed}', String(value.changed)).replace('{skipped}', String(value.skipped)).replace('{failed}', value.failed ? ` · ${value.failed} ${t('PA_ERRORS', 'errors')}` : '')}
+          {Boolean(value.removed) && <> · {t('PA_PERFECT_HERO_REMOVED_COUNT', '{count} Perfect Heroes removed').replace('{count}', String(value.removed))}</>}
         </span>
         {value.lastError && <span style={{ color: '#ff9a9a' }}>{value.lastError}</span>}
       </div>

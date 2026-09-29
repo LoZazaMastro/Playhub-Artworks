@@ -9,7 +9,7 @@ import useSGDB from '../../hooks/useSGDB';
 import MenuIcon from '../Icons/MenuIcon';
 import getAppOverview from '../../utils/getAppOverview';
 import { clearPerfectArtwork } from '../../utils/perfectArtwork';
-import openFilePicker from '../../utils/openFilePicker';
+import openFilePicker, { isFilePickerCancelled } from '../../utils/openFilePicker';
 import { artworkSources, useArtworkPreview } from '../../utils/artworkSources';
 import {
   clearDerivedCoverBackup,
@@ -75,6 +75,14 @@ const AssetSlot: FC<{
     try {
       await action();
       await refresh();
+    } catch (error) {
+      if (!isFilePickerCancelled(error)) {
+        toaster.toast({
+          title: 'Playhub Artworks',
+          body: localizeError(error),
+          icon: <MenuIcon fill="#ff5d5d" />,
+        });
+      }
     } finally {
       setBusy(false);
     }
