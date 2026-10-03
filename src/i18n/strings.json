@@ -335,5 +335,9 @@
   "PA_ERROR_STATIC_ARTWORK_REQUIRED": "Perfect Hero composition requires a static background and logo. Choose a non-animated image.",
   "PA_BATCH_PERFECT_HERO_RESET": "Removing existing Perfect Heroes",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes removed",
-  "PA_ERROR_PERFECT_HERO_RESET": "Could not finish removing the Perfect Hero or restoring the separate logo. Check the logs and retry."
+  "PA_ERROR_PERFECT_HERO_RESET": "Could not finish removing the Perfect Hero or restoring the separate logo. Check the logs and retry.",
+  "PA_CLEAN_UNUSED": "Clean unused artwork",
+  "PA_CLEAN_UNUSED_DESC": "Remove cached Perfect Hero and Banner sources for removed games. Steam artwork and original backups are kept.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} files removed ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Unavailable libraries and files were kept. Please retry when Steam libraries are accessible."
 }

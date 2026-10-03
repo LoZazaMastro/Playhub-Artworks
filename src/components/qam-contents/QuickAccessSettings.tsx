@@ -135,6 +135,7 @@ const QuickAccessSettings: VFC = () => {
   const [apiKey, setApiKey] = useState('');
   const [savedApiKey, setSavedApiKey] = useState('');
   const [savingApiKey, setSavingApiKey] = useState(false);
+  const [cleaningArtwork, setCleaningArtwork] = useState(false);
   const [libraryCoverFormat, setLibraryCoverFormat] = useState<LibraryCoverFormat>('portrait');
   const [homeRecentCover, setHomeRecentCoverState] = useState(false);
   const [centerHomeHero, setCenterHomeHero] = useState(false);
@@ -308,6 +309,21 @@ const QuickAccessSettings: VFC = () => {
     await set(HOME_RECENT_COVER_SETTING_KEY, value, true);
   }, [set]);
 
+  const cleanUnusedArtwork = async () => {
+    if (cleaningArtwork || batchProgress?.running) return;
+    setCleaningArtwork(true);
+    try {
+      const result = await call<{ removed: number; bytes: number; errors: number; inventoryComplete: boolean }>('clean_unused_artwork');
+      const summary = t('PA_CLEAN_UNUSED_RESULT', '{count} files removed ({size} MiB).')
+        .replace('{count}', String(result.removed)).replace('{size}', (result.bytes / 1048576).toFixed(1));
+      toaster.toast({ title: t('PA_CLEAN_UNUSED', 'Clean unused artwork'),
+        body: summary + ((!result.inventoryComplete || result.errors) ? ' ' + t('PA_CLEAN_UNUSED_PARTIAL', 'Unavailable libraries and files were kept. Please retry when Steam libraries are accessible.') : ''),
+        icon: <MenuIcon />, duration: 6000 });
+    } catch (error) {
+      toaster.toast({ title: t('PA_CLEAN_UNUSED', 'Clean unused artwork'), body: localizeError(error, 'PA_FAILED'), icon: <MenuIcon fill="#ff5d5d" /> });
+    } finally { setCleaningArtwork(false); }
+  };
+
   return (
     <PanelSection>
       <style>{`
@@ -474,6 +490,12 @@ const QuickAccessSettings: VFC = () => {
             </Focusable>
           </div>
           <div className="pa-heading">{t('PA_RESET', "Reset")}</div>
+          <DialogButton className="pa-card" disabled={cleaningArtwork || batchProgress?.running} onClick={() => void cleanUnusedArtwork()}>
+            <div className="pa-card-content"><FaTrash /><div>
+              <strong>{cleaningArtwork ? t('PA_IN_PROGRESS', 'In progress') : t('PA_CLEAN_UNUSED', 'Clean unused artwork')}</strong>
+              <span>{t('PA_CLEAN_UNUSED_DESC', 'Remove cached Perfect Hero and Banner sources for removed games. Steam artwork and original backups are kept.')}</span>
+            </div></div>
+          </DialogButton>
           <DialogButton
             className="pa-danger"
             disabled={batchProgress?.running}

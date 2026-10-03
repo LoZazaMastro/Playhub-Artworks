@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Vorhandene Perfect Heroes werden entfernt",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Heroes entfernt",
   "PA_ERROR_PERFECT_HERO_RESET": "Der Perfect Hero konnte nicht vollständig entfernt oder das separate Logo nicht wiederhergestellt werden. Prüfe die Protokolle und versuche es erneut.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Kein verwendbares Spiellogo gefunden. Es wurde kein neuer Perfect Hero erstellt. Prüfe die Spielzuordnung oder wende zuerst ein Logo an."
+  "PA_ERROR_LOGO_NOT_FOUND": "Kein verwendbares Spiellogo gefunden. Es wurde kein neuer Perfect Hero erstellt. Prüfe die Spielzuordnung oder wende zuerst ein Logo an.",
+  "PA_CLEAN_UNUSED": "Ungenutzte Grafiken bereinigen",
+  "PA_CLEAN_UNUSED_DESC": "Entfernt zwischengespeicherte Perfect-Hero- und Banner-Quellen entfernter Spiele. Steam-Grafiken und Originalbackups bleiben erhalten.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} Dateien entfernt ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Nicht erreichbare Bibliotheken und Dateien wurden behalten. Versuche es erneut, wenn die Steam-Bibliotheken erreichbar sind."
 }

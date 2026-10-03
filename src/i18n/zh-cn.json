@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "正在删除现有的 Perfect Hero",
   "PA_PERFECT_HERO_REMOVED_COUNT": "已删除 {count} 个 Perfect Hero",
   "PA_ERROR_PERFECT_HERO_RESET": "无法完成 Perfect Hero 的删除或恢复独立徽标。请检查日志并重试。",
-  "PA_ERROR_LOGO_NOT_FOUND": "未找到可用的游戏徽标，未创建新的 Perfect Hero。请检查游戏关联，或先应用一个徽标。"
+  "PA_ERROR_LOGO_NOT_FOUND": "未找到可用的游戏徽标，未创建新的 Perfect Hero。请检查游戏关联，或先应用一个徽标。",
+  "PA_CLEAN_UNUSED": "清理未使用的美术资源",
+  "PA_CLEAN_UNUSED_DESC": "删除已移除游戏的 Perfect Hero 和 Banner 缓存素材。保留 Steam 图片和原始备份。",
+  "PA_CLEAN_UNUSED_RESULT": "已删除 {count} 个文件（{size} MiB）。",
+  "PA_CLEAN_UNUSED_PARTIAL": "无法访问的库和文件已保留。请在 Steam 库可访问时重试。"
 }

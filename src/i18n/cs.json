@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Odstraňování stávajících Perfect Hero",
   "PA_PERFECT_HERO_REMOVED_COUNT": "Odstraněno Perfect Hero: {count}",
   "PA_ERROR_PERFECT_HERO_RESET": "Nepodařilo se dokončit odstranění Perfect Hero nebo obnovit samostatné logo. Zkontrolujte protokoly a zkuste to znovu.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Nebylo nalezeno použitelné logo hry. Nový Perfect Hero nebyl vytvořen. Zkontrolujte přiřazení hry nebo nejprve použijte logo."
+  "PA_ERROR_LOGO_NOT_FOUND": "Nebylo nalezeno použitelné logo hry. Nový Perfect Hero nebyl vytvořen. Zkontrolujte přiřazení hry nebo nejprve použijte logo.",
+  "PA_CLEAN_UNUSED": "Vyčistit nepoužívané obrázky",
+  "PA_CLEAN_UNUSED_DESC": "Odstraní zdroje Perfect Hero a Banner v mezipaměti pro odebrané hry. Obrázky Steamu a původní zálohy zůstanou zachovány.",
+  "PA_CLEAN_UNUSED_RESULT": "Odstraněno {count} souborů ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Nedostupné knihovny a soubory byly zachovány. Zkuste to znovu, až budou knihovny Steamu dostupné."
 }

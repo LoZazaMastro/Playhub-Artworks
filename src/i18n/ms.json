@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Membuang Perfect Hero sedia ada",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero dibuang",
   "PA_ERROR_PERFECT_HERO_RESET": "Tidak dapat menyelesaikan pembuangan Perfect Hero atau memulihkan logo berasingan. Semak log dan cuba lagi.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Tiada logo permainan yang boleh digunakan ditemui. Perfect Hero baharu tidak dicipta. Semak perkaitan permainan atau gunakan logo terlebih dahulu."
+  "PA_ERROR_LOGO_NOT_FOUND": "Tiada logo permainan yang boleh digunakan ditemui. Perfect Hero baharu tidak dicipta. Semak perkaitan permainan atau gunakan logo terlebih dahulu.",
+  "PA_CLEAN_UNUSED": "Bersihkan imej tidak digunakan",
+  "PA_CLEAN_UNUSED_DESC": "Membuang sumber Perfect Hero dan Banner dalam cache untuk permainan yang dibuang. Imej Steam dan sandaran asal dikekalkan.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} fail dibuang ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Pustaka dan fail yang tidak tersedia dikekalkan. Cuba lagi apabila pustaka Steam boleh diakses."
 }

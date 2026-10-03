@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Se elimină imaginile Perfect Hero existente",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} imagini Perfect Hero eliminate",
   "PA_ERROR_PERFECT_HERO_RESET": "Eliminarea imaginii Perfect Hero sau restaurarea siglei separate nu a putut fi finalizată. Verifică jurnalele și încearcă din nou.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Nu a fost găsită o siglă utilizabilă pentru joc. Nu a fost creat un nou Perfect Hero. Verifică asocierea jocului sau aplică mai întâi o siglă."
+  "PA_ERROR_LOGO_NOT_FOUND": "Nu a fost găsită o siglă utilizabilă pentru joc. Nu a fost creat un nou Perfect Hero. Verifică asocierea jocului sau aplică mai întâi o siglă.",
+  "PA_CLEAN_UNUSED": "Curăță imaginile neutilizate",
+  "PA_CLEAN_UNUSED_DESC": "Elimină sursele Perfect Hero și Banner din cache pentru jocurile șterse. Imaginile Steam și copiile originale sunt păstrate.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} fișiere eliminate ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Bibliotecile și fișierele indisponibile au fost păstrate. Reîncearcă atunci când bibliotecile Steam sunt accesibile."
 }

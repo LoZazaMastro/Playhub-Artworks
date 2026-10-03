@@ -34,6 +34,7 @@ for module_root in [plugin_dir, plugin_dir / 'defaults', plugin_dir / 'py_module
 
 from settings import SettingsManager # type: ignore
 from helpers import get_ssl_context # type: ignore
+from unused_assets import inventory as unused_asset_inventory, clean_sources as clean_unused_sources
 from provider_search import ( # type: ignore
     inspect_remote_artwork as inspect_remote_artwork_sync,
     search_provider_assets as search_provider_assets_sync,
@@ -882,6 +883,19 @@ def _add_manifest_apps(apps):
             _add_app(apps, appid, name, False)
 
 class Plugin:
+    def __init__(self):
+        self._derived_cover_lock = threading.RLock()
+
+    async def clean_unused_artwork(self, dry_run=False):
+        if not hasattr(self, '_unused_cleanup_lock'):
+            self._unused_cleanup_lock = asyncio.Lock()
+        async with self._unused_cleanup_lock:
+            def clean():
+                snapshot = unused_asset_inventory(get_steam_path(), parse, binary_load)
+                with self._derived_cover_lock:
+                    return clean_unused_sources(PERFECT_SOURCE_DIR, snapshot, dry_run=bool(dry_run))
+            return await asyncio.to_thread(clean)
+
     async def _main(self):
         self.settings = SettingsManager(name="playhub_artworks", settings_directory=decky.DECKY_PLUGIN_SETTINGS_DIR)
         self._settings_lock = asyncio.Lock()
@@ -1034,7 +1048,7 @@ class Plugin:
 
     async def preserve_perfect_source_from_transfer(self, appid=0, target='hero', token='', replace=False):
         def save_sync():
-            with self._transfer_lock:
+            with self._derived_cover_lock, self._transfer_lock:
                 entry = self._transfer_entry(token)
                 existing = self._find_perfect_source(appid, target)
                 if existing and not replace:
@@ -1289,11 +1303,12 @@ class Plugin:
 
     def _write_perfect_source(self, appid, target, payload, asset_format):
         _validate_artwork_content(payload, source=f'perfect-source.{asset_format}', allow_source=True)
-        PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
-        path = self._perfect_source_path(appid, target, asset_format)
-        temporary = path.with_suffix(path.suffix + '.tmp')
-        temporary.write_bytes(payload)
-        temporary.replace(path)
+        with self._derived_cover_lock:
+            PERFECT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+            path = self._perfect_source_path(appid, target, asset_format)
+            temporary = path.with_suffix(path.suffix + '.tmp')
+            temporary.write_bytes(payload)
+            temporary.replace(path)
         return path
 
     async def preserve_perfect_source(self, appid=0, target='hero', candidates=None, allow_custom=True):

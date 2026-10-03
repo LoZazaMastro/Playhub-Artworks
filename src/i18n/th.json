@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "กำลังลบ Perfect Hero ที่มีอยู่",
   "PA_PERFECT_HERO_REMOVED_COUNT": "ลบ Perfect Hero แล้ว {count} ภาพ",
   "PA_ERROR_PERFECT_HERO_RESET": "ไม่สามารถลบ Perfect Hero หรือคืนค่าโลโก้แยกให้เสร็จสมบูรณ์ได้ โปรดตรวจสอบบันทึกแล้วลองอีกครั้ง",
-  "PA_ERROR_LOGO_NOT_FOUND": "ไม่พบโลโก้เกมที่ใช้ได้ จึงไม่ได้สร้าง Perfect Hero ใหม่ โปรดตรวจสอบการเชื่อมโยงเกมหรือใช้โลโก้ก่อน"
+  "PA_ERROR_LOGO_NOT_FOUND": "ไม่พบโลโก้เกมที่ใช้ได้ จึงไม่ได้สร้าง Perfect Hero ใหม่ โปรดตรวจสอบการเชื่อมโยงเกมหรือใช้โลโก้ก่อน",
+  "PA_CLEAN_UNUSED": "ล้างภาพที่ไม่ได้ใช้",
+  "PA_CLEAN_UNUSED_DESC": "ลบต้นฉบับ Perfect Hero และ Banner ที่แคชไว้สำหรับเกมที่นำออก โดยเก็บภาพ Steam และข้อมูลสำรองต้นฉบับไว้",
+  "PA_CLEAN_UNUSED_RESULT": "ลบ {count} ไฟล์แล้ว ({size} MiB)",
+  "PA_CLEAN_UNUSED_PARTIAL": "เก็บคลังและไฟล์ที่เข้าถึงไม่ได้ไว้ โปรดลองอีกครั้งเมื่อเข้าถึงคลัง Steam ได้"
 }

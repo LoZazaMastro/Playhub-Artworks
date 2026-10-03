@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Removendo os Perfect Hero existentes",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero removidos",
   "PA_ERROR_PERFECT_HERO_RESET": "Não foi possível concluir a remoção do Perfect Hero ou restaurar o logotipo separado. Confira os logs e tente novamente.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Nenhum logotipo utilizável foi encontrado para o jogo. Nenhum novo Perfect Hero foi criado. Confira a associação do jogo ou aplique um logotipo primeiro."
+  "PA_ERROR_LOGO_NOT_FOUND": "Nenhum logotipo utilizável foi encontrado para o jogo. Nenhum novo Perfect Hero foi criado. Confira a associação do jogo ou aplique um logotipo primeiro.",
+  "PA_CLEAN_UNUSED": "Limpar imagens não utilizadas",
+  "PA_CLEAN_UNUSED_DESC": "Remove as fontes de Perfect Hero e Banner em cache dos jogos removidos. As imagens do Steam e os backups originais são mantidos.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} arquivos removidos ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "As bibliotecas e os arquivos inacessíveis foram mantidos. Tente novamente quando as bibliotecas do Steam estiverem acessíveis."
 }

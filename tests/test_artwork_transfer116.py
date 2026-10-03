@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import hashlib
+import io
 import struct
 import tempfile
 import threading
@@ -131,13 +132,13 @@ class Transfer116Tests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(instance._transfers)
 
     async def test_404_is_not_retried(self):
-        with patch.object(BACKEND,'urlopen',side_effect=HTTPError('https://example.invalid',404,'missing',{},None)) as request:
+        with patch.object(BACKEND,'urlopen',side_effect=HTTPError('https://example.invalid',404,'missing',{},io.BytesIO())) as request:
             with self.assertRaises(HTTPError):
                 await self.plugin.prepare_artwork_transfer('https://example.invalid/test.png')
             self.assertEqual(request.call_count,1)
 
     async def test_retry_transient_503_without_forwarding_api_key(self):
-        with patch.object(BACKEND,'urlopen',side_effect=[HTTPError('https://example.invalid',503,'unavailable',{},None),FakeResponse(png())]) as request:
+        with patch.object(BACKEND,'urlopen',side_effect=[HTTPError('https://example.invalid',503,'unavailable',{},io.BytesIO()),FakeResponse(png())]) as request:
             info=await self.plugin.prepare_artwork_transfer('https://cdn2.steamgriddb.com/hero/test.png')
             self.assertEqual(request.call_count,2)
             headers=request.call_args.args[0].headers

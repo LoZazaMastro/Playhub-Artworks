@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Meglévő Perfect Hero képek eltávolítása",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero eltávolítva",
   "PA_ERROR_PERFECT_HERO_RESET": "Nem sikerült befejezni a Perfect Hero eltávolítását vagy visszaállítani a külön logót. Ellenőrizd a naplókat, majd próbáld újra.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Nem található használható játéklogó. Nem készült új Perfect Hero. Ellenőrizd a játék társítását, vagy előbb alkalmazz egy logót."
+  "PA_ERROR_LOGO_NOT_FOUND": "Nem található használható játéklogó. Nem készült új Perfect Hero. Ellenőrizd a játék társítását, vagy előbb alkalmazz egy logót.",
+  "PA_CLEAN_UNUSED": "Nem használt képek törlése",
+  "PA_CLEAN_UNUSED_DESC": "Eltávolítja a törölt játékok gyorsítótárazott Perfect Hero és Banner forrásait. A Steam képei és az eredeti biztonsági másolatok megmaradnak.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} fájl törölve ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "A nem elérhető könyvtárak és fájlok megmaradtak. Próbáld újra, amikor a Steam-könyvtárak elérhetők."
 }

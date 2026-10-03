@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "جارٍ إزالة صور Perfect Hero الحالية",
   "PA_PERFECT_HERO_REMOVED_COUNT": "تمت إزالة {count} من صور Perfect Hero",
   "PA_ERROR_PERFECT_HERO_RESET": "تعذر إكمال إزالة Perfect Hero أو استعادة الشعار المنفصل. راجع السجلات وحاول مجددًا.",
-  "PA_ERROR_LOGO_NOT_FOUND": "لم يتم العثور على شعار مناسب للعبة. لم يتم إنشاء Perfect Hero جديد. تحقق من ربط اللعبة أو طبّق شعارًا أولًا."
+  "PA_ERROR_LOGO_NOT_FOUND": "لم يتم العثور على شعار مناسب للعبة. لم يتم إنشاء Perfect Hero جديد. تحقق من ربط اللعبة أو طبّق شعارًا أولًا.",
+  "PA_CLEAN_UNUSED": "تنظيف الصور غير المستخدمة",
+  "PA_CLEAN_UNUSED_DESC": "يزيل مصادر Perfect Hero وBanner المخزنة للألعاب المحذوفة. تُحفظ صور Steam والنسخ الاحتياطية الأصلية.",
+  "PA_CLEAN_UNUSED_RESULT": "تم حذف {count} ملف ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "تم الاحتفاظ بالمكتبات والملفات غير المتاحة. أعد المحاولة عندما تصبح مكتبات Steam متاحة."
 }

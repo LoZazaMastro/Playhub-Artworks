@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "기존 Perfect Hero 삭제 중",
   "PA_PERFECT_HERO_REMOVED_COUNT": "Perfect Hero {count}개 삭제됨",
   "PA_ERROR_PERFECT_HERO_RESET": "Perfect Hero 삭제 또는 별도 로고 복원을 완료하지 못했습니다. 로그를 확인하고 다시 시도하세요.",
-  "PA_ERROR_LOGO_NOT_FOUND": "사용 가능한 게임 로고를 찾지 못했습니다. 새 Perfect Hero는 생성되지 않았습니다. 게임 연결을 확인하거나 먼저 로고를 적용하세요."
+  "PA_ERROR_LOGO_NOT_FOUND": "사용 가능한 게임 로고를 찾지 못했습니다. 새 Perfect Hero는 생성되지 않았습니다. 게임 연결을 확인하거나 먼저 로고를 적용하세요.",
+  "PA_CLEAN_UNUSED": "사용하지 않는 아트워크 정리",
+  "PA_CLEAN_UNUSED_DESC": "삭제된 게임의 Perfect Hero 및 Banner 캐시 원본을 제거합니다. Steam 아트워크와 원본 백업은 유지됩니다.",
+  "PA_CLEAN_UNUSED_RESULT": "{count}개 파일 삭제됨 ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "접근할 수 없는 라이브러리와 파일은 유지했습니다. Steam 라이브러리에 접근할 수 있을 때 다시 시도하세요."
 }

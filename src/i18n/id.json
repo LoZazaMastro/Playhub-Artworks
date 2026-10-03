@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Menghapus Perfect Hero yang ada",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero dihapus",
   "PA_ERROR_PERFECT_HERO_RESET": "Tidak dapat menyelesaikan penghapusan Perfect Hero atau memulihkan logo terpisah. Periksa log dan coba lagi.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Logo permainan yang dapat digunakan tidak ditemukan. Perfect Hero baru tidak dibuat. Periksa asosiasi permainan atau terapkan logo terlebih dahulu."
+  "PA_ERROR_LOGO_NOT_FOUND": "Logo permainan yang dapat digunakan tidak ditemukan. Perfect Hero baru tidak dibuat. Periksa asosiasi permainan atau terapkan logo terlebih dahulu.",
+  "PA_CLEAN_UNUSED": "Bersihkan gambar tidak terpakai",
+  "PA_CLEAN_UNUSED_DESC": "Menghapus sumber Perfect Hero dan Banner yang tersimpan untuk game yang dihapus. Gambar Steam dan cadangan asli tetap disimpan.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} berkas dihapus ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Pustaka dan berkas yang tidak tersedia tetap disimpan. Coba lagi saat pustaka Steam dapat diakses."
 }

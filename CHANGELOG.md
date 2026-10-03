@@ -1,3 +1,7 @@
+1.1.9
+
+Fixed cleanup of unused Perfect Hero and Perfect Banner source images.
+
 1.1.8
 
 Fixed Steam logo restoration after removing Perfect Hero or Perfect Banner, including bulk Hero regeneration.

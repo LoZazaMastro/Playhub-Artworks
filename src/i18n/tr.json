@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "Mevcut Perfect Hero görselleri kaldırılıyor",
   "PA_PERFECT_HERO_REMOVED_COUNT": "{count} Perfect Hero kaldırıldı",
   "PA_ERROR_PERFECT_HERO_RESET": "Perfect Hero kaldırılamadı veya ayrı logo geri yüklenemedi. Günlükleri kontrol edip yeniden deneyin.",
-  "PA_ERROR_LOGO_NOT_FOUND": "Kullanılabilir bir oyun logosu bulunamadı. Yeni Perfect Hero oluşturulmadı. Oyun eşleştirmesini kontrol edin veya önce bir logo uygulayın."
+  "PA_ERROR_LOGO_NOT_FOUND": "Kullanılabilir bir oyun logosu bulunamadı. Yeni Perfect Hero oluşturulmadı. Oyun eşleştirmesini kontrol edin veya önce bir logo uygulayın.",
+  "PA_CLEAN_UNUSED": "Kullanılmayan görselleri temizle",
+  "PA_CLEAN_UNUSED_DESC": "Kaldırılan oyunların önbellekteki Perfect Hero ve Banner kaynaklarını siler. Steam görselleri ve özgün yedekler korunur.",
+  "PA_CLEAN_UNUSED_RESULT": "{count} dosya silindi ({size} MiB).",
+  "PA_CLEAN_UNUSED_PARTIAL": "Erişilemeyen kütüphaneler ve dosyalar korundu. Steam kütüphanelerine erişilebildiğinde yeniden deneyin."
 }

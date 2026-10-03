@@ -328,5 +328,9 @@
   "PA_BATCH_PERFECT_HERO_RESET": "既存のPerfect Heroを削除中",
   "PA_PERFECT_HERO_REMOVED_COUNT": "Perfect Heroを{count}件削除",
   "PA_ERROR_PERFECT_HERO_RESET": "Perfect Heroの削除または別レイヤーのロゴの復元を完了できませんでした。ログを確認して再試行してください。",
-  "PA_ERROR_LOGO_NOT_FOUND": "使用できるゲームのロゴが見つかりませんでした。新しいPerfect Heroは作成されていません。ゲームの関連付けを確認するか、先にロゴを適用してください。"
+  "PA_ERROR_LOGO_NOT_FOUND": "使用できるゲームのロゴが見つかりませんでした。新しいPerfect Heroは作成されていません。ゲームの関連付けを確認するか、先にロゴを適用してください。",
+  "PA_CLEAN_UNUSED": "未使用のアートワークを削除",
+  "PA_CLEAN_UNUSED_DESC": "削除したゲームの Perfect Hero と Banner のキャッシュ素材を削除します。Steam の画像と元のバックアップは保持します。",
+  "PA_CLEAN_UNUSED_RESULT": "{count} 個のファイルを削除しました（{size} MiB）。",
+  "PA_CLEAN_UNUSED_PARTIAL": "アクセスできないライブラリとファイルは保持しました。Steam ライブラリにアクセスできる状態で再試行してください。"
 }
