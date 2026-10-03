@@ -210,10 +210,9 @@ const AssetTabs: FC<{
             call('delete_setting', `zazamastro_hero_${appOverview.appid}`),
           ]);
         }
-        if (!withLogo) await showLogo(appOverview.appid);
         await refreshPerfect();
         /* Avoid another SteamUI/backend round trip after save; it could stall the next search. */
-        setLogoHidden(withLogo ? separateLogoHidden : false);
+        setLogoHidden(separateLogoHidden);
       }}
     />,
     window

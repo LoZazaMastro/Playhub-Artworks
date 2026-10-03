@@ -97,8 +97,19 @@ export const preservePerfectSource = async (
 export const isPerfectArtwork = async (appId: number, target: PerfectTarget): Promise<boolean> =>
   Boolean(await safeCall(false, 'get_setting', key(appId, target), false));
 
+// Legacy compositions have no withLogo metadata. Keep their separate logo hidden
+// until they are removed, so a remaining baked logo is not drawn twice.
+const hasPerfectLogoComposition = async (appId: number): Promise<boolean> => {
+  for (const target of ['hero', 'grid_l'] as PerfectTarget[]) {
+    if (!await safeCall(true, 'get_setting', key(appId, target), false)) continue;
+    const info = await safeCall<{ withLogo?: boolean } | null>(null, 'get_setting', `perfect_${target}_info_${appId}`, null);
+    if (info?.withLogo !== false) return true;
+  }
+  return false;
+};
+
 /**
- * A Perfect Hero already carries the logo, so Steam's separate logo layer is
+ * A Perfect composition already carries the logo, so Steam's separate logo layer is
  * switched off to avoid showing it twice.
  */
 export const markPerfectArtwork = async (appId: number, target: PerfectTarget, withLogo: boolean) => {
@@ -109,8 +120,12 @@ export const markPerfectArtwork = async (appId: number, target: PerfectTarget, w
   */
   const logoHidden = withLogo ? await hideLogo(appId) : false;
   await safeCall(false, 'set_setting', key(appId, target), true);
-  if (target === 'hero') await safeCall(false, 'set_setting', `perfect_hero_info_${appId}`, { version: 116, origin: 'manual', withLogo });
-  return logoHidden;
+  await safeCall(false, 'set_setting', `perfect_${target}_info_${appId}`, { version: 118, origin: 'manual', withLogo });
+  if (withLogo) return logoHidden;
+  // Another Perfect artwork may still carry the logo after this one drops it.
+  if (await hasPerfectLogoComposition(appId)) return await hideLogo(appId);
+  await showLogo(appId);
+  return false;
 };
 
 /** Back to Steam's own artwork plus the separate logo. */
@@ -119,9 +134,9 @@ export const clearPerfectArtwork = async (appId: number, target: PerfectTarget) 
   sourceWrites.delete(key(appId, target));
   await safeCall(false, 'delete_setting', key(appId, target));
   await safeCall(false, 'clear_perfect_source', appId, target);
+  await safeCall(false, 'delete_setting', `perfect_${target}_info_${appId}`);
   if (target === 'hero') {
-    await safeCall(false, 'delete_setting', `perfect_hero_info_${appId}`);
     await safeCall(false, 'delete_setting', `zazamastro_hero_${appId}`);
-    await showLogo(appId);
   }
+  if (!await hasPerfectLogoComposition(appId)) await showLogo(appId);
 };

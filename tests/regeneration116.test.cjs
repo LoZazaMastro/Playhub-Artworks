@@ -23,6 +23,7 @@ function setup(options = {}) {
     settings[`logo_visible_${id}`] = false;
     settings[`logo_position_backup_${id}`] = {pinnedPosition: 'UpperCenter', nWidthPct: 62, nHeightPct: 43};
     settings[`perfect_grid_l_${id}`] = true;
+    settings[`perfect_grid_l_info_${id}`] = {withLogo: false};
     settings[`nonsteam_${id}`] = {id};
     heroes.set(id, `old-${id}`); sources.add(id);
     positions.set(id, {pinnedPosition: 'BottomLeft', nWidthPct: .01, nHeightPct: .01});
@@ -284,4 +285,30 @@ test('All 31 locale files include the destructive warning and reset progress/err
     }
     assert.ok(data.PA_PERFECT_HERO_REMOVED_COUNT.includes('{count}'), name);
   }
+});
+
+for (const legacy of [false, true]) scenario(`Hero bulk reset preserves ${legacy ? 'legacy' : 'explicit'} Banner logo ownership`, {
+  ids: [42001], noAssets: true, seed: ({settings}) => {
+    if (legacy) delete settings.perfect_grid_l_info_42001;
+    else settings.perfect_grid_l_info_42001 = {withLogo: true};
+  },
+}, async h => {
+  await h.bulk.__test.resetPerfectHeroForRegeneration({appid: 42001}, h.controller.signal);
+  assert.equal(h.heroes.has(42001), false);
+  assert.equal(h.settings.perfect_hero_42001, undefined);
+  assert.equal(h.settings.perfect_grid_l_42001, true);
+  assert.equal(h.settings.logo_hidden_42001, true);
+  assert.equal(h.settings.logo_visible_42001, false);
+  assert.equal(h.positions.get(42001).nWidthPct, .01);
+  assert.equal(h.settings.logo_position_backup_42001.nWidthPct, 62);
+  assert.equal(h.events.some(e => e[0] === 'position'), false);
+  assert.ok(h.events.some(e => e[0] === 'rpc' && e[1] === 'clear_perfect_hero_state' && e[3] === false));
+});
+scenario('Hero bulk reset restores logo when remaining Banner has no baked logo', {ids: [42001], noAssets: true}, async h => {
+  await h.bulk.__test.resetPerfectHeroForRegeneration({appid: 42001}, h.controller.signal);
+  assert.equal(h.settings.perfect_grid_l_42001, true);
+  assert.equal(h.settings.perfect_grid_l_info_42001.withLogo, false);
+  assert.equal(h.settings.logo_hidden_42001, false);
+  assert.equal(h.positions.get(42001).nWidthPct, 62);
+  assert.ok(h.events.some(e => e[0] === 'rpc' && e[1] === 'clear_perfect_hero_state' && e[3] === true));
 });

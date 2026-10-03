@@ -876,10 +876,12 @@ async function* heroCandidatesFromSources(app: ZazaLibraryApp, sources: ArtworkP
  */
 const resetPerfectHeroForRegeneration = async (app: ZazaLibraryApp, signal?: AbortSignal): Promise<boolean> => {
   throwIfCancelled(signal);
-  const [marked, info, marker] = await withTimeout(Promise.all([
+  const [marked, info, marker, bannerMarked, bannerInfo] = await withTimeout(Promise.all([
     call<[string, boolean], boolean>('get_setting', `perfect_hero_${app.appid}`, false),
     call<[string, any], any>('get_setting', `perfect_hero_info_${app.appid}`, null),
     call<[string, ZazaHeroMarker | null], ZazaHeroMarker | null>('get_setting', zazaMarkerKey(app.appid), null),
+    call<[string, boolean], boolean>('get_setting', `perfect_grid_l_${app.appid}`, false),
+    call<[string, any], any>('get_setting', `perfect_grid_l_info_${app.appid}`, null),
   ]), STEAM_ARTWORK_TIMEOUT_MS, 'PA_ERROR_PERFECT_HERO_RESET');
   let hasPerfect = Boolean(marked || info);
   if (!hasPerfect && marker?.sha256) {
@@ -891,16 +893,19 @@ const resetPerfectHeroForRegeneration = async (app: ZazaLibraryApp, signal?: Abo
     hasPerfect = Boolean(current?.exists && current.source === 'custom' && current.sha256 === marker.sha256);
   }
   throwIfCancelled(signal);
+  // Hero regeneration leaves Banner intact. Legacy marked banners may already
+  // carry a logo despite lacking metadata, so preserve their hidden layer.
+  const restoreLogo = hasPerfect && !(bannerMarked && bannerInfo?.withLogo !== false);
   if (hasPerfect) {
     await clearSteamArtworkSafely(app.appid, ASSET_TYPE.hero);
     // Finish restoring the logo/state even if cancellation arrived during Steam's
     // clear. The next app/download observes it; never leave a half-reset hidden logo.
-    if (!await showLogo(app.appid)) throw new Error('PA_ERROR_PERFECT_HERO_RESET');
+    if (restoreLogo && !await showLogo(app.appid)) throw new Error('PA_ERROR_PERFECT_HERO_RESET');
   }
   // Also remove orphaned source snapshots and old markers. A plain hero's logo
   // visibility is unchanged when there was no identifiable Perfect composition.
   const cleared = await withTimeout(call<[number, boolean], boolean>(
-    'clear_perfect_hero_state', app.appid, hasPerfect), STEAM_ARTWORK_TIMEOUT_MS, 'PA_ERROR_PERFECT_HERO_RESET');
+    'clear_perfect_hero_state', app.appid, restoreLogo), STEAM_ARTWORK_TIMEOUT_MS, 'PA_ERROR_PERFECT_HERO_RESET');
   if (cleared !== true) throw new Error('PA_ERROR_PERFECT_HERO_RESET');
   log('bulk Perfect Hero reset', { appid: app.appid, removed: hasPerfect });
   return hasPerfect;
