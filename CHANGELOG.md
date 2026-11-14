@@ -1,3 +1,7 @@
+1.1.10
+
+Fixed temporary cover overlap and scaling on the Home screen when a game is removed or recent games refresh.
+
 1.1.9
 
 Fixed cleanup of unused Perfect Hero and Perfect Banner source images.

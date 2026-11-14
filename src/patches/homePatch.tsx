@@ -241,9 +241,11 @@ export const addHomePatch = (mounting = false, square = false): boolean => {
       ? `
       ${media}${notFeatured} {
         width: auto !important;
+        max-width: 100% !important;
       }
       ${media}${notFeatured} > div:first-child${notLabel} {
         width: auto !important;
+        max-width: 100% !important;
         aspect-ratio: 1 / 1;
       }
     `

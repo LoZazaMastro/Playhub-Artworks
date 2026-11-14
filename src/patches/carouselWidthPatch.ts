@@ -40,6 +40,7 @@ const TOLERANCE = 6;
 
 let patchedPrototype: any = null;
 let squareColumns = false;
+const widthOwners = new WeakMap<Function, { instance: object; props: object }>();
 
 const labelHeight = (): number => {
   const raw = homeCarouselClasses?.LabelHeight;
@@ -124,6 +125,11 @@ const takeOver = (prototype: any) => {
     } catch (_) {
       // Leave what is there; installing again would only stack another layer.
     }
+    if (previous.renderOriginal) {
+      try {
+        Object.defineProperty(prototype, 'render', previous.renderOriginal);
+      } catch (_) { /* A newer Steam build made render immutable. */ }
+    }
     if (previous.scrollOriginal) {
       try {
         Object.defineProperty(prototype, 'SendScrollNotification', previous.scrollOriginal);
@@ -175,6 +181,46 @@ const isHomeCoverCarousel = (instance: any): boolean => {
   } catch { return false; }
 };
 
+/**
+ * React replaces props during refresh/delete. Prepare the current callback BEFORE Steam
+ * renders its Grid: both GetCellColumnWidth and CellRenderer read this same function.
+ * A mounted-instance sweep is too late for that first layout, and the original autobind
+ * accessor has already cached a non-configurable method on most existing instances.
+ */
+const prepareColumnWidth = (instance: any): boolean => {
+  const props = instance.props;
+  const current = props?.fnGetColumnWidth as any;
+  if (typeof current !== 'function') return false;
+  const owner = widthOwners.get(current);
+  if (owner?.instance === instance && owner.props === props) return false;
+  // A previous bundle/instance may have wrapped these props. Do not retain its owner.
+  const source = typeof current[WIDTH_FN_MARKER] === 'function' ? current[WIDTH_FN_MARKER] : current;
+  if (!squareColumns || !isHomeCoverCarousel(instance)) {
+    if (source === current) return false;
+    try { props.fnGetColumnWidth = source; return props.fnGetColumnWidth === source; }
+    catch (_) { return false; }
+  }
+  const wrapped: any = (index: number, ...rest: any[]) => {
+    const width = source.call(props, index, ...rest);
+    if (!squareColumns || !isHomeCoverCarousel(instance)) return width;
+    const itemHeight = Number(instance.props?.nItemHeight) || 0;
+    for (const height of [itemHeight - labelHeight(), itemHeight]) {
+      if (height > 40 && Math.abs(width - height * PORTRAIT_RATIO) <= TOLERANCE) return height;
+    }
+    return width;
+  };
+  wrapped[WIDTH_FN_MARKER] = source;
+  try {
+    props.fnGetColumnWidth = wrapped;
+    if (props.fnGetColumnWidth !== wrapped) return false;
+    widthOwners.set(wrapped, { instance, props });
+    return true;
+  } catch (_) {
+    // Immutable/unsupported props retain Steam's callback; CSS stays within its slot.
+    return false;
+  }
+};
+
 /*
   Why this is an ACCESSOR patch and not an assignment.
 
@@ -193,7 +239,8 @@ const install = (prototype: any): boolean => {
 
   const descriptor = Object.getOwnPropertyDescriptor(prototype, 'GetCellColumnWidth');
   const scrollDescriptor = Object.getOwnPropertyDescriptor(prototype, 'SendScrollNotification');
-  if (!descriptor || !descriptor.configurable) {
+  const renderDescriptor = Object.getOwnPropertyDescriptor(prototype, 'render');
+  if (!descriptor?.configurable || !renderDescriptor?.configurable || typeof renderDescriptor.value !== 'function') {
     log('carousel width: method cannot be patched on this Steam build');
     return false;
   }
@@ -223,6 +270,14 @@ const install = (prototype: any): boolean => {
     },
     set(this: any, value: any) {
       define(this, 'GetCellColumnWidth', value);
+    },
+  });
+
+  Object.defineProperty(prototype, 'render', {
+    ...renderDescriptor,
+    value(this: any, ...args: any[]) {
+      prepareColumnWidth(this);
+      return renderDescriptor.value.apply(this, args);
     },
   });
 
@@ -257,7 +312,7 @@ const install = (prototype: any): boolean => {
 
   try {
     Object.defineProperty(prototype, PATCH_MARKER, {
-      value: { original: descriptor, scrollOriginal: scrollDescriptor },
+      value: { original: descriptor, scrollOriginal: scrollDescriptor, renderOriginal: renderDescriptor },
       configurable: true,
       enumerable: false,
       writable: true,
@@ -316,22 +371,7 @@ const patchMountedInstances = () => {
             method or remounting React.
           */
           const props = instance.props;
-          const currentWidth = props?.fnGetColumnWidth as any;
-          if (typeof currentWidth === 'function' && !currentWidth[WIDTH_FN_MARKER]) {
-            const source = currentWidth;
-            const wrapped: any = (index: number, ...rest: any[]) => {
-              const width = source.call(props, index, ...rest);
-              if (!squareColumns || !isHomeCoverCarousel(instance)) return width;
-              const itemHeight = Number(instance.props?.nItemHeight) || 0;
-              for (const height of [itemHeight - labelHeight(), itemHeight]) {
-                if (height > 40 && Math.abs(width - height * PORTRAIT_RATIO) <= TOLERANCE) return height;
-              }
-              return width;
-            };
-            wrapped[WIDTH_FN_MARKER] = source;
-            props.fnGetColumnWidth = wrapped;
-            changed = true;
-          }
+          changed = prepareColumnWidth(instance);
 
           if (own?.value && !(own.value as any).__playhubWrapped) {
             const bound = own.value as any;
