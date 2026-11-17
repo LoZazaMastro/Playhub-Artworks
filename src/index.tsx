@@ -32,6 +32,7 @@ import {
 
 import { applyCachedHomeRecentCover, refreshHomeRecentCover, stopHomeRecentCover } from './patches/homeRecentCover';
 import { startLibraryPreload, stopLibraryPreload } from './patches/libraryPreload';
+import { startAutomaticArtwork } from './utils/automaticArtworkObserver';
 
 const ROUTE = '/playhub-artworks/:appid/:assetType?';
 const RUNTIME_CLEANUP = '__playhubArtworksRuntimeCleanup';
@@ -48,6 +49,7 @@ export default definePlugin(() => {
   startRuntime();
   startLogging();
   const diagnostics = createFrontendDiagnostics();
+  const stopAutomaticArtwork = startAutomaticArtwork();
 
   // Register the cached asset choice before unrelated UI and backend setup.
   applyCachedHomeRecentCover();
@@ -179,6 +181,7 @@ export default definePlugin(() => {
     cleaned = true;
     log('plugin dismounted');
     stopRuntime();
+    stopAutomaticArtwork();
     try { cancelBulkArtworkJob(); } catch (_) { /* Continue independent teardown. */ }
     window.clearInterval(routeWatcher);
     routeTimers.forEach(timer => window.clearTimeout(timer));

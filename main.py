@@ -32,6 +32,7 @@ for module_root in [plugin_dir, plugin_dir / 'defaults', plugin_dir / 'py_module
     if module_root_str not in sys.path:
         sys.path.insert(0, module_root_str)
 
+import automatic_artwork
 from settings import SettingsManager # type: ignore
 from helpers import get_ssl_context # type: ignore
 from unused_assets import inventory as unused_asset_inventory, clean_sources as clean_unused_sources
@@ -1978,6 +1979,38 @@ class Plugin:
     
             return result
         return await asyncio.get_running_loop().run_in_executor(self._download_executor, inspect_sync)
+
+    def _auto_artwork_user(self):
+        if not WINDOWS:
+            raise ValueError('PA_AUTO_ARTWORK_UNKNOWN')
+        with OpenKey(HKEY_CURRENT_USER, r"Software\Valve\Steam\ActiveProcess") as active_key:
+            value = QueryValueEx(active_key, 'ActiveUser')[0]
+        if not isinstance(value, int) or not 0 < value <= 0xffffffff:
+            raise ValueError('PA_AUTO_ARTWORK_UNKNOWN')
+        return str(value)
+
+    async def get_auto_artwork_status(self, appid, steam_user, shortcut):
+        if not isinstance(shortcut, bool):
+            raise ValueError('PA_AUTO_ARTWORK_UNKNOWN')
+        def read_shortcuts(path):
+            with path.open('rb') as stream:
+                return binary_load(stream)
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor,
+            lambda: automatic_artwork.status(get_steam_userdata(), get_steam_libcache(), appid, steam_user, self._auto_artwork_user, shortcut, read_shortcuts))
+
+    async def stage_auto_shortcut_icon(self, appid, steam_user, token):
+        # Only bytes already validated/staged by our transfer service; no caller
+        # paths, VDF edits, user grid writes or external process is accepted.
+        await self.get_auto_artwork_status(appid, steam_user, True)
+        def stage():
+            with self._transfer_lock:
+                entry = self._transfer_entry(token)
+                content = Path(entry['path']).read_bytes()
+            def inspect(data):
+                asset_format, dimensions = _validate_artwork_content(data)
+                return {'format': asset_format, 'dimensions': dimensions, 'animated': _asset_is_animated(data, asset_format)}
+            return automatic_artwork.stage_icon(Path(decky.DECKY_PLUGIN_RUNTIME_DIR) / 'automatic_icons', content, appid, steam_user, self._auto_artwork_user, inspect)
+        return await asyncio.get_running_loop().run_in_executor(self._download_executor, stage)
 
     async def get_zazamastro_position_candidates(self):
         """Return locally verified games whose current hero is the one applied by ZazaMastro Fix.

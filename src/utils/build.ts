@@ -1,2 +1,2 @@
-/** Same requested release; distinguish corrected bundles in diagnostic logs. */
-export const ARTWORKS_BUILD = '1.1.7';
+/** Current release identifier used in diagnostic logs. */
+export const ARTWORKS_BUILD = '1.2.0';

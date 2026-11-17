@@ -1,6 +1,6 @@
 import { findSteamUI as findSP } from '../utils/steamWindow';
 import { routerHook } from '@decky/api';
-import { findModuleExport } from '@decky/ui';
+import { findModule, findModuleExport } from '@decky/ui';
 
 import { appportraitClasses, gamepadLibraryClasses, libraryAssetImageClasses, sel } from '../static-classes';
 import { addStyle, removeStyle } from '../utils/styleInjector';
@@ -197,7 +197,7 @@ const routeIsLibrary = (): boolean => {
   return libraryRouteActive;
 };
 
-export const updateSquareLibraryRoute = () => readRoute();
+export const updateSquareLibraryRoute = () => { readRoute(); if (squareEnabled) applyGameInfoStyle(); };
 
 /*
   The flag is refreshed BY THE ROUTE ITSELF, not by a timer.
@@ -479,18 +479,39 @@ const applyCapsuleStyle = () => {
     }
   `);
 
+};
+
+/** Header geometry must not depend on ever opening Steam's library grid. */
+const applyGameInfoStyle = () => {
+  const container = sel(libraryAssetImageClasses, 'Container');
+  const portrait = sel(libraryAssetImageClasses, 'PortraitImage');
+  if (!container || !portrait) return;
   /*
     Steam reuses portrait capsule markup in the game's Info tab, both for the large cover
     and for every cover layered inside a collection tile. The surrounding collection tile
     is already square; only the image container still insists on 2:3 and spills outside it.
     The tab panel id has a generated prefix but a stable suffix across Steam builds.
   */
+  // The native achievement header reuses the same portrait asset component.
+  // Resolve its own CSS module rather than changing every capsule or badge.
+  let achievementScope = '';
+  try {
+    const page = findModule((mod: any) => typeof mod === 'object' && mod?.AchievementsPage && mod?.HeaderImage && mod?.AchievementTabs);
+    if (page?.AchievementsPage) achievementScope = `${sel(page, 'AchievementsPage')} [style*="--grid-area: capsule"]`;
+    const header = findModule((mod: any) => typeof mod === 'object' && mod?.Portrait && mod?.StatsBlock && mod?.AchievementSearchHeader);
+    if (!achievementScope && header?.Container && header?.Portrait) achievementScope = `${sel(header, 'Container')} ${sel(header, 'Portrait')}`;
+  } catch { /* Steam can load the achievement chunk later. */ }
+  const infoScope = ['[id$="GameInfo_Content"]', achievementScope].filter(Boolean).join(', ');
   addStyle(GAME_INFO_STYLE_ID, `
-    [id$="GameInfo_Content"] ${container}${portrait} {
+    ${achievementScope || '.playhub-artworks-no-achievement-header'} {
+      --aspect-ratio: 1 / 1 !important;
+      aspect-ratio: 1 / 1 !important;
+    }
+    :is(${infoScope}) ${container}${portrait} {
       padding-top: 100% !important;
       height: 0 !important;
     }
-    [id$="GameInfo_Content"] ${container}${portrait} img {
+    :is(${infoScope}) ${container}${portrait} img {
       object-fit: cover !important;
       object-position: center center !important;
     }
@@ -501,6 +522,8 @@ const applyCapsuleStyle = () => {
  * @returns true when the selectors resolved, so the caller can stop retrying.
  */
 export const addSquareLibraryPatch = (mounting = false): boolean => {
+  squareEnabled = true;
+  applyGameInfoStyle();
   const library = sel(gamepadLibraryClasses, 'GamepadLibrary');
   const game = sel(appportraitClasses, 'LibraryItemBox');
   const container = sel(libraryAssetImageClasses, 'Container');

@@ -59,6 +59,7 @@ interface AssetSearchOptions {
   pages?: number;
   predicate?: (asset: any) => boolean;
   signal?: AbortSignal;
+  strictIdentity?: boolean;
 }
 
 interface LocalAssetInfo {
@@ -284,7 +285,7 @@ const withTimeout = <T,>(request: Promise<T>, timeoutMs: number, message: string
 };
 
 const assetRequestCache = new Map<string, Promise<any[]>>();
-const gameIdCache = new Map<number, Promise<number | null>>();
+const gameIdCache = new Map<string, Promise<number | null>>();
 
 const apiRequest = async (url: string, signal?: AbortSignal): Promise<any[]> => {
   throwIfCancelled(signal);
@@ -345,30 +346,38 @@ const searchGames = async (term: string, signal?: AbortSignal) => {
 };
 
 /** A saved manual association wins; autocomplete must not silently pick a sequel. */
-const sgdbGameIdForApp = async (app: ZazaLibraryApp, signal?: AbortSignal): Promise<number | null> => {
-  const cached = gameIdCache.get(app.appid);
+const sgdbGameIdForApp = async (app: ZazaLibraryApp, signal?: AbortSignal, strictIdentity = false): Promise<number | null> => {
+  let user = '';
+  try { user = getCurrentSteamUserId(); } catch (error) { if (strictIdentity) throw error; }
+  const key = JSON.stringify([user, app.appid, app.display_name, app.is_shortcut, strictIdentity]);
+  const cached = gameIdCache.get(key);
   if (cached) return cached;
   const lookup = (async () => {
-    const saved = await call<[string, any], any>('get_setting', `nonsteam_${app.appid}`, null).catch(() => null);
+    const saved = await call<[string, any], any>('get_setting', `nonsteam_${app.appid}`, null).catch(error => { if (strictIdentity) throw error; return null; });
     if (saved?.id && (!saved.provider || saved.provider === 'steamgriddb')) return Number(saved.id);
     const name = app.display_name?.trim() || '';
     if (!name) return null;
     const clean = name.replace(/[™®©]/g, '').replace(/[’‘]/g, "'").replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
     // Strip only clearly decorative trailing platform/region/year tags, never sequel numbers.
     const untagged = clean.replace(/\s*[[(](?:PC|Steam|GOG|Epic|Windows|USA|EU|Europe|Japan|19\d{2}|20\d{2})[\])](?=\s*$)/i, '').trim();
-    for (const term of [...new Set([name, clean, untagged])].filter(Boolean)) {
+    // Store bundles often append a purchase-tier label to the actual game title.
+    // Preserve remasters, DLC names and sequel numbers; only remove the standard
+    // purchase tier after the full title has failed to match exactly.
+    const standard = untagged.replace(/\s*(?:[-:–—]\s*)?(?:\(\s*)?(?:digital\s+)?standard\s+edition\s*\)?$/i, '').trim();
+    for (const term of [...new Set([name, clean, untagged, standard])].filter(Boolean)) {
       throwIfCancelled(signal);
       const games = await searchGames(term, signal);
-      const match = exactTitleMatch(term, games);
+      const exact = strictIdentity ? games.filter(game => exactTitleMatch(term, [game])) : games;
+      const match = strictIdentity && new Set(exact.map(game => game.id)).size !== 1 ? undefined : exactTitleMatch(term, exact);
       if (match?.id) return Number(match.id);
     }
     log('bulk game association not found', { appid: app.appid, name });
     return null;
   })();
-  gameIdCache.set(app.appid, lookup);
+  gameIdCache.set(key, lookup);
   if (gameIdCache.size > 64) gameIdCache.delete(gameIdCache.keys().next().value!);
   try { return await lookup; }
-  catch (error) { gameIdCache.delete(app.appid); throw error; }
+  catch (error) { gameIdCache.delete(key); throw error; }
 };
 
 /** Skip animation and impossible dimensions before choosing a candidate. */
@@ -391,17 +400,35 @@ const assetsForApp = async (app: ZazaLibraryApp, assetType: SGDBAssetType, optio
       if (!assets.length || (options.predicate && found.some(options.predicate))) break;
     }
   };
-  const saved = await call<[string, any], any>('get_setting', `nonsteam_${app.appid}`, null).catch(() => null);
+  const saved = await call<[string, any], any>('get_setting', `nonsteam_${app.appid}`, null).catch(error => { if (options.strictIdentity) throw error; return null; });
   if (saved?.id && (!saved.provider || saved.provider === 'steamgriddb')) {
     await collect(`/${endpoint}/game/${Number(saved.id)}`);
   } else if (!app.is_shortcut) {
     await collect(`/${endpoint}/steam/${app.appid}`);
   }
   if (!found.length) {
-    const gameId = await sgdbGameIdForApp(app, options.signal);
+    const gameId = await sgdbGameIdForApp(app, options.signal, options.strictIdentity);
     if (gameId && gameId !== Number(saved?.id)) await collect(`/${endpoint}/game/${gameId}`);
   }
   return allUsefulAssets(found).filter(asset => !options.predicate || options.predicate(asset));
+};
+
+/** Automatic filling uses the same SGDB engine, with unique exact identities.
+ * No manual-art replacement or bulk Perfect Hero transformation is performed. */
+export const automaticArtworkCandidates = async (app: ZazaLibraryApp, kind: SGDBAssetType,
+  shape: 'square' | 'portrait', signal?: AbortSignal) => {
+  const predicate = (asset: any) => {
+    const width = Number(asset.width), height = Number(asset.height), ratio = width / height;
+    if (!Number.isFinite(ratio) || width < 16 || height < 16) return false;
+    if (kind === 'grid_p') return shape === 'square' ? ratio >= .9 && ratio <= 1.1 : ratio >= .5 && ratio <= .8;
+    if (kind === 'grid_l') return ratio >= 1.8 && ratio <= 2.4;
+    if (kind === 'hero') return ratio >= 1.4 && ratio <= 4;
+    // Steam's native shortcut icon chooser explicitly supports PNG paths.
+    if (kind === 'icon') return ratio >= .8 && ratio <= 1.25 && width <= 1024 && height <= 1024 && /\.png(?:[?#]|$)/i.test(asset.url);
+    return kind === 'logo';
+  };
+  return (await assetsForApp(app, kind, { signal, strictIdentity: true, pages: 1, predicate,
+    dimensions: kind === 'grid_p' ? shape === 'square' ? '1024x1024,512x512' : '600x900' : undefined })).slice(0, 4);
 };
 
 const findAssetForApp = async (app: ZazaLibraryApp, assetType: SGDBAssetType, options: AssetSearchOptions = {}) =>

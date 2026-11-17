@@ -26,6 +26,7 @@ Find, compare and apply artwork without returning to the desktop or moving files
 - **Perfect Hero and Perfect Banner:** combine a background and logo into one high-resolution image, adjusting position, scale, opacity and shadow with your controller.
 - **ZazaMastro heroes:** when creating a Perfect Hero manually, you can also add a logo to heroes published under LoZazaMastro's SteamGridDB nickname.
 - **Batch tools:** fill missing artwork, upgrade missing or low-resolution banners to 920 x 430, regenerate covers and restore Steam's original assets.
+- **Automatic missing artwork:** fill missing covers, banners, backgrounds, logos and shortcut icons for installed games and newly imported shortcuts. Existing custom and official images are preserved, and covers follow the saved portrait or square preference. This background work uses your SteamGridDB key, exact game associations and a bounded queue that resumes after Steam restarts.
 - **Remembered preferences:** shape, sources and filters are saved separately for each artwork type.
 
 ## Getting started

@@ -90,6 +90,8 @@ jobs:
               "package.json",
               "main.py",
               "provider_search.py",
+              "automatic_artwork.py",
+              "unused_assets.py",
               "README.md",
               "LICENSE",
               "NOTICE.md",

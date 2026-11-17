@@ -90,7 +90,7 @@ test('in-flight layout guard cannot reattach, remeasure or schedule work after s
 });
 test('bootstrap unload cancels delayed routes and survives removeRoute throwing', async () => {
   const env = environment(), pending = deferred(), calls = []; let route = '/library';
-  const methods = { createFrontendDiagnostics: () => ({sync: noop, stop: noop}), startLogging: noop, stopLogging: noop, startRuntime: noop, stopRuntime: noop, applyCachedLayout: noop, refreshLayoutPatches: () => pending.promise,
+  const methods = { createFrontendDiagnostics: () => ({sync: noop, stop: noop}), startAutomaticArtwork: () => () => calls.push('stopAutomaticArtwork'), startLogging: noop, stopLogging: noop, startRuntime: noop, stopRuntime: noop, applyCachedLayout: noop, refreshLayoutPatches: () => pending.promise,
     stopLayoutPatches: () => calls.push('stopLayout'), updateSquareLibraryRoute: noop,
     attachHomeCarousel: () => calls.push('attach'), homeUsesRouteScope: () => false, updateHomeRoute: noop,
     guardAfterRoute: noop, startLayoutGuard: () => calls.push('guard'), stopLayoutGuard: () => calls.push('stopGuard'),
@@ -113,6 +113,7 @@ test('bootstrap unload cancels delayed routes and survives removeRoute throwing'
   pending.resolve(); await new Promise(r => setImmediate(r));
   assert.equal(calls.filter(x => x === 'guard').length, 1);
   assert.ok(calls.includes('stopLayout') && calls.includes('styles'));
+  assert.equal(calls.filter(x => x === 'stopAutomaticArtwork').length, 1);
   assert.ok(!calls.includes('lateScroll') && !calls.includes('lateLetter') && !calls.includes('attach'));
   plugin.onDismount(); assert.equal(calls.filter(x => x === 'stopLayout').length, 1);
 });

@@ -1,3 +1,7 @@
+1.2.0
+
+Automatic artwork now fills missing images for installed games while preserving custom artwork. Improved matching for Standard Edition titles and retried previously incomplete artwork searches. Square covers now also apply to the native achievement page.
+
 1.1.10
 
 Fixed temporary cover overlap and scaling on the Home screen when a game is removed or recent games refresh.
